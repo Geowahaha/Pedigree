@@ -32,7 +32,7 @@ export interface AirtablePet {
         contact?: string;
         'Medical History'?: string;
         หมายเหตุ?: string;
-        'หมายเลข ID'?: string; // Auto-generated Registration Number
+        'หมายเลข ID'?: string | number; // Can be string or number
         Note?: string;
         'Type ชนิด'?: string;
         'Last modified time'?: string;
@@ -67,7 +67,7 @@ class AirtableClient {
     }
 
     /**
-     * Search pets by name or breed
+     * Search pets by name or breed (Client-side filtering)
      */
     async searchPets(query: string, maxRecords: number = 20): Promise<AirtablePet[]> {
         try {
@@ -76,24 +76,25 @@ class AirtableClient {
                 return this.getRandomPets(maxRecords);
             }
 
-            // FIND returns position number (>0 if found, 0 if not found)
-            // OR() treats any number > 0 as TRUE
-            const escapedQuery = query.replace(/"/g, '\\"');
-            const formula = `OR(FIND(LOWER("${escapedQuery}"), LOWER({Name})), FIND(LOWER("${escapedQuery}"), LOWER({Breed})))`;
-
-            const params = new URLSearchParams({
-                filterByFormula: formula,
-                maxRecords: maxRecords.toString(),
-            });
-
-            const response = await fetch(`${AIRTABLE_API_URL}/${PET_TABLE}?${params}`, {
+            // Fetch all pets and filter in JavaScript (avoids Airtable formula issues)
+            const response = await fetch(`${AIRTABLE_API_URL}/${PET_TABLE}?maxRecords=100`, {
                 headers: this.headers,
             });
 
             if (!response.ok) throw new Error(`API Error: ${response.status}`);
 
             const data = await response.json();
-            return data.records;
+            const allPets = data.records as AirtablePet[];
+
+            // Filter by name or breed (case-insensitive)
+            const lowerQuery = query.toLowerCase();
+            const filtered = allPets.filter(pet => {
+                const name = pet.fields.Name?.toLowerCase() || '';
+                const breed = pet.fields.Breed?.toLowerCase() || '';
+                return name.includes(lowerQuery) || breed.includes(lowerQuery);
+            });
+
+            return filtered.slice(0, maxRecords);
         } catch (error) {
             console.error('Search error:', error);
             throw error;

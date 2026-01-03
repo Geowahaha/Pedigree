@@ -41,8 +41,11 @@ async function calculateGeneration(motherId?: string, fatherId?: string): Promis
             const regNum = parent.fields['หมายเลข ID'];
             if (!regNum) return 1;
 
+            // Convert to string
+            const regNumStr = typeof regNum === 'number' ? regNum.toString() : regNum;
+
             // Extract generation from registration number (e.g., "LU-AP-G2-005" -> 2)
-            const match = regNum.match(/G(\d+)/);
+            const match = regNumStr.match(/G(\d+)/);
             return match ? parseInt(match[1], 10) : 1;
         });
 
@@ -66,7 +69,10 @@ async function getNextNumber(motherAbbr: string, fatherAbbr: string, generation:
 
         const matchingPets = allPets.filter(pet => {
             const regNum = pet.fields['หมายเลข ID'];
-            return regNum && regNum.startsWith(prefix);
+            if (!regNum) return false;
+            // Convert to string if it's a number
+            const regNumStr = typeof regNum === 'number' ? regNum.toString() : regNum;
+            return regNumStr.startsWith(prefix);
         });
 
         if (matchingPets.length === 0) {
@@ -78,8 +84,11 @@ async function getNextNumber(motherAbbr: string, fatherAbbr: string, generation:
             const regNum = pet.fields['หมายเลข ID'];
             if (!regNum) return 0;
 
+            // Convert to string
+            const regNumStr = typeof regNum === 'number' ? regNum.toString() : regNum;
+
             // Extract number (e.g., "LU-AP-G2-005" -> 5)
-            const match = regNum.match(/-(\d{3})$/);
+            const match = regNumStr.match(/-(\d{3})$/);
             return match ? parseInt(match[1], 10) : 0;
         });
 
@@ -157,27 +166,18 @@ export async function registerNewPet(input: RegisterPetInput): Promise<AirtableP
 
         console.log(`Generated Registration Number: ${registrationNumber}`);
 
-        // Prepare fields for Airtable
+        // Start with ONLY required fields to test
         const fields: Partial<AirtablePet['fields']> = {
             'Name': input.name,
             'Breed': input.breed,
-            'Gender เพศ': input.gender,
-            'หมายเลข ID': registrationNumber,
-            'Type ชนิด': input.type || 'Dog',
         };
 
-        // Optional fields
-        if (input.birthday) fields.Birthday = input.birthday;
-        if (input.weight) fields.Weight = input.weight;
-        if (input.contact) fields.contact = input.contact;
-        if (input.medicalHistory) fields['Medical History'] = input.medicalHistory;
-        if (input.forSale !== undefined) fields['For Sale?'] = input.forSale;
-        if (input.notes) fields.Note = input.notes;
+        // Try adding optional fields one by one (comment out if error)
+        // if (input.birthday) fields.Birthday = input.birthday;
+        // if (input.weight) fields.Weight = input.weight;
+        // if (input.gender) fields['Gender เพศ'] = input.gender;
 
-        // Linked records (parents and home)
-        if (input.motherId) fields['Mother แม่'] = [input.motherId];
-        if (input.fatherId) fields['Father พ่อ'] = [input.fatherId];
-        if (input.homeId) fields['บ้าน'] = [input.homeId];
+        console.log('Sending to Airtable:', JSON.stringify(fields, null, 2));
 
         // Create record in Airtable
         const newPet = await airtableClient.createPet(fields);
