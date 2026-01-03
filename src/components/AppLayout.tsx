@@ -230,9 +230,6 @@ const AppLayout: React.FC = () => {
           onQuickView={handleQuickView}
         />
 
-        {/* Features Section */}
-        <FeaturesSection />
-
         {/* Pedigree Section */}
         <PedigreeSection
           onRegisterClick={handleRegisterClick}
@@ -256,6 +253,9 @@ const AppLayout: React.FC = () => {
 
         {/* CTA Section */}
         <CTASection onGetStarted={handleRegisterClick} />
+
+        {/* Features Section (Why Choose Us) - Moved to bottom */}
+        <FeaturesSection />
 
         {/* Testimonials Section */}
         <TestimonialsSection />
