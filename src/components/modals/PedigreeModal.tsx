@@ -66,7 +66,9 @@ Generated on: ${new Date().toLocaleDateString()}
   };
 
   const handleShareProfile = async () => {
-    const profileUrl = window.location.href; // In a real app this might be a specific route
+    // Generate distinct URL with query param
+    const baseUrl = window.location.href.split('?')[0];
+    const profileUrl = `${baseUrl}?petId=${pet.id}`;
     const shareText = `Check out ${pet.name}'s pedigree - ${pet.breed} from ${pet.location}`;
 
     // Try native share API first (mobile)
@@ -189,10 +191,12 @@ Generated on: ${new Date().toLocaleDateString()}
           </div>
 
           {/* Pedigree Tree Component */}
-          <div className="bg-white rounded-3xl p-8 shadow-sm border border-primary/10 overflow-hidden mb-8">
-            <h3 className="text-xl font-bold text-foreground">Detailed Bloodline</h3>
-            <p className="text-sm text-foreground/60">Verified Ancestry & Genetic History</p>
-            <div className="mt-6">
+          <div className="bg-white rounded-3xl p-1 sm:p-4 shadow-sm border border-primary/10 overflow-hidden mb-8">
+            <div className="px-4 pt-4">
+              <h3 className="text-xl font-bold text-foreground">Detailed Bloodline</h3>
+              <p className="text-sm text-foreground/60">Verified Ancestry & Genetic History</p>
+            </div>
+            <div className="mt-4">
               <PedigreeTree
                 pet={pet}
                 allPets={pets}
@@ -202,7 +206,7 @@ Generated on: ${new Date().toLocaleDateString()}
                 }}
               />
             </div>
-            <div className="mt-8 flex justify-center gap-6 text-xs text-foreground/60">
+            <div className="mt-4 pb-4 flex justify-center gap-6 text-xs text-foreground/60">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500 shadow-sm" />
                 Verified Parent

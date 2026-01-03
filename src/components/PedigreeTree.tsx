@@ -331,12 +331,12 @@ const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, m
 
 
     return (
-        <div className="relative w-full h-full bg-gradient-to-br from-muted/20 to-background rounded-3xl overflow-hidden">
-            {/* Zoom Controls */}
-            <div className="absolute top-4 right-4 z-30 flex flex-col gap-2">
+        <div className="relative w-full h-[60vh] min-h-[500px] bg-gradient-to-br from-muted/5 to-background rounded-3xl overflow-hidden border border-t-0 border-x-0 border-b-2 border-primary/5">
+            {/* Zoom Controls - Transparent Glass */}
+            <div className="absolute top-4 right-4 z-30 flex flex-col gap-2 group/controls">
                 <button
                     onClick={zoomIn}
-                    className="p-3 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 border border-primary/20"
+                    className="p-3 bg-white/40 backdrop-blur-md rounded-xl shadow-sm border border-primary/10 opacity-60 hover:opacity-100 hover:bg-white hover:scale-105 hover:shadow-lg transition-all duration-300"
                     title="Zoom In"
                 >
                     <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -345,7 +345,7 @@ const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, m
                 </button>
                 <button
                     onClick={zoomOut}
-                    className="p-3 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 border border-primary/20"
+                    className="p-3 bg-white/40 backdrop-blur-md rounded-xl shadow-sm border border-primary/10 opacity-60 hover:opacity-100 hover:bg-white hover:scale-105 hover:shadow-lg transition-all duration-300"
                     title="Zoom Out"
                 >
                     <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -354,7 +354,7 @@ const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, m
                 </button>
                 <button
                     onClick={resetZoom}
-                    className="p-3 bg-white rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-105 border border-primary/20"
+                    className="p-3 bg-white/40 backdrop-blur-md rounded-xl shadow-sm border border-primary/10 opacity-60 hover:opacity-100 hover:bg-white hover:scale-105 hover:shadow-lg transition-all duration-300"
                     title="Reset View"
                 >
                     <svg className="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -363,15 +363,15 @@ const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, m
                 </button>
             </div>
 
-            {/* Scale Indicator */}
-            <div className="absolute top-4 left-4 z-30 px-4 py-2 bg-white rounded-xl shadow-lg border border-primary/20">
-                <span className="text-sm font-semibold text-primary">{Math.round(transformRef.current.scale * 100)}%</span>
+            {/* Scale Indicator - Transparent */}
+            <div className="absolute top-4 left-4 z-30 px-3 py-1.5 bg-white/40 backdrop-blur-md rounded-lg shadow-sm border border-primary/10 opacity-60 hover:opacity-100 transition-opacity">
+                <span className="text-xs font-bold text-primary">{Math.round(transformRef.current.scale * 100)}%</span>
             </div>
 
-            {/* Help Text */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 bg-white/90 backdrop-blur rounded-full shadow-lg border border-primary/20">
-                <p className="text-xs text-muted-foreground flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Help Text - Hidden on small screens or transparent */}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 bg-white/30 backdrop-blur-md rounded-full shadow-sm border border-primary/10 opacity-40 hover:opacity-100 transition-all pointer-events-none">
+                <p className="text-[10px] text-foreground/80 font-medium flex items-center gap-2 whitespace-nowrap">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Pinch to zoom • Drag to pan
@@ -382,7 +382,7 @@ const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, m
             <div
                 ref={containerRef}
                 className={cn(
-                    "w-full h-[600px] overflow-hidden touch-none select-none",
+                    "w-full h-full overflow-hidden touch-none select-none",
                     isInteracting ? "cursor-grabbing" : "cursor-grab"
                 )}
                 onMouseDown={handleMouseDown}
