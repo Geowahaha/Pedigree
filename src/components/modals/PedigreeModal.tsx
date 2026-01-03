@@ -37,7 +37,9 @@ const PedigreeModal: React.FC<PedigreeModalProps> = ({ isOpen, onClose, pet, onP
 
   if (!isOpen || !pet) return null;
 
-  const calculateAge = (birthDate: string) => {
+  const calculateAge = (birthDate?: string) => {
+    if (!birthDate) return 'Unknown';
+
     const birth = new Date(birthDate);
     const now = new Date();
     const years = now.getFullYear() - birth.getFullYear();
@@ -54,16 +56,16 @@ const PedigreeModal: React.FC<PedigreeModalProps> = ({ isOpen, onClose, pet, onP
 OFFICIAL PEDIGREE CERTIFICATE
 ════════════════════════════════
 
-Name: ${pet.name}
-Breed: ${pet.breed}
-Type: ${pet.type.toUpperCase()}
-Gender: ${pet.gender}
-Birth Date: ${pet.birthDate}
-Color: ${pet.color}
+Name: ${pet.name || 'N/A'}
+Breed: ${pet.breed || 'N/A'}
+Type: ${pet.type?.toUpperCase() || 'DOG'}
+Gender: ${pet.gender || 'N/A'}
+Birth Date: ${pet.birthDate || 'N/A'}
+Color: ${pet.color || 'N/A'}
 ${pet.registrationNumber ? `Registration: ${pet.registrationNumber}` : ''}
 Health Certified: ${pet.healthCertified ? 'YES ✓' : 'NO'}
-Location: ${pet.location}
-Owner: ${pet.owner}
+Location: ${pet.location || 'N/A'}
+Owner: ${pet.owner || 'N/A'}
 
 ════════════════════════════════
 Generated on: ${new Date().toLocaleDateString()}
@@ -170,10 +172,12 @@ Generated on: ${new Date().toLocaleDateString()}
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2 flex-wrap">
                   <h3 className="text-3xl font-extrabold text-foreground tracking-tight">{pet.name}</h3>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${pet.type === 'dog' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'
-                    }`}>
-                    {pet.type === 'dog' ? 'Dog' : 'Cat'}
-                  </span>
+                  {pet.type && (
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${pet.type === 'dog' ? 'bg-accent/10 text-accent' : 'bg-primary/10 text-primary'
+                      }`}>
+                      {pet.type === 'dog' ? 'Dog' : 'Cat'}
+                    </span>
+                  )}
                   {pet.healthCertified && (
                     <span className="px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 flex items-center gap-1 border border-green-200">
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
