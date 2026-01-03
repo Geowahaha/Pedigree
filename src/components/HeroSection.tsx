@@ -189,7 +189,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   };
 
   return (
-    <section id="home" className="relative min-h-screen flex flex-col items-center justify-center pt-20 pb-16 px-4">
+    <section id="home" className="relative min-h-[60vh] flex flex-col items-center justify-center pt-10 pb-8 px-4">
       {/* Background with subtle gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#F5F1E8] via-background to-[#E8F1E8] -z-10" />
 
@@ -198,17 +198,17 @@ const HeroSection: React.FC<HeroSectionProps> = ({
       <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-3xl animate-pulse delay-1000" />
 
       {/* Main Content */}
-      <div className="relative z-10 max-w-4xl w-full mx-auto text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="relative z-10 max-w-4xl w-full mx-auto text-center mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Main Headline - Adjusted for mobile visibility */}
-        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mb-4 mt-8 px-4">
+        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mb-2 mt-4 px-4">
           Your Pet's Legacy Starts Here
         </h2>
-        <p className="text-base sm:text-lg text-foreground/60 mb-12 max-w-2xl mx-auto px-4">
+        <p className="text-base sm:text-lg text-foreground/60 mb-6 max-w-2xl mx-auto px-4">
           Search pedigrees, register pets, explore products, and discover your perfect companion
         </p>
 
         {/* Search Bar - ChatGPT/Google Style */}
-        <div ref={searchRef} className="relative max-w-3xl mx-auto mb-8">
+        <div ref={searchRef} className="relative max-w-3xl mx-auto mb-4">
           <form onSubmit={handleSearchSubmit}>
             <div className="relative group">
               <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-accent/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
@@ -332,7 +332,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
       </div>
 
       {/* Suggestion Cards - Google Style */}
-      <div className={`relative z-10 max-w-7xl w-full mx-auto px-4 transition-all duration-500 ease-in-out ${showDropdown && searchResults.length > 0 ? 'mt-96' : 'mt-0'
+      <div className={`relative z-10 max-w-7xl w-full mx-auto px-4 transition-all duration-500 ease-in-out ${showDropdown && searchResults.length > 0 ? 'mt-48' : 'mt-0'
         }`}>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
           {suggestions.map((card, index) => (
