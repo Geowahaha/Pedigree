@@ -141,72 +141,140 @@ const TreeNode: React.FC<TreeNodeProps> = ({ petId, role, allPets, currentDepth,
 };
 
 const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, maxDepth = 3 }) => {
-    const [scale, setScale] = useState(1);
-    const [position, setPosition] = useState({ x: 0, y: 0 });
-    const [isPanning, setIsPanning] = useState(false);
-    const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+    // State references (mutable, doesn't trigger re-renders)
+    const transformRef = useRef({ scale: 1, x: 0, y: 0 });
+    const gestureRef = useRef({
+        startDistance: 0,
+        startScale: 1,
+        startMid: { x: 0, y: 0 },
+        startPos: { x: 0, y: 0 },
+        isZooming: false,
+        startX: 0,
+        startY: 0
+    });
+
+    // React State for rendering (only update when gesture ends or for UI controls)
+    const [renderTrigger, setRenderTrigger] = useState(0); // Force re-render just for UI updates
+    const [isInteracting, setIsInteracting] = useState(false);
+
     const containerRef = useRef<HTMLDivElement>(null);
     const contentRef = useRef<HTMLDivElement>(null);
 
-    // Pinch Zoom Handler with Center-Point Zooming
+    // Apply transform directly to DOM for smoothness
+    const updateTransform = () => {
+        if (contentRef.current) {
+            const { scale, x, y } = transformRef.current;
+            contentRef.current.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+            // Force re-render sparingly to update scale indicator UI
+            requestAnimationFrame(() => {
+                // Only update React state occasionally if needed, or don't at all during drag
+            });
+        }
+    };
+
+    // Initialize/Reset
+    useEffect(() => {
+        // Center initial view if needed
+        // For now, start at 0,0, scale 1
+    }, []);
+
+    // Gesture Handlers
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
 
-        let initialDistance = 0;
-        let initialScale = scale;
-        let initialPosition = { ...position };
-
         const handleTouchStart = (e: TouchEvent) => {
             if (e.touches.length === 2) {
+                // Two fingers = Zoom
                 e.preventDefault();
-                e.stopPropagation();
+                gestureRef.current.isZooming = true;
+                setIsInteracting(true);
 
-                const touch1 = e.touches[0];
-                const touch2 = e.touches[1];
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
 
-                // Calculate initial distance between fingers
-                initialDistance = Math.hypot(
-                    touch2.clientX - touch1.clientX,
-                    touch2.clientY - touch1.clientY
-                );
-                initialScale = scale;
-                initialPosition = { ...position };
+                // Calculate distance
+                const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                gestureRef.current.startDistance = dist;
+                gestureRef.current.startScale = transformRef.current.scale;
+
+                // Calculate midpoint relative to container
+                const rect = container.getBoundingClientRect();
+                const midX = (t1.clientX + t2.clientX) / 2 - rect.left;
+                const midY = (t1.clientY + t2.clientY) / 2 - rect.top;
+
+                gestureRef.current.startMid = { x: midX, y: midY };
+                gestureRef.current.startPos = { x: transformRef.current.x, y: transformRef.current.y };
+
+            } else if (e.touches.length === 1) {
+                // One finger = Pan
+                const t = e.touches[0];
+                gestureRef.current.isZooming = false;
+                setIsInteracting(true);
+                gestureRef.current.startX = t.clientX;
+                gestureRef.current.startY = t.clientY;
+                gestureRef.current.startPos = { x: transformRef.current.x, y: transformRef.current.y };
             }
         };
 
         const handleTouchMove = (e: TouchEvent) => {
-            if (e.touches.length === 2) {
-                e.preventDefault();
-                e.stopPropagation();
+            e.preventDefault();
+            e.stopPropagation();
 
-                const touch1 = e.touches[0];
-                const touch2 = e.touches[1];
+            if (e.touches.length === 2 && gestureRef.current.isZooming) {
+                // Handle Zoom
+                const t1 = e.touches[0];
+                const t2 = e.touches[1];
 
-                // Calculate current distance
-                const currentDistance = Math.hypot(
-                    touch2.clientX - touch1.clientX,
-                    touch2.clientY - touch1.clientY
-                );
+                const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                if (gestureRef.current.startDistance === 0) return; // Prevent division by zero
 
-                // Calculate new scale (constrained between 0.3 and 3)
-                const newScale = Math.max(0.3, Math.min(3, initialScale * (currentDistance / initialDistance)));
-                setScale(newScale);
+                const scaleFactor = currentDist / gestureRef.current.startDistance;
+                let newScale = gestureRef.current.startScale * scaleFactor;
 
-                // Keep content centered - reset position on zoom
-                // This ensures the tree stays centered at top of screen
-                setPosition({ x: 0, y: 0 });
+                // Constrain scale
+                newScale = Math.max(0.3, Math.min(3, newScale));
+
+                // "Zoom towards finger" math
+                // P' = C - (C - P) * (S' / S)
+                // C is startMid, P is startPos, S is startScale, S' is newScale
+                const mid = gestureRef.current.startMid;
+                const p = gestureRef.current.startPos;
+                const s = gestureRef.current.startScale;
+
+                const ratio = newScale / s;
+
+                const newX = mid.x - (mid.x - p.x) * ratio;
+                const newY = mid.y - (mid.y - p.y) * ratio;
+
+                transformRef.current = { scale: newScale, x: newX, y: newY };
+                updateTransform();
+
+            } else if (e.touches.length === 1 && !gestureRef.current.isZooming) {
+                // Handle Pan
+                const t = e.touches[0];
+                const dx = t.clientX - gestureRef.current.startX;
+                const dy = t.clientY - gestureRef.current.startY;
+
+                transformRef.current.x = gestureRef.current.startPos.x + dx;
+                transformRef.current.y = gestureRef.current.startPos.y + dy;
+                updateTransform();
             }
         };
 
         const handleTouchEnd = (e: TouchEvent) => {
+            if (e.touches.length === 0) {
+                setIsInteracting(false);
+                // Update state for UI to reflect final scale (e.g. 150%)
+                setRenderTrigger(prev => prev + 1);
+            }
             if (e.touches.length < 2) {
-                // Reset when fingers lifted
-                initialDistance = 0;
+                gestureRef.current.isZooming = false;
+                // If one finger remains, switch to pan? Complex logic, skipping for reliability first.
             }
         };
 
-        // Use { passive: false } to allow preventDefault()
+        // Add listeners
         container.addEventListener('touchstart', handleTouchStart, { passive: false });
         container.addEventListener('touchmove', handleTouchMove, { passive: false });
         container.addEventListener('touchend', handleTouchEnd, { passive: false });
@@ -216,41 +284,51 @@ const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, m
             container.removeEventListener('touchmove', handleTouchMove);
             container.removeEventListener('touchend', handleTouchEnd);
         };
-    }, [scale, position]);
+    }, []); // Empty dependency array = listeners never detached/reattached during interaction!
 
-    // Mouse Pan Handler
-    const handleMouseDown = (e: React.MouseEvent) => {
-        setIsPanning(true);
-        setStartPos({ x: e.clientX - position.x, y: e.clientY - position.y });
-    };
 
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!isPanning) return;
-        setPosition({
-            x: e.clientX - startPos.x,
-            y: e.clientY - startPos.y
-        });
-    };
-
-    const handleMouseUp = () => {
-        setIsPanning(false);
-    };
-
-    // Zoom Controls - Keep content centered
+    // UI Controls (Mouse/Buttons) interact with Refs too
     const zoomIn = () => {
-        setScale(prev => Math.min(prev + 0.2, 3));
-        setPosition({ x: 0, y: 0 }); // Reset to center
+        transformRef.current.scale = Math.min(transformRef.current.scale + 0.3, 3);
+        updateTransform();
+        setRenderTrigger(prev => prev + 1);
     };
 
     const zoomOut = () => {
-        setScale(prev => Math.max(prev - 0.2, 0.3));
-        setPosition({ x: 0, y: 0 }); // Reset to center
+        transformRef.current.scale = Math.max(transformRef.current.scale - 0.3, 0.3);
+        updateTransform();
+        setRenderTrigger(prev => prev + 1);
     };
 
     const resetZoom = () => {
-        setScale(1);
-        setPosition({ x: 0, y: 0 });
+        transformRef.current = { scale: 1, x: 0, y: 0 };
+        updateTransform();
+        setRenderTrigger(prev => prev + 1);
     };
+
+    // Mouse Panning (Desktop)
+    const handleMouseDown = (e: React.MouseEvent) => {
+        // e.preventDefault(); // Optional, but let's keep default for mouse interactions
+        gestureRef.current.isZooming = false;
+        gestureRef.current.startX = e.clientX;
+        gestureRef.current.startY = e.clientY;
+        gestureRef.current.startPos = { x: transformRef.current.x, y: transformRef.current.y };
+        setIsInteracting(true);
+    };
+
+    const handleMouseMove = (e: React.MouseEvent) => {
+        if (!isInteracting || gestureRef.current.isZooming) return;
+        const dx = e.clientX - gestureRef.current.startX;
+        const dy = e.clientY - gestureRef.current.startY;
+        transformRef.current.x = gestureRef.current.startPos.x + dx;
+        transformRef.current.y = gestureRef.current.startPos.y + dy;
+        updateTransform();
+    };
+
+    const handleMouseUp = () => {
+        setIsInteracting(false);
+    };
+
 
     return (
         <div className="relative w-full h-full bg-gradient-to-br from-muted/20 to-background rounded-3xl overflow-hidden">
@@ -287,7 +365,7 @@ const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, m
 
             {/* Scale Indicator */}
             <div className="absolute top-4 left-4 z-30 px-4 py-2 bg-white rounded-xl shadow-lg border border-primary/20">
-                <span className="text-sm font-semibold text-primary">{Math.round(scale * 100)}%</span>
+                <span className="text-sm font-semibold text-primary">{Math.round(transformRef.current.scale * 100)}%</span>
             </div>
 
             {/* Help Text */}
@@ -304,8 +382,8 @@ const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, m
             <div
                 ref={containerRef}
                 className={cn(
-                    "w-full h-[600px] overflow-hidden touch-none",
-                    isPanning ? "cursor-grabbing" : "cursor-grab"
+                    "w-full h-[600px] overflow-hidden touch-none select-none",
+                    isInteracting ? "cursor-grabbing" : "cursor-grab"
                 )}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
@@ -314,11 +392,11 @@ const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, m
             >
                 <div
                     ref={contentRef}
-                    className="w-full h-full flex items-start justify-center pt-12"
+                    className="w-full h-full flex items-start justify-center pt-12 origin-top-left"
                     style={{
-                        transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-                        transformOrigin: 'top center',
-                        transition: 'transform 0.1s ease-out',
+                        transform: `translate(0px, 0px) scale(1)`,
+                        // Initial style. Updates happen via direct DOM manipulation for performance (no react re-renders)
+                        transition: isInteracting ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
                     }}
                 >
                     <TreeNode
@@ -336,3 +414,4 @@ const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, m
 };
 
 export default PedigreeTree;
+
