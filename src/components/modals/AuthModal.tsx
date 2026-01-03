@@ -7,7 +7,7 @@ interface AuthModalProps {
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { signIn, signUp, signInWithGoogle, signInWithGitHub, signInWithOAuth } = useAuth();
+  const { signIn, signUp, signInWithGoogle, signInWithGitHub, signInWithOAuth, demoMode, toggleDemoMode } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [formData, setFormData] = useState({
     email: '',
@@ -327,31 +327,43 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer */}
-        {!success && (
-          <div className="px-6 pb-6 text-center text-sm text-[#2C2C2C]/50">
-            {mode === 'login' ? (
-              <p>
-                Don't have an account?{' '}
-                <button
-                  onClick={() => { setMode('signup'); setError(null); }}
-                  className="text-[#8B9D83] hover:text-[#6B7D63] font-medium"
-                >
-                  Sign up
-                </button>
-              </p>
-            ) : (
-              <p>
-                Already have an account?{' '}
-                <button
-                  onClick={() => { setMode('login'); setError(null); }}
-                  className="text-[#8B9D83] hover:text-[#6B7D63] font-medium"
-                >
-                  Sign in
-                </button>
-              </p>
-            )}
+        <div className="px-6 pb-6 pt-2 text-center text-sm text-[#2C2C2C]/50">
+          {mode === 'login' ? (
+            <p>
+              Don't have an account?{' '}
+              <button
+                onClick={() => { setMode('signup'); setError(null); }}
+                className="text-[#8B9D83] hover:text-[#6B7D63] font-medium"
+              >
+                Sign up
+              </button>
+            </p>
+          ) : (
+            <p>
+              Already have an account?{' '}
+              <button
+                onClick={() => { setMode('login'); setError(null); }}
+                className="text-[#8B9D83] hover:text-[#6B7D63] font-medium"
+              >
+                Sign in
+              </button>
+            </p>
+          )}
+
+          <div className="mt-6 pt-4 border-t border-[#8B9D83]/10 flex items-center justify-between">
+            <div className="text-left">
+              <p className="text-xs font-semibold text-[#2C2C2C]/70">Demo Mode (Simulation)</p>
+              <p className="text-[10px] text-[#2C2C2C]/40">Use if Supabase config is missing.</p>
+            </div>
+            <button
+              type="button"
+              onClick={toggleDemoMode}
+              className={`w-11 h-6 rounded-full transition-colors relative ${demoMode ? 'bg-[#8B9D83]' : 'bg-gray-200'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform shadow-sm ${demoMode ? 'left-6' : 'left-1'}`} />
+            </button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

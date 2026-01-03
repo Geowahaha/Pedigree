@@ -15,6 +15,8 @@ interface AuthContextType {
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   savedCart: CartItem[];
   syncCart: (items: CartItem[]) => Promise<void>;
+  demoMode: boolean;
+  toggleDemoMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,6 +25,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [savedCart, setSavedCart] = useState<CartItem[]>([]);
+
+  // Demo Mode State
+  const [demoMode, setDemoMode] = useState(false);
 
   useEffect(() => {
     // Get initial user
@@ -74,15 +79,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const handleSignInWithGoogle = async () => {
-    await signInWithOAuth('google');
+    await handleSignInWithOAuth('google');
   };
 
   const handleSignInWithGitHub = async () => {
-    await signInWithOAuth('github');
+    await handleSignInWithOAuth('github');
   };
 
   const handleSignInWithApple = async () => {
-    await signInWithOAuth('apple' as any);
+    await handleSignInWithOAuth('apple');
   };
 
   const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
@@ -101,11 +106,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const mockUser = (provider: string): AuthUser => ({
+    id: `mock-user-${provider}`,
+    email: `demo.${provider}@example.com`,
+    profile: {
+      id: `mock-user-${provider}`,
+      email: `demo.${provider}@example.com`,
+      full_name: `Demo User (${provider})`,
+      account_type: 'breeder',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      avatar_url: `https://ui-avatars.com/api/?name=Demo+${provider}&background=random`,
+      location: 'Demo City',
+      phone: '000-000-0000',
+      bio: 'This is a demo account for testing social login flow.',
+      verified_breeder: true
+    }
+  });
+
   const handleSignInWithOAuth = async (provider: 'google' | 'github' | 'line' | 'apple') => {
+    if (demoMode) {
+      // Simulate login delay
+      setLoading(true);
+      setTimeout(() => {
+        const user = mockUser(provider);
+        setUser(user);
+        setLoading(false);
+        // Persist mock session slightly just for this reload (in real app, session persists)
+        // alert(`[DEMO MODE] Successfully logged in via ${provider} simulation!`);
+      }, 800);
+      return;
+    }
+
     // Cast 'line' to specific provider type if needed by supabase type definition
     // Usually 'google' | 'github' | 'azure' | 'apple' etc. 
     // If 'line' is not in the type, we might need to cast to any or use correct string.
     await signInWithOAuth(provider as any);
+  };
+
+  const toggleDemoMode = () => {
+    setDemoMode(prev => !prev);
   };
 
   return (
@@ -122,7 +162,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithOAuth: handleSignInWithOAuth,
         updateProfile: handleUpdateProfile,
         savedCart,
-        syncCart
+        syncCart,
+        demoMode,
+        toggleDemoMode
       }}
     >
       {children}
