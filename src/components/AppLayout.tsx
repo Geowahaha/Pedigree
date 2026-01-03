@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Pet, Product, products } from '@/data/petData';
+import { Pet, Product, products, pets } from '@/data/petData';
 import { useAuth } from '@/contexts/AuthContext';
 import Header from './Header';
 import HeroSection from './HeroSection';
@@ -65,6 +65,23 @@ const AppLayout: React.FC = () => {
       setCart(loadedCart);
     }
   }, [user, savedCart]);
+
+  // Check for shared pet link on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const sharedPetId = params.get('petId');
+
+    if (sharedPetId) {
+      const foundPet = pets.find(p => p.id === sharedPetId);
+      if (foundPet) {
+        setSelectedPet(foundPet);
+        setPedigreeModalOpen(true);
+
+        // Clean up URL without refresh (optional, keeps URL clean)
+        // window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, []);
 
   // Track active section on scroll
   useEffect(() => {

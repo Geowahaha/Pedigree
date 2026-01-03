@@ -199,21 +199,11 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 
       {/* Main Content */}
       <div className="relative z-10 max-w-4xl w-full mx-auto text-center mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        {/* Logo/Brand */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="p-3 rounded-2xl bg-primary/10">
-            <svg className="w-10 h-10 text-primary" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z" />
-            </svg>
-          </div>
-          <h1 className="text-4xl font-bold text-foreground">Petdegree</h1>
-        </div>
-
-        {/* Main Headline */}
-        <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-foreground mb-4">
+        {/* Main Headline - Adjusted for mobile visibility */}
+        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mb-4 mt-8 px-4">
           Your Pet's Legacy Starts Here
         </h2>
-        <p className="text-lg sm:text-xl text-foreground/60 mb-12 max-w-2xl mx-auto">
+        <p className="text-base sm:text-lg text-foreground/60 mb-12 max-w-2xl mx-auto px-4">
           Search pedigrees, register pets, explore products, and discover your perfect companion
         </p>
 
