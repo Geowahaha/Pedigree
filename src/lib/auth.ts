@@ -145,7 +145,7 @@ export async function signInWithOAuth(provider: 'google' | 'github' | 'facebook'
   const { error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: window.location.origin
+      redirectTo: import.meta.env.PROD ? 'https://petdegree.vercel.app' : window.location.origin
     }
   });
   if (error) throw error;
