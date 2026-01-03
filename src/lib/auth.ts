@@ -78,7 +78,7 @@ export async function getSession() {
 // Get current user with profile
 export async function getCurrentUser(): Promise<AuthUser | null> {
   const { data: { user }, error } = await supabase.auth.getUser();
-  
+
   if (error || !user) return null;
 
   // Fetch profile
@@ -141,7 +141,7 @@ export async function resetPassword(email: string) {
 }
 
 // Sign in with OAuth (Google, GitHub)
-export async function signInWithOAuth(provider: 'google' | 'github') {
+export async function signInWithOAuth(provider: 'google' | 'github' | 'facebook' | 'apple') {
   const { error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
