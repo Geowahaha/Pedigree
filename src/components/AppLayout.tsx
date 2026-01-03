@@ -1,7 +1,7 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { Pet, Product, products, pets } from '@/data/petData';
+import { Pet, Product, products } from '@/data/petData';
 import { useAuth } from '@/contexts/AuthContext';
+import { getPetById } from '@/lib/petsService';
 import Header from './Header';
 import HeroSection from './HeroSection';
 import FeaturesSection from './FeaturesSection';
@@ -66,21 +66,28 @@ const AppLayout: React.FC = () => {
     }
   }, [user, savedCart]);
 
-  // Check for shared pet link on mount
+  // Check for shared pet link on mount - FETCH FROM SUPABASE
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const sharedPetId = params.get('petId');
+    async function handleSharedLink() {
+      const params = new URLSearchParams(window.location.search);
+      const sharedPetId = params.get('petId');
 
-    if (sharedPetId) {
-      const foundPet = pets.find(p => p.id === sharedPetId);
-      if (foundPet) {
-        setSelectedPet(foundPet);
-        setPedigreeModalOpen(true);
+      if (sharedPetId) {
+        try {
+          const foundPet = await getPetById(sharedPetId);
+          if (foundPet) {
+            setSelectedPet(foundPet);
+            setPedigreeModalOpen(true);
 
-        // Clean up URL without refresh (optional, keeps URL clean)
-        // window.history.replaceState({}, '', window.location.pathname);
+            // Clean up URL without refresh (keeps URL clean)
+            // window.history.replaceState({}, '', window.location.pathname);
+          }
+        } catch (error) {
+          console.error('Failed to load shared pet:', error);
+        }
       }
     }
+    handleSharedLink();
   }, []);
 
   // Track active section on scroll
