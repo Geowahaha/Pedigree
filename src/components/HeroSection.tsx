@@ -191,7 +191,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   };
 
   return (
-    <section id="home" className="relative min-h-[70vh] flex flex-col items-center justify-center pt-32 pb-12 px-4">
+    <section id="home" className="relative min-h-[70vh] flex flex-col items-center justify-center pt-16 pb-12 px-4">
       {/* Background with subtle gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#F5F1E8] via-background to-[#E8F1E8] -z-10" />
 
@@ -202,7 +202,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
       {/* Main Content */}
       <div className="relative z-10 max-w-4xl w-full mx-auto text-center mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Main Headline - Adjusted for mobile visibility */}
-        <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-foreground mb-4 mt-4 px-4 leading-tight">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-foreground mb-4 mt-4 px-4 leading-tight">
           {t('hero.headline')}
         </h2>
         <p className="text-lg sm:text-xl text-foreground/60 mb-8 max-w-2xl mx-auto px-4">
@@ -334,7 +334,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
       </div>
 
       {/* Suggestion Cards - Google Style */}
-      <div className={`relative z-10 max-w-7xl w-full mx-auto px-4 transition-all duration-500 ease-in-out ${showDropdown && searchResults.length > 0 ? 'mt-48' : 'mt-0'
+      <div className={`relative z-10 max-w-7xl w-full mx-auto px-4 transition-all duration-500 ease-in-out ${showDropdown && searchResults.length > 0 ? 'mt-80' : 'mt-0'
         }`}>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
           {suggestions.map((card, index) => (
