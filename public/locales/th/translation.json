@@ -1,0 +1,25 @@
+{
+    "nav": {
+        "home": "หน้าหลัก",
+        "marketplace": "ตลาดซื้อขาย",
+        "breeding": "การผสมพันธุ์",
+        "pedigree": "ใบเพ็ดดีกรี",
+        "breeder_dashboard": "แดชบอร์ดเพาะพันธุ์",
+        "messages": "ข้อความ",
+        "sign_in": "เข้าสู่ระบบ",
+        "sign_out": "ออกจากระบบ"
+    },
+    "dashboard": {
+        "title": "แดชบอร์ดเพาะพันธุ์",
+        "overview": "ภาพรวม",
+        "my_pets": "สัตว์เลี้ยงของฉัน",
+        "requests": "คำร้องขอตรวจสอบ",
+        "settings": "ตั้งค่า",
+        "smart_match": "จับคู่อัจฉริยะ",
+        "add_pet": "เพิ่มสัตว์เลี้ยงใหม่"
+    },
+    "pedigree": {
+        "legacy_offspring": "ทายาท & สายเลือด",
+        "pedigree_tree": "แผนผังเพ็ดดีกรี"
+    }
+}

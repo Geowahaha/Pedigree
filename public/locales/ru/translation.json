@@ -1,0 +1,25 @@
+{
+    "nav": {
+        "home": "Главная",
+        "marketplace": "Рынок",
+        "breeding": "Разведение",
+        "pedigree": "Родословная",
+        "breeder_dashboard": "Панель заводчика",
+        "messages": "Сообщения",
+        "sign_in": "Войти",
+        "sign_out": "Выйти"
+    },
+    "dashboard": {
+        "title": "Панель заводчика",
+        "overview": "Обзор",
+        "my_pets": "Мои питомцы",
+        "requests": "Запросы на проверку",
+        "settings": "Настройки",
+        "smart_match": "Умный подбор",
+        "add_pet": "Добавить питомца"
+    },
+    "pedigree": {
+        "legacy_offspring": "Наследие и потомство",
+        "pedigree_tree": "Древо родословной"
+    }
+}

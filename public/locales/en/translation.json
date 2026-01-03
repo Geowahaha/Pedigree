@@ -1,0 +1,25 @@
+{
+  "nav": {
+    "home": "Home",
+    "marketplace": "Marketplace",
+    "breeding": "Breeding",
+    "pedigree": "Pedigree",
+    "breeder_dashboard": "Breeder Dashboard",
+    "messages": "Messages",
+    "sign_in": "Sign In",
+    "sign_out": "Sign Out"
+  },
+  "dashboard": {
+    "title": "Breeder Dashboard",
+    "overview": "Overview",
+    "my_pets": "My Registered Pets",
+    "requests": "Verification Requests",
+    "settings": "Settings",
+    "smart_match": "Smart Match",
+    "add_pet": "Add New Pet"
+  },
+  "pedigree": {
+    "legacy_offspring": "Legacy & Offspring",
+    "pedigree_tree": "Pedigree Tree"
+  }
+}

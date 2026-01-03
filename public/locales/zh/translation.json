@@ -1,0 +1,25 @@
+{
+    "nav": {
+        "home": "首页",
+        "marketplace": "市场",
+        "breeding": "繁育",
+        "pedigree": "血统证书",
+        "breeder_dashboard": "繁育者仪表板",
+        "messages": "消息",
+        "sign_in": "登录",
+        "sign_out": "退出"
+    },
+    "dashboard": {
+        "title": "繁育者仪表板",
+        "overview": "概览",
+        "my_pets": "我的宠物",
+        "requests": "验证请求",
+        "settings": "设置",
+        "smart_match": "智能匹配",
+        "add_pet": "添加新宠物"
+    },
+    "pedigree": {
+        "legacy_offspring": "后代 & 传承",
+        "pedigree_tree": "血统树"
+    }
+}
