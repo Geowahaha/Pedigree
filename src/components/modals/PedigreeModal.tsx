@@ -91,9 +91,9 @@ Generated on: ${new Date().toLocaleDateString()}
   };
 
   const handleShareProfile = async () => {
-    // Generate distinct URL with query param
-    const baseUrl = window.location.href.split('?')[0];
-    const profileUrl = `${baseUrl}?petId=${pet.id}`;
+    // Generate fast-loading pedigree URL
+    const baseUrl = window.location.origin;
+    const profileUrl = `${baseUrl}/pedigree/${pet.id}`;
     const shareText = `Check out ${pet.name}'s pedigree - ${pet.breed} from ${pet.location}`;
 
     // Try native share API first (mobile)

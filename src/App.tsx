@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AirtableTest from "./pages/AirtableTest";
 import MigrationPage from "./pages/MigrationPage";
+import PedigreePage from "./pages/PedigreePage";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/test-airtable" element={<AirtableTest />} />
                 <Route path="/migrate" element={<MigrationPage />} />
+                <Route path="/pedigree/:petId" element={<PedigreePage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
