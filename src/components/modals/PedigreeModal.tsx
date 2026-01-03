@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
-import { Pet, pets } from '@/data/petData';
+import React, { useState, useEffect } from 'react';
+import { Pet } from '@/data/petData';
+import { getPedigreeTree } from '@/lib/petsService';
 import PedigreeTree from '../PedigreeTree';
 
 interface PedigreeModalProps {
@@ -13,6 +14,26 @@ interface PedigreeModalProps {
 const PedigreeModal: React.FC<PedigreeModalProps> = ({ isOpen, onClose, pet, onPetClick }) => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [pedigreeTree, setPedigreeTree] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch pedigree tree when pet changes
+  useEffect(() => {
+    async function fetchPedigree() {
+      if (pet?.id) {
+        setLoading(true);
+        try {
+          const tree = await getPedigreeTree(pet.id, 5);
+          setPedigreeTree(tree);
+        } catch (error) {
+          console.error('Failed to fetch pedigree:', error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }
+    fetchPedigree();
+  }, [pet?.id]);
 
   if (!isOpen || !pet) return null;
 
@@ -197,14 +218,22 @@ Generated on: ${new Date().toLocaleDateString()}
               <p className="text-sm text-foreground/60">Verified Ancestry & Genetic History</p>
             </div>
             <div className="mt-4">
-              <PedigreeTree
-                pet={pet}
-                allPets={pets}
-                onPetClick={(p) => {
-                  // Open clicked pet in tree
-                  if (onPetClick) onPetClick(p);
-                }}
-              />
+              {loading ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+                </div>
+              ) : pedigreeTree ? (
+                <PedigreeTree
+                  pet={pedigreeTree}
+                  onPetClick={(p) => {
+                    if (onPetClick) onPetClick(p);
+                  }}
+                />
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  No pedigree data available
+                </div>
+              )}
             </div>
             <div className="mt-4 pb-4 flex justify-center gap-6 text-xs text-foreground/60">
               <div className="flex items-center gap-2">
@@ -222,84 +251,7 @@ Generated on: ${new Date().toLocaleDateString()}
             </div>
           </div>
 
-          {/* Legacy & Offspring Section - Added for "Whole Family" View */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-6 px-4">
-              <div>
-                <h4 className="text-lg font-bold text-foreground flex items-center gap-2">
-                  Legacy & Offspring
-                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] uppercase font-extrabold tracking-wider">Expanded</span>
-                </h4>
-                <p className="text-sm text-muted-foreground">Direct descendents and future litters</p>
-              </div>
-            </div>
-
-            {/* Horizontal Scroll Container */}
-            <div className="flex gap-4 overflow-x-auto pb-6 px-4 snap-x">
-
-              {/* Card 1: Available Puppies (Priority) */}
-              {pets.filter(p => (p.parentIds?.sire === pet.id || p.parentIds?.dam === pet.id) && calculateAge(p.birthDate).includes('months')).map(puppy => (
-                <div key={puppy.id} className="min-w-[280px] snap-center bg-white rounded-2xl border border-primary/20 shadow-sm overflow-hidden group cursor-pointer hover:shadow-md transition-all">
-                  <div className="relative h-40 overflow-hidden">
-                    <img src={puppy.image} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={puppy.name} />
-                    <div className="absolute top-3 right-3 bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                      Available Now
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h5 className="font-bold text-foreground text-lg">{puppy.name}</h5>
-                        <p className="text-xs text-muted-foreground">{calculateAge(puppy.birthDate)} • {puppy.gender}</p>
-                      </div>
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-                      </div>
-                    </div>
-                    <div className="pt-3 border-t border-dashed border-primary/10 mt-2 flex items-center justify-between">
-                      <span className="text-xs font-medium text-primary bg-primary/5 px-2 py-1 rounded">Direct Offspring</span>
-                      {onPetClick && (
-                        <button onClick={() => onPetClick(puppy)} className="text-xs font-bold text-foreground hover:underline">View Profile</button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {/* Card 2: Upcoming Litter (Mock) */}
-              <div className="min-w-[280px] snap-center bg-gradient-to-br from-[#F5F1E8] to-white rounded-2xl border border-dashed border-primary/30 p-6 flex flex-col justify-between group hover:border-primary/60 transition-colors">
-                <div>
-                  <div className="flex items-center gap-2 mb-4 text-primary">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    <span className="text-xs font-bold uppercase tracking-wider">Coming Soon</span>
-                  </div>
-                  <h5 className="font-bold text-xl text-foreground mb-1">Spring 2026 Litter</h5>
-                  <p className="text-sm text-muted-foreground mb-4">Planned breeding with <span className="font-semibold text-primary">Ch. Royal Gold</span></p>
-                </div>
-                <button className="w-full py-2 rounded-xl bg-white border border-primary/20 text-xs font-bold text-primary hover:bg-primary hover:text-white transition-all shadow-sm">
-                  Join Waiting List
-                </button>
-              </div>
-
-              {/* Card 3: Past Offspring (Found in mock data) */}
-              {pets.filter(p => (p.parentIds?.sire === pet.id || p.parentIds?.dam === pet.id) && !calculateAge(p.birthDate).includes('months')).map(child => (
-                <div key={child.id} onClick={() => onPetClick && onPetClick(child)} className="min-w-[220px] snap-center bg-white rounded-2xl border border-gray-100 p-4 flex flex-col gap-3 cursor-pointer hover:border-primary/30 transition-all">
-                  <div className="flex items-center gap-3">
-                    <img src={child.image} className="w-12 h-12 rounded-full object-cover border border-gray-100" alt={child.name} />
-                    <div>
-                      <h6 className="font-bold text-sm text-foreground">{child.name}</h6>
-                      <p className="text-[10px] text-muted-foreground">Born {new Date(child.birthDate).getFullYear()}</p>
-                    </div>
-                  </div>
-                  <div className="mt-auto pt-2">
-                    <span className="block text-[10px] text-center w-full py-1.5 rounded-lg bg-gray-50 text-gray-500 font-medium group-hover:bg-primary/5 group-hover:text-primary transition-colors">
-                      View Pedigree
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Legacy & Offspring section removed - will be reimplemented with Supabase */}
         </div>
 
         {/* Footer - Sticky at Bottom */}

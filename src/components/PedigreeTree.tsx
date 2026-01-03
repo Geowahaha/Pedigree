@@ -3,31 +3,27 @@ import { Pet } from '@/data/petData';
 import { cn } from '@/lib/utils';
 
 interface PedigreeTreeProps {
-    pet: Pet;
-    allPets: Pet[];
-    onPetClick: (pet: Pet) => void;
+    pet: any; // Can be Pet or tree with mother/father
+    onPetClick?: (pet: Pet) => void;
     maxDepth?: number;
 }
 
 interface TreeNodeProps {
-    petId?: string;
+    pet?: any;
     role: 'sire' | 'dam' | 'self';
-    allPets: Pet[];
     currentDepth: number;
     maxDepth: number;
-    onPetClick: (pet: Pet) => void;
+    onPetClick?: (pet: Pet) => void;
     status?: 'pending' | 'verified' | 'rejected';
 }
 
-const TreeNode: React.FC<TreeNodeProps> = ({ petId, role, allPets, currentDepth, maxDepth, onPetClick, status }) => {
-    const pet = allPets.find(p => p.id === petId);
-
-    // Base case: Max depth reached
-    if (currentDepth > maxDepth) return null;
+const TreeNode: React.FC<TreeNodeProps> = ({ pet, role, currentDepth, maxDepth, onPetClick, status }) => {
+    // Base case: Max depth reached or no pet
+    if (currentDepth > maxDepth || !pet) return null;
 
     const hasParents = currentDepth < maxDepth;
-    const sireId = pet?.parentIds?.sire;
-    const damId = pet?.parentIds?.dam;
+    const mother = pet.mother;
+    const father = pet.father;
 
     return (
         <div className="flex flex-col items-center">
@@ -96,7 +92,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({ petId, role, allPets, currentDepth,
             </div>
 
             {/* Recursion for Parents - INVERTED: Parents are BELOW */}
-            {hasParents && (sireId || damId || currentDepth < maxDepth) && (
+            {hasParents && (mother || father) && (
                 <div className="flex flex-col items-center mt-4">
                     {/* Vertical Line from Child DOWN to Parents */}
                     <div className="w-1 h-12 bg-gradient-to-b from-primary/40 to-primary/20 rounded-full" />
@@ -108,29 +104,27 @@ const TreeNode: React.FC<TreeNodeProps> = ({ petId, role, allPets, currentDepth,
                         {/* Vertical connector from crossbar center to join the child line */}
                         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-4 bg-primary/30 rounded-full" />
 
-                        {/* Sire Branch (Left) */}
+                        {/* Sire/Father Branch (Left) */}
                         <div className="flex flex-col items-center">
                             <TreeNode
-                                petId={sireId}
+                                pet={father}
                                 role="sire"
-                                allPets={allPets}
                                 currentDepth={currentDepth + 1}
                                 maxDepth={maxDepth}
                                 onPetClick={onPetClick}
-                                status={pet?.parentIds?.sireStatus || 'verified'}
+                                status={'verified'}
                             />
                         </div>
 
-                        {/* Dam Branch (Right) */}
+                        {/* Dam/Mother Branch (Right) */}
                         <div className="flex flex-col items-center">
                             <TreeNode
-                                petId={damId}
+                                pet={mother}
                                 role="dam"
-                                allPets={allPets}
                                 currentDepth={currentDepth + 1}
                                 maxDepth={maxDepth}
                                 onPetClick={onPetClick}
-                                status={pet?.parentIds?.damStatus || 'verified'}
+                                status={'verified'}
                             />
                         </div>
                     </div>
@@ -140,7 +134,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({ petId, role, allPets, currentDepth,
     );
 };
 
-const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, maxDepth = 3 }) => {
+const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, onPetClick, maxDepth = 3 }) => {
     // State references (mutable, doesn't trigger re-renders)
     const transformRef = useRef({ scale: 1, x: 0, y: 0 });
     const gestureRef = useRef({
@@ -400,9 +394,8 @@ const PedigreeTree: React.FC<PedigreeTreeProps> = ({ pet, allPets, onPetClick, m
                     }}
                 >
                     <TreeNode
-                        petId={pet.id}
+                        pet={pet}
                         role="self"
-                        allPets={allPets}
                         currentDepth={0}
                         maxDepth={maxDepth}
                         onPetClick={onPetClick}
