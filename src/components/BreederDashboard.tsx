@@ -9,6 +9,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import PetDetailsModal from './modals/PetDetailsModal';
 
 interface BreederDashboardProps {
     onClose: () => void;
@@ -18,6 +19,9 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
     const { user } = useAuth();
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<'overview' | 'pets' | 'requests' | 'settings'>('overview');
+
+    // View Details State
+    const [viewPet, setViewPet] = useState<Pet | null>(null);
 
     // Smart Match State
     const [matchModalOpen, setMatchModalOpen] = useState(false);
@@ -50,15 +54,19 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
 
     const [myPets] = useState<Pet[]>(allPets.slice(0, 3)); // Mock: User owns first 3 pets
 
-    const handleVerify = (id: string) => {
-        // In a real app, this would call the backend to update verification status
+    const handleVerify = (id: string, requesterName: string) => {
+        const note = prompt(`Enter a note for ${requesterName} (optional):`, "Verified! Happy to be part of the lineage.");
+        // In a real app, this would call the backend to update verification status with the note
         setPendingRequests(prev => prev.filter(req => req.id !== id));
-        // Provide feedback (toast usually)
-        alert("Relationship Verified! The verified badge will now appear on the family tree.");
+        alert(`Relationship Verified! Note sent: "${note || 'No note'}"`);
     };
 
-    const handleReject = (id: string) => {
-        setPendingRequests(prev => prev.filter(req => req.id !== id));
+    const handleReject = (id: string, requesterName: string) => {
+        const note = prompt(`Enter reason for rejection to ${requesterName}:`, "Sorry, I don't recognize this breeding.");
+        if (note) {
+            setPendingRequests(prev => prev.filter(req => req.id !== id));
+            alert(`Request Rejected. Note sent.`);
+        }
     };
 
     const handleSmartMatch = (pet: Pet) => {
@@ -209,11 +217,34 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                                             <div key={req.id} className="bg-white p-6 rounded-2xl shadow-sm border border-primary/10 flex flex-col md:flex-row items-center justify-between gap-6 transition-all hover:scale-[1.01]">
                                                 <div className="flex items-center gap-6">
                                                     {/* Child Pet (Requester) */}
-                                                    <div className="flex flex-col items-center">
-                                                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center font-bold text-foreground/50 text-sm">
-                                                            {req.requesterPet[0]}
+                                                    <div className="flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity"
+                                                        onClick={() => {
+                                                            const pet = allPets.find(p => p.id === req.requesterPetId) || {
+                                                                id: req.requesterPetId,
+                                                                name: req.requesterPet,
+                                                                image: `https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=500&h=500&fit=crop`,
+                                                                breed: 'Unknown Breed',
+                                                                type: 'dog',
+                                                                gender: 'female',
+                                                                birthDate: '2024-01-01',
+                                                                price: 0,
+                                                                location: 'Unknown',
+                                                                description: 'Details not available in mock data.',
+                                                                owner: 'Unknown Breeder',
+                                                                healthCertified: false,
+                                                                vaccinated: false
+                                                            } as Pet;
+                                                            setViewPet(pet);
+                                                        }}
+                                                    >
+                                                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center font-bold text-foreground/50 text-sm overflow-hidden">
+                                                            {req.id === 'req-001' ? (
+                                                                <img src={allPets.find(p => p.id === 'pet-003')?.image} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                req.requesterPet[0]
+                                                            )}
                                                         </div>
-                                                        <span className="text-xs font-bold mt-1 text-center">{req.requesterPet}</span>
+                                                        <span className="text-xs font-bold mt-1 text-center decoration-primary/30 underline-offset-2 hover:underline">{req.requesterPet}</span>
                                                         <span className="text-[10px] text-foreground/40 text-center">Child</span>
                                                     </div>
 
@@ -226,11 +257,20 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                                                     </div>
 
                                                     {/* Parent Pet (Yours) */}
-                                                    <div className="flex flex-col items-center">
-                                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm">
-                                                            {req.claimedParent[0]}
+                                                    <div className="flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity"
+                                                        onClick={() => {
+                                                            const pet = allPets.find(p => p.id === req.claimedParentId);
+                                                            if (pet) setViewPet(pet);
+                                                        }}
+                                                    >
+                                                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm overflow-hidden">
+                                                            {allPets.find(p => p.id === req.claimedParentId)?.image ? (
+                                                                <img src={allPets.find(p => p.id === req.claimedParentId)?.image} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                req.claimedParent[0]
+                                                            )}
                                                         </div>
-                                                        <span className="text-xs font-bold mt-1 text-center">{req.claimedParent}</span>
+                                                        <span className="text-xs font-bold mt-1 text-center decoration-primary/30 underline-offset-2 hover:underline">{req.claimedParent}</span>
                                                         <span className="text-[10px] text-foreground/40 text-center">Your Pet</span>
                                                     </div>
                                                 </div>
@@ -241,14 +281,14 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                                                     </div>
                                                     <div className="flex gap-2">
                                                         <button
-                                                            onClick={() => handleVerify(req.id)}
+                                                            onClick={() => handleVerify(req.id, req.requesterName)}
                                                             className="flex-1 bg-primary text-white text-xs font-bold py-2.5 rounded-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
                                                         >
                                                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                                                             Verify
                                                         </button>
                                                         <button
-                                                            onClick={() => handleReject(req.id)}
+                                                            onClick={() => handleReject(req.id, req.requesterName)}
                                                             className="flex-1 bg-white border border-red-200 text-red-500 text-xs font-bold py-2.5 rounded-lg hover:bg-red-50 transition-colors"
                                                         >
                                                             Reject
@@ -337,6 +377,19 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* View Pet Details Modal */}
+            {viewPet && (
+                <PetDetailsModal
+                    isOpen={!!viewPet}
+                    onClose={() => setViewPet(null)}
+                    pet={viewPet}
+                    onViewPedigree={(p) => {
+                        console.log("View pedigree for", p.name);
+                        setViewPet(null);
+                    }}
+                />
+            )}
         </div>
     );
 };
