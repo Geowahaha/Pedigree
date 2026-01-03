@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useTranslation } from 'react-i18next';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface HeaderProps {
   cartCount: number;
@@ -15,7 +15,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, onNavigate, onAuthClick, onDashboardClick, onAdminClick }) => {
   const { user, signOut } = useAuth();
-  const { t, i18n } = useTranslation();
+  const { t, language, setLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -38,10 +38,6 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
   const handleSignOut = async () => {
     await signOut();
     setUserMenuOpen(false);
-  };
-
-  const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng);
   };
 
   return (
@@ -79,14 +75,12 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
           {/* Language Selector (Desktop) */}
           <div className="hidden md:flex items-center ml-2 mr-2">
             <select
-              value={i18n.language}
-              onChange={(e) => changeLanguage(e.target.value)}
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as any)}
               className="bg-transparent text-sm font-medium text-foreground/80 border-none focus:ring-0 cursor-pointer hover:text-primary transition-colors"
             >
               <option value="en">EN</option>
               <option value="th">TH</option>
-              <option value="zh">CN</option>
-              <option value="ru">RU</option>
             </select>
           </div>
 
@@ -163,7 +157,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                           </svg>
-                          {t('nav.breeder_dashboard')}
+                          {t('nav.breeding')} {/* Dashboard */}
                         </button>
                         <button className="w-full px-4 py-2 text-left text-sm text-[#2C2C2C]/70 hover:bg-[#F5F1E8] transition-colors flex items-center gap-3">
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,7 +186,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                           </svg>
-                          {t('nav.sign_out')}
+                          {t('nav.signOut')}
                         </button>
                       </div>
                     </div>
@@ -207,7 +201,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                {t('nav.sign_in')}
+                {t('nav.signIn')}
               </button>
             )}
 

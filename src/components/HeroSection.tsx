@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { pets, products, Pet, Product } from '@/data/petData';
 
 interface HeroSectionProps {
@@ -35,6 +36,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   onViewPetDetails,
   onQuickView
 }) => {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<SuggestionCard[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -189,7 +191,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   };
 
   return (
-    <section id="home" className="relative min-h-[60vh] flex flex-col items-center justify-center pt-10 pb-8 px-4">
+    <section id="home" className="relative min-h-[70vh] flex flex-col items-center justify-center pt-32 pb-12 px-4">
       {/* Background with subtle gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#F5F1E8] via-background to-[#E8F1E8] -z-10" />
 
@@ -200,11 +202,11 @@ const HeroSection: React.FC<HeroSectionProps> = ({
       {/* Main Content */}
       <div className="relative z-10 max-w-4xl w-full mx-auto text-center mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
         {/* Main Headline - Adjusted for mobile visibility */}
-        <h2 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mb-2 mt-4 px-4">
-          Your Pet's Legacy Starts Here
+        <h2 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-foreground mb-4 mt-4 px-4 leading-tight">
+          {t('hero.headline')}
         </h2>
-        <p className="text-base sm:text-lg text-foreground/60 mb-6 max-w-2xl mx-auto px-4">
-          Search pedigrees, register pets, explore products, and discover your perfect companion
+        <p className="text-lg sm:text-xl text-foreground/60 mb-8 max-w-2xl mx-auto px-4">
+          {t('hero.subtext')}
         </p>
 
         {/* Search Bar - ChatGPT/Google Style */}
@@ -226,7 +228,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
-                  placeholder="Search for pets, pedigrees, breeds, or products..."
+                  placeholder={t('hero.searchPlaceholder')}
                   className="flex-1 px-4 py-5 bg-transparent outline-none text-foreground placeholder:text-foreground/40 text-lg border-none focus:ring-0 focus:outline-none"
                   style={{ boxShadow: 'none' }}
                 />
@@ -262,7 +264,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
             <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl border border-foreground/10 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 z-50">
               <div className="p-2">
                 <p className="text-xs text-foreground/50 px-4 py-2 font-medium">
-                  {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+                  {searchResults.length} {t('hero.resultsFound')}
                 </p>
                 {searchResults.map((result) => (
                   <button
@@ -294,9 +296,9 @@ const HeroSection: React.FC<HeroSectionProps> = ({
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-semibold text-foreground truncate">{result.name}</h4>
                         <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium flex-shrink-0">
-                          {result.type === 'pet' && '🐾 Pet'}
-                          {result.type === 'product' && '🛍️ Product'}
-                          {result.type === 'pedigree' && '🌳 Pedigree'}
+                          {result.type === 'pet' && t('hero.badges.pet')}
+                          {result.type === 'product' && t('hero.badges.shop')}
+                          {result.type === 'pedigree' && t('hero.badges.tree')}
                         </span>
                       </div>
                       <p className="text-sm text-foreground/60 truncate">{result.subtitle}</p>
@@ -318,14 +320,14 @@ const HeroSection: React.FC<HeroSectionProps> = ({
               type="submit"
               className="px-6 py-2.5 rounded-full bg-foreground/5 hover:bg-foreground/10 text-foreground/70 font-medium transition-all hover:shadow-md"
             >
-              Search Pedigrees
+              {t('hero.searchBtn')}
             </button>
             <button
               type="button"
               onClick={onRegisterClick}
               className="px-6 py-2.5 rounded-full bg-accent hover:bg-accent/90 text-white font-medium transition-all hover:shadow-md"
             >
-              Register Pet
+              {t('hero.registerBtn')}
             </button>
           </div>
         </div>
@@ -360,10 +362,10 @@ const HeroSection: React.FC<HeroSectionProps> = ({
               {/* Card Badge */}
               <div className="absolute top-2 right-2">
                 <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm shadow-sm">
-                  {card.type === 'register' && '✨ Action'}
-                  {card.type === 'pet' && '🐾 Pet'}
-                  {card.type === 'product' && '🛍️ Shop'}
-                  {card.type === 'pedigree' && '🌳 Tree'}
+                  {card.type === 'register' && t('hero.badges.action')}
+                  {card.type === 'pet' && t('hero.badges.pet')}
+                  {card.type === 'product' && t('hero.badges.shop')}
+                  {card.type === 'pedigree' && t('hero.badges.tree')}
                 </span>
               </div>
 
@@ -374,7 +376,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({
                 </h3>
                 {card.subtitle && (
                   <p className="text-xs text-foreground/50 line-clamp-1">
-                    {card.subtitle}
+                    {/* Don't translate subtitle if it contains specific data */}
+                    {card.type === 'pedigree' ? t('common.viewPedigree') : card.subtitle}
                   </p>
                 )}
               </div>
@@ -390,14 +393,14 @@ const HeroSection: React.FC<HeroSectionProps> = ({
           <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          Suggestions refresh every 30 seconds
+          {t('hero.refreshHint')}
         </p>
       </div>
 
       {/* Scroll Indicator */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce">
         <div className="flex flex-col items-center gap-2 text-foreground/30">
-          <span className="text-[10px] font-bold uppercase tracking-wider">Explore More</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider">{t('hero.exploreMore')}</span>
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
           </svg>
