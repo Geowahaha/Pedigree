@@ -10,7 +10,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithGitHub: () => Promise<void>;
-  signInWithOAuth: (provider: 'google' | 'github' | 'line') => Promise<void>;
+  signInWithApple: () => Promise<void>;
+  signInWithOAuth: (provider: 'google' | 'github' | 'line' | 'apple') => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   savedCart: CartItem[];
   syncCart: (items: CartItem[]) => Promise<void>;
@@ -80,6 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await signInWithOAuth('github');
   };
 
+  const handleSignInWithApple = async () => {
+    await signInWithOAuth('apple' as any);
+  };
+
   const handleUpdateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) throw new Error('Not authenticated');
     const updated = await updateProfile(user.id, updates);
@@ -96,9 +101,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleSignInWithOAuth = async (provider: 'google' | 'github' | 'line') => {
+  const handleSignInWithOAuth = async (provider: 'google' | 'github' | 'line' | 'apple') => {
     // Cast 'line' to specific provider type if needed by supabase type definition
-    // Usually 'google' | 'github' | 'azure' | etc. 
+    // Usually 'google' | 'github' | 'azure' | 'apple' etc. 
     // If 'line' is not in the type, we might need to cast to any or use correct string.
     await signInWithOAuth(provider as any);
   };
@@ -113,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut: handleSignOut,
         signInWithGoogle: handleSignInWithGoogle,
         signInWithGitHub: handleSignInWithGitHub,
+        signInWithApple: handleSignInWithApple,
         signInWithOAuth: handleSignInWithOAuth,
         updateProfile: handleUpdateProfile,
         savedCart,

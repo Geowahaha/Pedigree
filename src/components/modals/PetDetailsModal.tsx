@@ -16,7 +16,7 @@ const PetDetailsModal: React.FC<PetDetailsModalProps> = ({ isOpen, onClose, pet,
     const now = new Date();
     const years = now.getFullYear() - birth.getFullYear();
     const months = now.getMonth() - birth.getMonth();
-    
+
     if (years === 0) return `${months} months`;
     if (years === 1 && months < 0) return `${12 + months} months`;
     return `${years} year${years > 1 ? 's' : ''} old`;
@@ -34,7 +34,7 @@ const PetDetailsModal: React.FC<PetDetailsModalProps> = ({ isOpen, onClose, pet,
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      
+
       {/* Modal */}
       <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
         {/* Hero Image */}
@@ -45,7 +45,7 @@ const PetDetailsModal: React.FC<PetDetailsModalProps> = ({ isOpen, onClose, pet,
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-          
+
           {/* Close Button */}
           <button
             onClick={onClose}
@@ -58,11 +58,10 @@ const PetDetailsModal: React.FC<PetDetailsModalProps> = ({ isOpen, onClose, pet,
 
           {/* Badges */}
           <div className="absolute top-4 left-4 flex gap-2">
-            <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-              pet.type === 'dog' 
-                ? 'bg-[#C97064] text-white' 
+            <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${pet.type === 'dog'
+                ? 'bg-[#C97064] text-white'
                 : 'bg-[#8B9D83] text-white'
-            }`}>
+              }`}>
               {pet.type === 'dog' ? 'Dog' : 'Cat'}
             </span>
             {pet.healthCertified && (
@@ -75,10 +74,26 @@ const PetDetailsModal: React.FC<PetDetailsModalProps> = ({ isOpen, onClose, pet,
             )}
           </div>
 
-          {/* Name Overlay */}
+          {/* Name Overlay & Main Actions */}
           <div className="absolute bottom-4 left-4 right-4">
             <h2 className="text-3xl font-bold text-white mb-1">{pet.name}</h2>
-            <p className="text-white/80">{pet.breed}</p>
+            <div className="flex items-center justify-between">
+              <p className="text-white/90 font-medium">{pet.breed}</p>
+
+              {/* Prominent Pedigree Button */}
+              <button
+                onClick={() => {
+                  onClose();
+                  onViewPedigree(pet);
+                }}
+                className="px-4 py-2 rounded-xl bg-white/20 backdrop-blur-md border border-white/30 text-white text-sm font-bold hover:bg-white/30 transition-all flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Family Tree
+              </button>
+            </div>
           </div>
         </div>
 
@@ -126,20 +141,13 @@ const PetDetailsModal: React.FC<PetDetailsModalProps> = ({ isOpen, onClose, pet,
             )}
             <div className="flex items-center justify-between py-3 border-b border-[#8B9D83]/10">
               <span className="text-[#2C2C2C]/60">Health Status</span>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                pet.healthCertified 
-                  ? 'bg-green-100 text-green-700' 
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${pet.healthCertified
+                  ? 'bg-green-100 text-green-700'
                   : 'bg-gray-100 text-gray-600'
-              }`}>
+                }`}>
                 {pet.healthCertified ? 'Certified' : 'Not Certified'}
               </span>
             </div>
-            {pet.parentIds && (pet.parentIds.sire || pet.parentIds.dam) && (
-              <div className="flex items-center justify-between py-3">
-                <span className="text-[#2C2C2C]/60">Pedigree</span>
-                <span className="text-[#8B9D83] font-medium">Available</span>
-              </div>
-            )}
           </div>
 
           {/* Contact Owner */}
@@ -161,21 +169,9 @@ const PetDetailsModal: React.FC<PetDetailsModalProps> = ({ isOpen, onClose, pet,
         <div className="flex items-center justify-between p-6 border-t border-[#8B9D83]/10 bg-[#F5F1E8]/50">
           <button
             onClick={onClose}
-            className="px-6 py-3 rounded-xl border border-[#8B9D83]/30 text-[#2C2C2C] font-medium hover:bg-white transition-colors"
+            className="w-full px-6 py-3 rounded-xl border border-[#8B9D83]/30 text-[#2C2C2C] font-medium hover:bg-white transition-colors"
           >
             Close
-          </button>
-          <button
-            onClick={() => {
-              onClose();
-              onViewPedigree(pet);
-            }}
-            className="px-6 py-3 rounded-xl bg-[#2C2C2C] text-white font-medium hover:bg-[#3C3C3C] transition-colors flex items-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            View Pedigree
           </button>
         </div>
       </div>
