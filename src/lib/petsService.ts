@@ -143,22 +143,28 @@ export async function getPedigreeTree(petId: string, maxDepth: number = 5): Prom
         if (depth > maxDepth || visited.has(id)) return null;
         visited.add(id);
 
+        // Query pets table directly to get mother_id and father_id
         const { data, error } = await supabase
-            .from('pets_with_parents')
+            .from('pets')
             .select('*')
             .eq('id', id)
             .single();
 
-        if (error || !data) return null;
+        if (error || !data) {
+            console.log(`Pet ${id} not found at depth ${depth}`);
+            return null;
+        }
 
         const tree: any = mapSupabasePetToPet(data);
 
         // Recursively fetch parents
         if (data.mother_id) {
+            console.log(`Fetching mother ${data.mother_id} for ${data.name}`);
             tree.mother = await fetchTree(data.mother_id, depth + 1);
         }
 
         if (data.father_id) {
+            console.log(`Fetching father ${data.father_id} for ${data.name}`);
             tree.father = await fetchTree(data.father_id, depth + 1);
         }
 
