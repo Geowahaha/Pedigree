@@ -11,7 +11,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signInWithGitHub: () => Promise<void>;
   signInWithApple: () => Promise<void>;
-  signInWithOAuth: (provider: 'google' | 'github' | 'line' | 'apple') => Promise<void>;
+  signInWithOAuth: (provider: 'google' | 'github' | 'facebook' | 'apple') => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   savedCart: CartItem[];
   syncCart: (items: CartItem[]) => Promise<void>;
@@ -124,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
-  const handleSignInWithOAuth = async (provider: 'google' | 'github' | 'line' | 'apple') => {
+  const handleSignInWithOAuth = async (provider: 'google' | 'github' | 'facebook' | 'apple') => {
     if (demoMode) {
       // Simulate login delay
       setLoading(true);
@@ -132,15 +132,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const user = mockUser(provider);
         setUser(user);
         setLoading(false);
-        // Persist mock session slightly just for this reload (in real app, session persists)
-        // alert(`[DEMO MODE] Successfully logged in via ${provider} simulation!`);
       }, 800);
       return;
     }
 
-    // Cast 'line' to specific provider type if needed by supabase type definition
-    // Usually 'google' | 'github' | 'azure' | 'apple' etc. 
-    // If 'line' is not in the type, we might need to cast to any or use correct string.
     await signInWithOAuth(provider as any);
   };
 

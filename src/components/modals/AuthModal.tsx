@@ -68,12 +68,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleOAuthSignIn = async (provider: 'google' | 'github' | 'line') => {
+  const handleOAuthSignIn = async (provider: 'google' | 'github' | 'facebook') => {
     try {
-      if (provider === 'line') {
-        // Note: Real LINE integration requires Supabase OIDC configuration or custom flow
-        // For now, we simulate calling the OAuth endpoint
-        await signInWithOAuth('line' as any);
+      if (provider === 'facebook') {
+        await signInWithOAuth('facebook' as any);
       } else if (provider === 'google') {
         await signInWithGoogle();
       } else {
@@ -313,13 +311,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleOAuthSignIn('line')}
-                  className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[#06C755]/30 hover:bg-[#06C755]/10 text-[#06C755] transition-colors bg-[#06C755]/5"
+                  onClick={() => handleOAuthSignIn('facebook')}
+                  className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[#1877F2]/30 hover:bg-[#1877F2]/10 text-[#1877F2] transition-colors bg-[#1877F2]/5"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.365 9.863c.349 0 .63.285.63.631 0 .345-.281.63-.63.63h-2.671v2.738c0 .345-.281.63-.63.63-.349 0-.63-.285-.63-.63V9.863h3.931zm-10.133.631c.349 0 .63.285.63.631v.322c0 .345-.281.63-.63.63s-.63-.285-.63-.63v-.322h-1.32v2.738c0 .345-.281.63-.63.63-.349 0-.63-.285-.63-.63V9.863h2.583c.348 0 .63.286.63.631zm-4.747.633c0-.345-.281-.63-.63-.63h-2.18c-.349 0-.63.285-.63.63v2.738c0 .345.281.63.63.63s.63-.285.63-.63v-1.261h1.55c.349 0 .63-.285.63-.63 0-.345-.281-.63-.63-.63h-1.55v-.217h1.55c.349 0 .63-.285.63-.63zm6.393 1.256c0 .345-.281.63-.63.63-.349 0-.63-.285-.63-.63v-1.63h-.01l-1.637 2.223c-.126.17-.323.275-.531.275h-.02c-.349-.022-.613-.323-.591-.672v-2.738c0-.345.281-.63.63-.63s.63.285.63.63v1.651l.011-.004 1.57-2.14c.125-.173.326-.279.538-.275h.02c.349.022.613.323.591.672v2.838zM12 0C5.373 0 0 4.974 0 11.11C0 16.63 4.908 21.24 11.238 22.067c.437.151.65-.187.65-.436 0-.276-.002-1.042-.008-1.996-2.582.561-3.128-1.247-3.128-1.247-.468-1.192-1.144-1.509-1.144-1.509-.844-.576.064-.564.064-.564.932.066 1.423.957 1.423.957.828 1.418 2.172 1.008 2.702.772.083-.6.324-1.009.59-1.241-2.062-.234-4.23-1.031-4.23-4.59 0-1.013.363-1.841.957-2.49-.096-.235-.415-1.179.091-2.457 0 0 .78-.249 2.553.952.741-.206 1.535-.309 2.327-.312.79.003 1.584.106 2.328.312 1.77-1.201 2.55-0.952 2.55-0.952.507 1.278.188 2.222.093 2.457.597.649.956 1.477.956 2.49 0 3.568-2.171 4.352-4.24 4.58.334.288.631.855.631 1.722 0 1.243-.012 2.245-.012 2.548 0 .252.213.592.656.434C19.094 21.235 24 16.626 24 11.11 24 4.974 18.627 0 12 0z" />
+                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.791-4.647 4.504-4.647 1.3 0 2.67.232 2.67.232v2.933h-1.504c-1.49 0-1.955.925-1.955 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                   </svg>
-                  LINE
+                  Facebook
                 </button>
               </div>
             </form>

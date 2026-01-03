@@ -62,29 +62,33 @@ This guide will walk you through setting up Google, GitHub, Apple, and LINE logi
 
 ---
 
-## 3. LINE Login Setup (Thailand Favorite)
-**Goal:** Get `Channel ID` and `Channel Secret`.
+## 3. Facebook Login Setup (Social Giant)
+**Goal:** Get `Client ID` (App ID) and `Client Secret` (App Secret).
 
-1. Go to **[LINE Developers Console](https://developers.line.biz/console/)**.
-2. Log in with your LINE account.
-3. Keep or Create a **Provider**.
-4. Click **Create a new Channel** > **LINE Login**.
-5. Fill in details (Name, Description, Icon, etc.).
-6. Under **Snippet**, select "Web app" for App Type.
-7. **Step 3.1: Config**
-   - Go to the **LINE Login** tab.
-   - **Callback URL:**
+1. Go to **[Meta for Developers](https://developers.facebook.com/)**.
+2. Log in and go to **My Apps**.
+3. Click **Create App**.
+   - Select **Authenticate and request data from users with Facebook Login**.
+   - Click **Next**.
+   - **Display Name:** Petdegree
+   - **App Contact Email:** Your email.
+   - Click **Create App**.
+4. **Step 3.1: Config**
+   - On the Dashboard, find **Facebook Login** product > Click **Set up**.
+   - Choose **Web**.
+   - **Site URL:** `https://petdegree.vercel.app` (Save).
+   - Go to **Facebook Login > Settings** (left menu).
+   - **Valid OAuth Redirect URIs:**
      - **PASTE YOUR SUPABASE CALLBACK URL HERE**.
-     - Note: LINE might require the URL to be `https` (localhost might tricky without tunneling, but works for Vercel).
-   - Enable **Web App**.
-8. **Step 3.2: Get Keys**
-   - Go to **Basic Settings** tab.
-   - Copy **Channel ID** (this is Client ID).
-   - Copy **Channel secret** (this is Client Secret).
-9. **Step 3.3: Supabase Setup**
-   - Supabase doesn't always have a default "LINE" UI in older projects.
-   - If "LINE" is in the provider list: Enable it and paste keys.
-   - If NOT: You might need to use **OpenID Connect (OIDC)** beta feature or a custom implementation. For now, check if LINE is listed. If not, use the **Demo Mode** for LINE until you upgrade Supabase to Pro or use a Custom Auth Proxy.
+     - Click **Save Changes**.
+5. **Step 3.2: Get Keys**
+   - Go to **Settings > Basic** (left menu).
+   - **App ID:** Copy this (This is your Client ID).
+   - **App Secret:** Show and Copy this (This is your Client Secret).
+6. **Step 3.3: Supabase Setup**
+   - Go to **Supabase > Auth > Providers > Facebook**.
+   - Paste Client ID and Client Secret.
+   - Enable and Save.
 
 ---
 
