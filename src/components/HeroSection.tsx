@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { pets, products, Pet, Product } from '@/data/petData';
+import { products, Pet, Product } from '@/data/petData';
+import { getRandomPets, searchPets } from '@/lib/petsService';
 
 interface HeroSectionProps {
   onRegisterClick: () => void;
@@ -41,7 +42,21 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   const [suggestions, setSuggestions] = useState<SuggestionCard[]>([]);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [supabasePets, setSupabasePets] = useState<Pet[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  // Fetch random pets from Supabase on mount
+  useEffect(() => {
+    async function fetchPets() {
+      try {
+        const randomPets = await getRandomPets(6);
+        setSupabasePets(randomPets);
+      } catch (error) {
+        console.error('Failed to fetch pets:', error);
+      }
+    }
+    fetchPets();
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -57,52 +72,53 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 
   // Live search - update results as user types
   useEffect(() => {
-    if (searchQuery.trim().length >= 2) {
-      const query = searchQuery.toLowerCase();
-      const results: SearchResult[] = [];
+    async function performSearch() {
+      if (searchQuery.trim().length >= 2) {
+        const query = searchQuery.toLowerCase();
+        const results: SearchResult[] = [];
 
-      // Search pets
-      pets.forEach(pet => {
-        if (
-          pet.name.toLowerCase().includes(query) ||
-          pet.breed.toLowerCase().includes(query) ||
-          pet.location.toLowerCase().includes(query) ||
-          pet.registrationNumber?.toLowerCase().includes(query)
-        ) {
-          results.push({
-            id: `pet-${pet.id}`,
-            type: pet.parentIds?.sire || pet.parentIds?.dam ? 'pedigree' : 'pet',
-            name: pet.name,
-            subtitle: `${pet.breed} • ${pet.location}`,
-            image: pet.image,
-            data: pet
+        try {
+          // Search pets from Supabase
+          const foundPets = await searchPets(query, 6);
+          foundPets.forEach(pet => {
+            results.push({
+              id: `pet-${pet.id}`,
+              type: pet.parentIds?.sire || pet.parentIds?.dam ? 'pedigree' : 'pet',
+              name: pet.name,
+              subtitle: `${pet.breed} • ${pet.location}`,
+              image: pet.image,
+              data: pet
+            });
           });
+        } catch (error) {
+          console.error('Search error:', error);
         }
-      });
 
-      // Search products
-      products.forEach(product => {
-        if (
-          product.name.toLowerCase().includes(query) ||
-          product.category.toLowerCase().includes(query)
-        ) {
-          results.push({
-            id: `product-${product.id}`,
-            type: 'product',
-            name: product.name,
-            subtitle: `฿${product.price.toFixed(2)} • ${product.category}`,
-            image: product.image,
-            data: product
-          });
-        }
-      });
+        // Search products
+        products.forEach(product => {
+          if (
+            product.name.toLowerCase().includes(query) ||
+            product.category.toLowerCase().includes(query)
+          ) {
+            results.push({
+              id: `product-${product.id}`,
+              type: 'product',
+              name: product.name,
+              subtitle: `฿${product.price.toFixed(2)} • ${product.category}`,
+              image: product.image,
+              data: product
+            });
+          }
+        });
 
-      setSearchResults(results.slice(0, 6)); // Limit to 6 results
-      setShowDropdown(true);
-    } else {
-      setSearchResults([]);
-      setShowDropdown(false);
+        setSearchResults(results.slice(0, 6)); // Limit to 6 results
+        setShowDropdown(true);
+      } else {
+        setSearchResults([]);
+        setShowDropdown(false);
+      }
     }
+    performSearch();
   }, [searchQuery]);
 
   // Generate random suggestions on mount and every 30 seconds
@@ -110,8 +126,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({
     const generateSuggestions = () => {
       const cards: SuggestionCard[] = [];
 
-      // Add 3 random pets (increased from 2)
-      const randomPets = [...pets].sort(() => 0.5 - Math.random()).slice(0, 3);
+      // Add 3 random pets from Supabase
+      const randomPets = [...supabasePets].sort(() => 0.5 - Math.random()).slice(0, 3);
       randomPets.forEach(pet => {
         cards.push({
           id: `pet-${pet.id}`,
@@ -137,7 +153,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
       });
 
       // Add 1 pedigree example (pet with parents)
-      const pedigreeExamples = pets.filter(p => p.parentIds?.sire || p.parentIds?.dam);
+      const pedigreeExamples = supabasePets.filter(p => p.parentIds?.sire || p.parentIds?.dam);
       if (pedigreeExamples.length > 0) {
         const randomPedigree = pedigreeExamples[Math.floor(Math.random() * pedigreeExamples.length)];
         cards.push({
@@ -150,15 +166,34 @@ const HeroSection: React.FC<HeroSectionProps> = ({
         });
       }
 
-      // Shuffle cards
-      setSuggestions(cards.sort(() => 0.5 - Math.random()));
+      // Add "Register" card at random position
+      const registerCard: SuggestionCard = {
+        id: 'register-card',
+        type: 'register',
+        title: t('hero.registerPet') || 'Register Your Pet',
+        subtitle: t('hero.registerSubtitle') || 'Start verified breeding journey',
+        icon: (
+          <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+        )
+      };
+
+      // Insert register card at random position
+      const insertIndex = Math.floor(Math.random() * (cards.length + 1));
+      cards.splice(insertIndex, 0, registerCard);
+
+      // Shuffle all cards
+      const shuffled = cards.sort(() => 0.5 - Math.random());
+      setSuggestions(shuffled.slice(0, 6)); // Show 6 cards
     };
 
-    generateSuggestions();
-    const interval = setInterval(generateSuggestions, 30000); // Refresh every 30 seconds (increased from 10)
-
-    return () => clearInterval(interval);
-  }, []);
+    if (supabasePets.length > 0) {
+      generateSuggestions();
+      const interval = setInterval(generateSuggestions, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [t, supabasePets]);
 
   const handleCardClick = (card: SuggestionCard) => {
     switch (card.type) {
