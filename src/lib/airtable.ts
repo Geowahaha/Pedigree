@@ -71,10 +71,15 @@ class AirtableClient {
      */
     async searchPets(query: string, maxRecords: number = 20): Promise<AirtablePet[]> {
         try {
-            const formula = `OR(
-        FIND(LOWER("${query}"), LOWER({Name})),
-        FIND(LOWER("${query}"), LOWER({Breed}))
-      )`;
+            // Handle empty query
+            if (!query || query.trim() === '') {
+                return this.getRandomPets(maxRecords);
+            }
+
+            // FIND returns position number (>0 if found, 0 if not found)
+            // OR() treats any number > 0 as TRUE
+            const escapedQuery = query.replace(/"/g, '\\"');
+            const formula = `OR(FIND(LOWER("${escapedQuery}"), LOWER({Name})), FIND(LOWER("${escapedQuery}"), LOWER({Breed})))`;
 
             const params = new URLSearchParams({
                 filterByFormula: formula,

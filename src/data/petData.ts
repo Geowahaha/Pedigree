@@ -5,14 +5,20 @@ export interface Pet {
   name: string;
   breed: string;
   type: 'dog' | 'cat' | 'horse';
-  birthDate: string;
+  birthDate?: string;
+  age?: number; // Added for Airtable
   gender: 'male' | 'female';
   image: string;
   color: string;
+  weight?: number; // Added for Airtable
   registrationNumber?: string;
-  healthCertified: boolean;
+  healthCertified?: boolean;
   location: string;
-  owner: string;
+  owner?: string;
+  available?: boolean; // Added for Airtable
+  price?: number; // Added for Airtable
+  description?: string; // Added for Airtable
+  verified?: boolean; // Added for Airtable
   parentIds?: {
     sire?: string;
     dam?: string;
@@ -20,6 +26,8 @@ export interface Pet {
     damStatus?: 'pending' | 'verified' | 'rejected';
   };
   isOwnerVerified?: boolean;
+  medicalHistory?: string; // Added for Airtable
+  airtableId?: string; // Added for Airtable sync
 }
 
 export interface Product {
