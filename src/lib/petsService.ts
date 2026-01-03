@@ -133,14 +133,10 @@ export async function deletePet(id: string): Promise<void> {
     if (error) throw new Error(`Failed to delete pet: ${error.message}`);
 }
 
-/**
- * Get complete pedigree tree (recursive)
- */
 export async function getPedigreeTree(petId: string, maxDepth: number = 5): Promise<any> {
     async function fetchTree(id: string, depth: number): Promise<any> {
         // Only depth limit - allow same pet in multiple branches
         if (depth > maxDepth) {
-            console.log(`⚠️ Max depth ${maxDepth} reached for ${id}`);
             return null;
         }
 
@@ -152,33 +148,24 @@ export async function getPedigreeTree(petId: string, maxDepth: number = 5): Prom
             .single();
 
         if (error || !data) {
-            console.log(`❌ Pet ${id} not found at depth ${depth}`);
             return null;
         }
-
-        console.log(`✅ Found pet: ${data.name} (depth ${depth}), mother: ${data.mother_id ? 'yes' : 'no'}, father: ${data.father_id ? 'yes' : 'no'}`);
 
         const tree: any = mapSupabasePetToPet(data);
 
         // Recursively fetch parents
         if (data.mother_id) {
-            console.log(`🔵 Fetching mother for ${data.name}`);
             tree.mother = await fetchTree(data.mother_id, depth + 1);
-            console.log(`🔵 Mother for ${data.name}:`, tree.mother ? tree.mother.name : 'null');
         }
 
         if (data.father_id) {
-            console.log(`🔴 Fetching father for ${data.name}`);
             tree.father = await fetchTree(data.father_id, depth + 1);
-            console.log(`🔴 Father for ${data.name}:`, tree.father ? tree.father.name : 'null');
         }
 
         return tree;
     }
 
-    const result = await fetchTree(petId, 0);
-    console.log('🌳 Complete pedigree tree:', result);
-    return result;
+    return await fetchTree(petId, 0);
 }
 
 /**

@@ -23,8 +23,8 @@ const PedigreeModal: React.FC<PedigreeModalProps> = ({ isOpen, onClose, pet, onP
       if (pet?.id) {
         setLoading(true);
         try {
-          // Use depth of 2 for faster loading (shows pet + parents + grandparents)
-          const tree = await getPedigreeTree(pet.id, 2);
+          // Depth 1 = instant loading (pet + parents only)
+          const tree = await getPedigreeTree(pet.id, 1);
           setPedigreeTree(tree);
         } catch (error) {
           console.error('Failed to fetch pedigree:', error);
