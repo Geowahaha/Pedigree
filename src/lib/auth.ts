@@ -5,6 +5,7 @@ export interface UserProfile {
   email: string;
   full_name: string | null;
   account_type: 'breeder' | 'buyer';
+  role: 'admin' | 'breeder' | 'buyer'; // Role-based access control
   avatar_url: string | null;
   location: string | null;
   phone: string | null;
