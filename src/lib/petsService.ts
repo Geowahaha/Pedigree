@@ -137,11 +137,12 @@ export async function deletePet(id: string): Promise<void> {
  * Get complete pedigree tree (recursive)
  */
 export async function getPedigreeTree(petId: string, maxDepth: number = 5): Promise<any> {
-    const visited = new Set<string>();
-
     async function fetchTree(id: string, depth: number): Promise<any> {
-        if (depth > maxDepth || visited.has(id)) return null;
-        visited.add(id);
+        // Only depth limit - allow same pet in multiple branches
+        if (depth > maxDepth) {
+            console.log(`⚠️ Max depth ${maxDepth} reached for ${id}`);
+            return null;
+        }
 
         // Query pets table directly to get mother_id and father_id
         const { data, error } = await supabase
@@ -151,27 +152,33 @@ export async function getPedigreeTree(petId: string, maxDepth: number = 5): Prom
             .single();
 
         if (error || !data) {
-            console.log(`Pet ${id} not found at depth ${depth}`);
+            console.log(`❌ Pet ${id} not found at depth ${depth}`);
             return null;
         }
+
+        console.log(`✅ Found pet: ${data.name} (depth ${depth}), mother: ${data.mother_id ? 'yes' : 'no'}, father: ${data.father_id ? 'yes' : 'no'}`);
 
         const tree: any = mapSupabasePetToPet(data);
 
         // Recursively fetch parents
         if (data.mother_id) {
-            console.log(`Fetching mother ${data.mother_id} for ${data.name}`);
+            console.log(`🔵 Fetching mother for ${data.name}`);
             tree.mother = await fetchTree(data.mother_id, depth + 1);
+            console.log(`🔵 Mother for ${data.name}:`, tree.mother ? tree.mother.name : 'null');
         }
 
         if (data.father_id) {
-            console.log(`Fetching father ${data.father_id} for ${data.name}`);
+            console.log(`🔴 Fetching father for ${data.name}`);
             tree.father = await fetchTree(data.father_id, depth + 1);
+            console.log(`🔴 Father for ${data.name}:`, tree.father ? tree.father.name : 'null');
         }
 
         return tree;
     }
 
-    return fetchTree(petId, 0);
+    const result = await fetchTree(petId, 0);
+    console.log('🌳 Complete pedigree tree:', result);
+    return result;
 }
 
 /**
