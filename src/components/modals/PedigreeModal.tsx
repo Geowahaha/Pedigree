@@ -227,6 +227,17 @@ Generated on: ${new Date().toLocaleDateString()}
                 <p className={`text-foreground/60 ${isFullScreen ? 'text-xs' : 'text-sm'}`}>Verified Ancestry & Genetic History</p>
               </div>
 
+              {/* Visual Cue for Normal Mode - Modern Animated Badge */}
+              {!isFullScreen && (
+                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-primary/5 text-primary/80 rounded-full text-xs font-medium animate-pulse border border-primary/10 select-none cursor-pointer hover:bg-primary/10 transition-colors"
+                  onClick={() => setIsFullScreen(true)}>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5-2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                  </svg>
+                  <span>Double-click to Expand</span>
+                </div>
+              )}
+
               {/* Toggle Button - Hidden in Header for Fullscreen to be positioned separately, or kept here if Normal */}
               {!isFullScreen && (
                 <button
