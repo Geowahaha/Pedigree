@@ -16,6 +16,7 @@ export interface Pet {
   location: string;
   owner?: string;
   available?: boolean; // Added for Airtable
+  for_sale?: boolean; // Added for Supabase
   price?: number; // Added for Airtable
   description?: string; // Added for Airtable
   verified?: boolean; // Added for Airtable
@@ -28,6 +29,7 @@ export interface Pet {
   isOwnerVerified?: boolean;
   medicalHistory?: string; // Added for Airtable
   airtableId?: string; // Added for Airtable sync
+  owner_id?: string; // Added for Supabase/Chat features
 }
 
 export interface Product {
@@ -60,6 +62,7 @@ export const pets: Pet[] = [
     healthCertified: true,
     location: 'San Francisco, CA',
     owner: 'Sarah Mitchell',
+    owner_id: '123e4567-e89b-12d3-a456-426614174000',
     parentIds: { sire: 'pet-011', dam: 'pet-004' } // Duke (male Golden) and Bella (female Golden)
   },
   {

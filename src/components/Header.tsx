@@ -1,7 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getUserNotifications, markUserNotifRead, UserNotification } from '@/lib/database';
+import { supabase } from '@/lib/supabase';
 
 interface HeaderProps {
   cartCount: number;
@@ -18,6 +20,46 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
   const { t, language, setLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Notification System
+  const [notifications, setNotifications] = useState<UserNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotif, setShowNotif] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      // Initial load
+      getUserNotifications(user.id).then(data => {
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.is_read).length);
+      });
+
+      // Subscribe to real-time updates
+      const channel = supabase
+        .channel('user-notifications')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_notifications',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            // Reload notifications when any change occurs
+            getUserNotifications(user.id).then(data => {
+              setNotifications(data);
+              setUnreadCount(data.filter(n => !n.is_read).length);
+            });
+          }
+        )
+        .subscribe();
+
+      return () => {
+        channel.unsubscribe();
+      };
+    }
+  }, [user]);
 
   const navItems = [
     { id: 'home', label: t('nav.home') },
@@ -86,6 +128,80 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
 
           {/* Right Actions */}
           <div className="flex items-center gap-3">
+            {/* Notification Bell (User) */}
+            {user && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowNotif(!showNotif)}
+                  className="p-2.5 rounded-full bg-white/50 hover:bg-white border border-primary/20 transition-all duration-300 relative hover:shadow-lg mr-2"
+                >
+                  <svg className="w-5 h-5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white animate-pulse shadow-sm" />
+                  )}
+                </button>
+
+                {showNotif && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowNotif(false)} />
+                    <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-white border border-[#8B9D83]/20 shadow-2xl z-20 overflow-hidden ring-1 ring-black/5">
+                      <div className="p-4 border-b border-[#8B9D83]/10 flex justify-between items-center bg-[#F5F1E8]">
+                        <h3 className="font-bold text-[#2C2C2C] text-sm">Notifications</h3>
+                        {unreadCount > 0 && <span className="px-2 py-0.5 bg-[#C97064] text-white text-[10px] uppercase font-bold tracking-wider rounded-full">{unreadCount} NEW</span>}
+                      </div>
+                      <div className="max-h-[60vh] overflow-y-auto">
+                        {notifications.length === 0 ? (
+                          <div className="p-8 text-center text-gray-400 text-sm flex flex-col items-center">
+                            <svg className="w-10 h-10 text-gray-200 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                            No new notifications
+                          </div>
+                        ) : (
+                          notifications.map(n => (
+                            <div key={n.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${!n.is_read ? 'bg-[#8B9D83]/5' : ''}`}
+                              onClick={() => {
+                                // Mark as read
+                                if (!n.is_read) {
+                                  markUserNotifRead(n.id);
+                                  setNotifications(prev => prev.map(p => p.id === n.id ? { ...p, is_read: true } : p));
+                                  setUnreadCount(prev => Math.max(0, prev - 1));
+                                }
+
+                                // Handle chat_message notifications - open chat window
+                                if (n.type === 'chat_message' && n.payload?.room_id) {
+                                  setShowNotif(false);
+                                  // Dispatch custom event to open chat
+                                  window.dispatchEvent(new CustomEvent('openChat', {
+                                    detail: { roomId: n.payload.room_id }
+                                  }));
+                                }
+                              }}
+                            >
+                              <div className="flex gap-3">
+                                <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${!n.is_read ? 'bg-[#C97064] ring-2 ring-[#C97064]/20' : 'bg-transparent'}`} />
+                                <div>
+                                  <p className={`text-sm text-[#2C2C2C] ${!n.is_read ? 'font-bold' : 'font-medium'}`}>{n.title}</p>
+                                  <p className="text-xs text-gray-500 mt-1 leading-relaxed line-clamp-2">{n.message}</p>
+                                  <p className="text-[10px] text-gray-400 mt-2 font-medium">{new Date(n.created_at).toLocaleDateString()}</p>
+                                  {n.type === 'chat_message' && (
+                                    <button className="mt-2 text-[10px] font-bold text-[#8B9D83] hover:text-[#6B7D63] flex items-center gap-1">
+                                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                                      Open Chat
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             {/* Cart Button */}
             <button
               onClick={onCartClick}
@@ -127,9 +243,14 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
                       <div className="px-4 py-3 border-b border-[#8B9D83]/10">
                         <p className="text-sm font-medium text-[#2C2C2C]">{user.profile?.full_name || 'User'}</p>
                         <p className="text-xs text-[#2C2C2C]/60 truncate">{user.email}</p>
-                        {user.profile?.account_type && (
-                          <span className="inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium bg-[#8B9D83]/10 text-[#6B7D63] capitalize">
-                            {user.profile.account_type}
+                        {user.profile && (
+                          <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium capitalize ${user.profile.role === 'admin'
+                            ? 'bg-purple-100 text-purple-700 ring-1 ring-purple-200'
+                            : user.profile.account_type === 'breeder'
+                              ? 'bg-[#8B9D83]/10 text-[#6B7D63]'
+                              : 'bg-blue-100 text-blue-700'
+                            }`}>
+                            {user.profile.role === 'admin' ? '👑 Admin' : user.profile.account_type}
                           </span>
                         )}
                       </div>

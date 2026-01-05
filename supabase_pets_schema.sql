@@ -15,6 +15,7 @@ CREATE TABLE pets (
   
   -- Basic Information
   name TEXT NOT NULL,
+  type TEXT CHECK (type IN ('dog', 'cat')),
   breed TEXT NOT NULL,
   gender TEXT CHECK (gender IN ('male', 'female', 'Male', 'Female')),
   birthday DATE,

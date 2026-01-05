@@ -10,6 +10,8 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import PetDetailsModal from './modals/PetDetailsModal';
+import PetRegistrationModal from './PetRegistrationModal';
+import { getUserPets } from '@/lib/database';
 
 interface BreederDashboardProps {
     onClose: () => void;
@@ -52,19 +54,60 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
         }
     ]);
 
-    const [myPets] = useState<Pet[]>(allPets.slice(0, 3)); // Mock: User owns first 3 pets
+    const [myPets, setMyPets] = useState<Pet[]>([]);
+    const [showRegistrationModal, setShowRegistrationModal] = useState(false);
 
-    const handleVerify = (id: string, requesterName: string) => {
+    useEffect(() => {
+        if (activeTab === 'pets') {
+            getUserPets().then(data => {
+                // Ensure type safety
+                setMyPets(data.map(p => ({ ...p, age: p.age || '1' })));
+            }).catch(console.error);
+        }
+    }, [activeTab]);
+
+    const refreshPets = () => {
+        getUserPets().then(data => {
+            setMyPets(data.map(p => ({ ...p, age: p.age || '1' })));
+        }).catch(console.error);
+    };
+
+    const handleVerify = async (id: string, requesterName: string) => {
         const note = prompt(`Enter a note for ${requesterName} (optional):`, "Verified! Happy to be part of the lineage.");
-        // In a real app, this would call the backend to update verification status with the note
         setPendingRequests(prev => prev.filter(req => req.id !== id));
+
+        try {
+            const { createUserNotification } = await import('@/lib/database');
+            if (user) {
+                await createUserNotification({
+                    user_id: user.id,
+                    type: 'system',
+                    title: 'Verification Approved ✅',
+                    message: `You successfully verified the lineage request from ${requesterName}.`,
+                    payload: { request_id: id }
+                });
+            }
+        } catch (e) { console.error(e) }
+
         alert(`Relationship Verified! Note sent: "${note || 'No note'}"`);
     };
 
-    const handleReject = (id: string, requesterName: string) => {
+    const handleReject = async (id: string, requesterName: string) => {
         const note = prompt(`Enter reason for rejection to ${requesterName}:`, "Sorry, I don't recognize this breeding.");
         if (note) {
             setPendingRequests(prev => prev.filter(req => req.id !== id));
+            try {
+                const { createUserNotification } = await import('@/lib/database');
+                if (user) {
+                    await createUserNotification({
+                        user_id: user.id,
+                        type: 'system',
+                        title: 'Request Rejected ❌',
+                        message: `You rejected the lineage request from ${requesterName}.`,
+                        payload: { request_id: id }
+                    });
+                }
+            } catch (e) { console.error(e) }
             alert(`Request Rejected. Note sent.`);
         }
     };
@@ -304,7 +347,16 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
 
                         {activeTab === 'pets' && (
                             <div className="space-y-6">
-                                <h2 className="text-xl font-bold text-foreground">{t('dashboard.my_pets')}</h2>
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold text-foreground">{t('dashboard.my_pets')}</h2>
+                                    <button
+                                        onClick={() => setShowRegistrationModal(true)}
+                                        className="bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow hover:shadow-lg transition-all flex items-center gap-2"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                        Register New Pet (OCR)
+                                    </button>
+                                </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {myPets.map(pet => (
                                         <div key={pet.id} className="group relative overflow-hidden rounded-2xl bg-white border border-primary/10 hover:shadow-lg transition-all p-4 flex gap-4">
@@ -365,7 +417,25 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                                     </div>
                                     <p className="text-xs text-foreground/60">{match.pet.breed} • {match.pet.age}</p>
                                 </div>
-                                <button className="text-xs bg-primary/10 text-primary hover:bg-primary hover:text-white px-3 py-2 rounded-lg font-bold transition-all">
+                                <button
+                                    className="text-xs bg-primary/10 text-primary hover:bg-primary hover:text-white px-3 py-2 rounded-lg font-bold transition-all"
+                                    onClick={async (e) => {
+                                        e.stopPropagation();
+                                        alert(`Proposal sent to ${match.pet.name}'s owner!`);
+                                        try {
+                                            const { createUserNotification } = await import('@/lib/database');
+                                            if (user) {
+                                                await createUserNotification({
+                                                    user_id: user.id,
+                                                    type: 'breeding',
+                                                    title: '💌 Match Proposal Sent',
+                                                    message: `You proposed a match between ${currentMatchPet?.name} and ${match.pet.name}. Fingers crossed!`,
+                                                    payload: { target_pet: match.pet.id }
+                                                });
+                                            }
+                                        } catch (err) { }
+                                    }}
+                                >
                                     Connect
                                 </button>
                             </div>
@@ -390,6 +460,17 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                     }}
                 />
             )}
+
+            <PetRegistrationModal
+                isOpen={showRegistrationModal}
+                onClose={() => setShowRegistrationModal(false)}
+                onSuccess={() => {
+                    refreshPets();
+                    setShowRegistrationModal(false);
+                    // Switch to pets tab to see new pet
+                    setActiveTab('pets');
+                }}
+            />
         </div>
     );
 };

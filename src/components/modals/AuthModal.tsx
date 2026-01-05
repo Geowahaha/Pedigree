@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { uploadUserAvatar } from '@/lib/storage';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -9,6 +13,8 @@ interface AuthModalProps {
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const { signIn, signUp, signInWithGoogle, signInWithGitHub, signInWithOAuth, demoMode, toggleDemoMode } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [step, setStep] = useState(1); // 1: Account, 2: Profile (Signup only)
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -16,6 +22,13 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     confirmPassword: '',
     accountType: 'breeder' as 'breeder' | 'buyer'
   });
+
+  // Innovative Profile Features
+  const [nickname, setNickname] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -30,6 +43,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     setError(null);
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -37,13 +58,48 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
     try {
       if (mode === 'signup') {
-        if (formData.password !== formData.confirmPassword) {
-          throw new Error('Passwords do not match');
+        if (step === 1) {
+          // Validations
+          if (formData.password !== formData.confirmPassword) throw new Error('Passwords do not match');
+          if (formData.password.length < 6) throw new Error('Password must be at least 6 characters');
+
+          // Proceed to Profile Step
+          setStep(2);
+          setLoading(false);
+          return;
         }
-        if (formData.password.length < 6) {
-          throw new Error('Password must be at least 6 characters');
+
+        // Finalize Signup
+        let avatarUrl = '';
+        if (avatarFile) {
+          try {
+            avatarUrl = await uploadUserAvatar(avatarFile);
+          } catch (uErr) {
+            console.error("Avatar upload failed, proceeding without it", uErr);
+          }
         }
-        await signUp(formData.email, formData.password, formData.name, formData.accountType);
+
+        const user = await signUp(
+          formData.email,
+          formData.password,
+          formData.name,
+          formData.accountType,
+          nickname,
+          avatarUrl
+        );
+
+        // Notify Admin of new user
+        if (user) {
+          try {
+            const { createNotification } = await import('@/lib/database');
+            await createNotification({
+              type: 'new_user',
+              title: 'New User Registration',
+              message: `${nickname || formData.name} joined the community!`,
+              reference_id: user.id
+            });
+          } catch (notifErr) { console.error(notifErr); }
+        }
       } else {
         await signIn(formData.email, formData.password);
       }
@@ -52,14 +108,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       setTimeout(() => {
         setSuccess(false);
         onClose();
-        // Reset form
-        setFormData({
-          email: '',
-          password: '',
-          name: '',
-          confirmPassword: '',
-          accountType: 'breeder'
-        });
+        // Reset everything
+        setFormData({ email: '', password: '', name: '', confirmPassword: '', accountType: 'breeder' });
+        setStep(1);
+        setNickname('');
+        setAvatarFile(null);
+        setAvatarPreview(null);
       }, 1500);
     } catch (err: any) {
       setError(err.message || 'An error occurred');
@@ -160,89 +214,124 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </div>
               )}
 
-              {mode === 'signup' && (
-                <>
+              {step === 2 ? (
+                <div className="space-y-6 pt-4 animate-in fade-in slide-in-from-right-4">
+                  <div className="flex flex-col items-center gap-4">
+                    <div
+                      className="w-28 h-28 rounded-full bg-gray-50 border-2 border-dashed border-[#8B9D83]/40 flex items-center justify-center overflow-hidden cursor-pointer hover:bg-[#8B9D83]/5 transition-colors relative group"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {avatarPreview ? (
+                        <img src={avatarPreview} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-center text-[#8B9D83] text-xs">
+                          <svg className="w-8 h-8 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                          Upload Photo
+                        </div>
+                      )}
+                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarChange} />
+                    </div>
+                    <p className="text-sm text-[#2C2C2C]/50">Show the community who you are!</p>
+                  </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Full Name</label>
+                    <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Nickname (Optional)</label>
                     <input
                       type="text"
-                      name="name"
-                      value={formData.name}
+                      value={nickname}
+                      onChange={(e) => setNickname(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all"
+                      placeholder="e.g. DogLover99"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {mode === 'signup' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Full Name</label>
+                        <input
+                          type="text"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
+                          required
+                          className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all"
+                          placeholder="Your name"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Account Type</label>
+                        <select
+                          name="accountType"
+                          value={formData.accountType}
+                          onChange={handleChange}
+                          className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all bg-white"
+                        >
+                          <option value="breeder">Breeder / Pet Owner</option>
+                          <option value="buyer">Buyer / Pet Lover</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Email Address</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
                       onChange={handleChange}
                       required
                       className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all"
-                      placeholder="Your name"
+                      placeholder="your@email.com"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Account Type</label>
-                    <select
-                      name="accountType"
-                      value={formData.accountType}
+                    <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Password</label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all bg-white"
-                    >
-                      <option value="breeder">Breeder / Pet Owner</option>
-                      <option value="buyer">Buyer / Pet Lover</option>
-                    </select>
+                      required
+                      minLength={6}
+                      className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all"
+                      placeholder="••••••••"
+                    />
                   </div>
+
+                  {mode === 'signup' && (
+                    <div>
+                      <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Confirm Password</label>
+                      <input
+                        type="password"
+                        name="confirmPassword"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        required
+                        minLength={6}
+                        className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all"
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  )}
+
+                  {mode === 'login' && (
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 text-sm text-[#2C2C2C]/70">
+                        <input type="checkbox" className="rounded border-[#8B9D83]/30 text-[#8B9D83] focus:ring-[#8B9D83]" />
+                        Remember me
+                      </label>
+                      <button type="button" className="text-sm text-[#8B9D83] hover:text-[#6B7D63] font-medium">
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
                 </>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Email Address</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all"
-                  placeholder="your@email.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  minLength={6}
-                  className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all"
-                  placeholder="••••••••"
-                />
-              </div>
-
-              {mode === 'signup' && (
-                <div>
-                  <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Confirm Password</label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    required
-                    minLength={6}
-                    className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all"
-                    placeholder="••••••••"
-                  />
-                </div>
-              )}
-
-              {mode === 'login' && (
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-2 text-sm text-[#2C2C2C]/70">
-                    <input type="checkbox" className="rounded border-[#8B9D83]/30 text-[#8B9D83] focus:ring-[#8B9D83]" />
-                    Remember me
-                  </label>
-                  <button type="button" className="text-sm text-[#8B9D83] hover:text-[#6B7D63] font-medium">
-                    Forgot password?
-                  </button>
-                </div>
               )}
 
               <button
@@ -257,8 +346,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   </svg>
                 ) : mode === 'login' ? (
                   'Sign In'
+                ) : step === 1 ? (
+                  'Continue'
                 ) : (
-                  'Create Account'
+                  'Complete Registration'
                 )}
               </button>
 

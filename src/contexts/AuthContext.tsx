@@ -6,7 +6,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string, accountType: 'breeder' | 'buyer') => Promise<void>;
+  signUp: (email: string, password: string, fullName: string, accountType: 'breeder' | 'buyer', nickname?: string, avatarUrl?: string) => Promise<AuthUser | null>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithGitHub: () => Promise<void>;
@@ -58,18 +58,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleSignIn = async (email: string, password: string) => {
     await signIn(email, password);
-    const user = await getCurrentUser();
-    setUser(user);
-    if (user) {
-      const cart = await loadCart();
-      setSavedCart(cart);
-    }
+    // onAuthStateChange will automatically update the user and cart
+    // No need to manually fetch here - this makes login faster!
   };
 
-  const handleSignUp = async (email: string, password: string, fullName: string, accountType: 'breeder' | 'buyer') => {
-    await signUp(email, password, fullName, accountType);
-    const user = await getCurrentUser();
-    setUser(user);
+  const handleSignUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    accountType: 'breeder' | 'buyer',
+    nickname?: string,
+    avatarUrl?: string
+  ) => {
+    const newUser = await signUp(email, password, fullName, accountType, nickname, avatarUrl);
+    // onAuthStateChange will automatically update the user
+    return newUser;
   };
 
   const handleSignOut = async () => {
@@ -114,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: `demo.${provider}@example.com`,
       full_name: `Demo User (${provider})`,
       account_type: 'breeder',
+      role: 'breeder',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       avatar_url: `https://ui-avatars.com/api/?name=Demo+${provider}&background=random`,
@@ -167,10 +171,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAuth() {
+// Export hook separately to maintain Fast Refresh compatibility
+export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};

@@ -14,6 +14,9 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
     name: '',
     type: 'dog' as 'dog' | 'cat',
@@ -29,6 +32,7 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
   });
   const [submitted, setSubmitted] = useState(false);
   const [registrationNumber, setRegistrationNumber] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
@@ -41,9 +45,26 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
     setError(null);
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user) {
       setError('Please sign in to register a pet');
       return;
@@ -53,6 +74,11 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
     setError(null);
 
     try {
+      let imageUrl = '';
+      if (imageFile) {
+        imageUrl = await convertToBase64(imageFile);
+      }
+
       const pet = await createPet({
         name: formData.name,
         type: formData.type,
@@ -65,11 +91,12 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
         description: formData.description || undefined,
         sire_registration: formData.sireRegistration || undefined,
         dam_registration: formData.damRegistration || undefined,
+        image_url: imageUrl,
       });
 
       setRegistrationNumber(pet.registration_number);
       setSubmitted(true);
-      
+
       if (onSuccess) {
         onSuccess();
       }
@@ -85,6 +112,8 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
     setStep(1);
     setError(null);
     setRegistrationNumber(null);
+    setImageFile(null);
+    setImagePreview(null);
     setFormData({
       name: '',
       type: 'dog',
@@ -133,7 +162,7 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
-      
+
       {/* Modal */}
       <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
         {/* Header */}
@@ -161,9 +190,8 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
               {[1, 2, 3].map((s) => (
                 <div
                   key={s}
-                  className={`flex-1 h-1.5 rounded-full transition-colors ${
-                    s <= step ? 'bg-[#8B9D83]' : 'bg-[#8B9D83]/20'
-                  }`}
+                  className={`flex-1 h-1.5 rounded-full transition-colors ${s <= step ? 'bg-[#8B9D83]' : 'bg-[#8B9D83]/20'
+                    }`}
                 />
               ))}
             </div>
@@ -206,6 +234,38 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
                 {/* Step 1: Basic Info */}
                 {step === 1 && (
                   <div className="space-y-5">
+                    {/* Add Photo Upload UI */}
+                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                      <div
+                        className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border-2 border-white shadow-sm"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {imagePreview ? (
+                          <img src={imagePreview} className="w-full h-full object-cover" />
+                        ) : (
+                          <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold text-[#2C2C2C]">Pet Photo / Pedigree</p>
+                        <p className="text-xs text-[#2C2C2C]/50 mb-2">Upload a photo of your pet or their pedigree document.</p>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="px-4 py-2 text-xs font-medium rounded-lg border border-gray-200 hover:bg-white transition-colors"
+                        >
+                          Choose File
+                        </button>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          className="hidden"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                        />
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Pet Name *</label>
@@ -414,7 +474,7 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
               ) : (
                 <div />
               )}
-              
+
               {step < 3 ? (
                 <button
                   type="button"

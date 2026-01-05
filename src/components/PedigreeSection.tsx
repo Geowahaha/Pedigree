@@ -15,7 +15,7 @@ const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onVi
   const [allPets, setAllPets] = useState<Pet[]>(staticPets);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [generationFilter, setGenerationFilter] = useState<'all' | 'complete' | 'partial' | 'none'>('all');
+
 
   // Load pets from database
   useEffect(() => {
@@ -25,26 +25,39 @@ const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onVi
         const dbPets = await getPublicPets();
 
         // Convert database pets to display format
-        const convertedPets: Pet[] = dbPets.map((dbPet: DbPet) => ({
-          id: dbPet.id,
-          name: dbPet.name,
-          breed: dbPet.breed,
-          type: dbPet.type,
-          birthDate: dbPet.birth_date,
-          gender: dbPet.gender,
-          image: dbPet.image_url || (dbPet.type === 'dog'
-            ? 'https://d64gsuwffb70l.cloudfront.net/69567cc3a990a2b608fe6790_1767275829522_4145f3ee.jpg'
-            : 'https://d64gsuwffb70l.cloudfront.net/69567cc3a990a2b608fe6790_1767275859561_c08c1e97.jpg'),
-          color: dbPet.color || '',
-          registrationNumber: dbPet.registration_number || undefined,
-          healthCertified: dbPet.health_certified,
-          location: dbPet.location || '',
-          owner: dbPet.owner?.full_name || 'Unknown',
-          parentIds: dbPet.pedigree ? {
-            sire: dbPet.pedigree.sire_id || undefined,
-            dam: dbPet.pedigree.dam_id || undefined
-          } : undefined
-        }));
+        const convertedPets: Pet[] = dbPets.map((dbPet: DbPet) => {
+          // Sanitize type based on breed if possible to prevent errors
+          const breedLower = (dbPet.breed || '').toLowerCase();
+          const typeLower = (dbPet.type || '').toLowerCase();
+
+          let finalType: 'dog' | 'cat' = dbPet.type;
+
+          if (breedLower.includes('dog') || breedLower.includes('hura') || breedLower.includes('หมา') || breedLower.includes('สุนัข') || breedLower.includes('retriever') || breedLower.includes('shepherd') || breedLower.includes('terrier')) {
+            finalType = 'dog';
+          } else if (breedLower.includes('cat') || breedLower.includes('แมว') || breedLower.includes('persian') || breedLower.includes('shorthair') || breedLower.includes('maine coon')) {
+            finalType = 'cat';
+          }
+
+          return {
+            id: dbPet.id,
+            name: dbPet.name,
+            breed: dbPet.breed,
+            type: finalType,
+            birthDate: dbPet.birth_date,
+            gender: dbPet.gender,
+            // No default/fake images - leave empty if missing
+            image: dbPet.image_url || '',
+            color: dbPet.color || '',
+            registrationNumber: dbPet.registration_number || undefined,
+            healthCertified: dbPet.health_certified,
+            location: dbPet.location || '',
+            owner: dbPet.owner?.full_name || dbPet.owner_name || 'Unknown',
+            parentIds: dbPet.pedigree ? {
+              sire: dbPet.pedigree.sire_id || undefined,
+              dam: dbPet.pedigree.dam_id || undefined
+            } : undefined
+          };
+        });
 
         // Combine static pets with database pets (database pets first)
         setAllPets([...convertedPets, ...staticPets]);
@@ -71,23 +84,12 @@ const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onVi
       (pet.location && pet.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (pet.registrationNumber && pet.registrationNumber.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    // Generation depth filter
-    let matchesGeneration = true;
-    if (generationFilter !== 'all') {
-      const hasSire = Boolean(pet.parentIds?.sire);
-      const hasDam = Boolean(pet.parentIds?.dam);
-      const hasParents = hasSire && hasDam;
 
-      if (generationFilter === 'complete') {
-        matchesGeneration = hasParents;
-      } else if (generationFilter === 'partial') {
-        matchesGeneration = (hasSire || hasDam) && !hasParents;
-      } else if (generationFilter === 'none') {
-        matchesGeneration = !hasSire && !hasDam;
-      }
-    }
 
-    return matchesType && matchesSearch && matchesGeneration;
+    // Check for valid image (strict rule: show ONLY pets with images)
+    const hasImage = pet.image && pet.image.trim() !== '';
+
+    return matchesType && matchesSearch && hasImage;
   });
 
   return (
@@ -95,33 +97,20 @@ const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onVi
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-bold mb-4 animate-in fade-in zoom-in duration-500">
-            Pedigree Registry
-          </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mb-4">
-            Registered Family Trees
-          </h2>
-          <p className="text-lg text-foreground/60 max-w-2xl mx-auto">
-            Explore our collection of registered pets with verified pedigrees. Each profile includes complete ancestry documentation.
-          </p>
-        </div>
-
-        {/* Generation Filter */}
-        <div className="flex justify-center mb-8">
-          <div className="inline-flex items-center gap-3 bg-white rounded-2xl p-2 shadow-sm border">
-            <span className="text-sm font-bold text-foreground/70 px-2">Filter by Pedigree:</span>
-            <select
-              value={generationFilter}
-              onChange={(e) => setGenerationFilter(e.target.value as typeof generationFilter)}
-              className="px-4 py-2 rounded-xl border-0 focus:ring-2 focus:ring-primary/20 outline-none text-sm font-medium bg-transparent text-foreground cursor-pointer"
-            >
-              <option value="all">All Generations</option>
-              <option value="complete">✓ Complete Pedigree</option>
-              <option value="partial">○ Partial Pedigree</option>
-              <option value="none">✕ No Pedigree</option>
-            </select>
+          <div className="cursor-pointer group" onClick={onRegisterClick}>
+            <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-bold mb-4 animate-in fade-in zoom-in duration-500">
+              Pedigree Registry
+            </span>
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-foreground mb-4 group-hover:text-primary transition-colors duration-300">
+              Register your pet now!
+            </h2>
+            <p className="text-lg text-foreground/60 max-w-2xl mx-auto group-hover:underline decoration-primary underline-offset-4">
+              Click here to verify pedigree and archive lineage
+            </p>
           </div>
         </div>
+
+
 
         {/* Filter Tabs */}
         <div className="flex items-center justify-center gap-2 mb-10">
@@ -165,17 +154,6 @@ const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onVi
 
 
         {/* CTA */}
-        <div className="text-center">
-          <button
-            onClick={onRegisterClick}
-            className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-accent text-white font-bold hover:bg-accent/90 transition-all duration-300 shadow-xl shadow-accent/25 hover:shadow-2xl hover:shadow-accent/30 hover:-translate-y-1"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-            </svg>
-            Register Your Pet
-          </button>
-        </div>
       </div>
     </section>
   );

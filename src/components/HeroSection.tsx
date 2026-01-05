@@ -13,7 +13,7 @@ interface HeroSectionProps {
 
 type SuggestionCard = {
   id: string;
-  type: 'register' | 'pet' | 'product' | 'pedigree';
+  type: 'register' | 'pet' | 'product' | 'pedigree' | 'puppy';
   title: string;
   subtitle?: string;
   image?: string;
@@ -126,47 +126,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
     const generateSuggestions = () => {
       const cards: SuggestionCard[] = [];
 
-      // Add 3 random pets from Supabase
-      const randomPets = [...supabasePets].sort(() => 0.5 - Math.random()).slice(0, 3);
-      randomPets.forEach(pet => {
-        cards.push({
-          id: `pet-${pet.id}`,
-          type: 'pet',
-          title: pet.name,
-          subtitle: `${pet.breed} • ${pet.location}`,
-          image: pet.image,
-          data: pet
-        });
-      });
-
-      // Add 2 random products
-      const randomProducts = [...products].sort(() => 0.5 - Math.random()).slice(0, 2);
-      randomProducts.forEach(product => {
-        cards.push({
-          id: `product-${product.id}`,
-          type: 'product',
-          title: product.name,
-          subtitle: `฿${product.price.toFixed(2)}`,
-          image: product.image,
-          data: product
-        });
-      });
-
-      // Add 1 pedigree example (pet with parents)
-      const pedigreeExamples = supabasePets.filter(p => p.parentIds?.sire || p.parentIds?.dam);
-      if (pedigreeExamples.length > 0) {
-        const randomPedigree = pedigreeExamples[Math.floor(Math.random() * pedigreeExamples.length)];
-        cards.push({
-          id: `pedigree-${randomPedigree.id}`,
-          type: 'pedigree',
-          title: `${randomPedigree.name}'s Family Tree`,
-          subtitle: 'View complete pedigree',
-          image: randomPedigree.image,
-          data: randomPedigree
-        });
-      }
-
-      // Add "Register" card at random position
+      // 1. PRIORITY #1: Register Card (Always FIRST)
       const registerCard: SuggestionCard = {
         id: 'register-card',
         type: 'register',
@@ -178,14 +138,60 @@ const HeroSection: React.FC<HeroSectionProps> = ({
           </svg>
         )
       };
+      cards.push(registerCard);
 
-      // Insert register card at random position
-      const insertIndex = Math.floor(Math.random() * (cards.length + 1));
-      cards.splice(insertIndex, 0, registerCard);
+      // 2. PRIORITY #2: Puppy Coming Soon (Ad / Promo)
+      const puppyCard: SuggestionCard = {
+        id: 'puppy-coming-soon',
+        type: 'puppy', // Custom type for puppy ad
+        title: 'Puppy Coming Soon',
+        subtitle: 'Reserve your queue now',
+        image: 'https://images.unsplash.com/photo-1591160690555-5debfba289f0?auto=format&fit=crop&q=80&w=400',
+        data: null as any // Placeholder
+      };
+      // Or we can add logic to fetch real breeding match later
+      cards.push(puppyCard);
 
-      // Shuffle all cards
-      const shuffled = cards.sort(() => 0.5 - Math.random());
-      setSuggestions(shuffled.slice(0, 6)); // Show 6 cards
+
+      // 3. MIXED CONTENT: Pets & Products
+      const mixedCards: SuggestionCard[] = [];
+
+      // Add Random Pets (Avoid Tree Cards separately)
+      // We take enough pets to fill the remaining slots
+      // STRICT FILTER: Only show pets with images
+      const validPets = supabasePets.filter(p => p.image && p.image.trim() !== '');
+      const availablePets = [...validPets].sort(() => 0.5 - Math.random()).slice(0, 3);
+      availablePets.forEach(pet => {
+        mixedCards.push({
+          id: `pet-${pet.id}`,
+          type: 'pet',
+          title: pet.name,
+          subtitle: `${pet.breed} • ${pet.location}`,
+          image: pet.image,
+          data: pet
+        });
+      });
+
+      // Add Random Products
+      const availableProducts = [...products].sort(() => 0.5 - Math.random()).slice(0, 1);
+      availableProducts.forEach(product => {
+        mixedCards.push({
+          id: `product-${product.id}`,
+          type: 'product',
+          title: product.name,
+          subtitle: `฿${product.price.toFixed(2)}`,
+          image: product.image,
+          data: product
+        });
+      });
+
+      // Shuffle ONLY the mixed content to randomize whether users see pets or products next
+      const shuffledMixed = mixedCards.sort(() => 0.5 - Math.random());
+
+      // Combine: [Register] -> [Puppy Promo] -> [Mixed Content...]
+      const finalCards = [...cards, ...shuffledMixed].slice(0, 6); // Cap at 6 total
+
+      setSuggestions(finalCards);
     };
 
     if (supabasePets.length > 0) {
@@ -307,10 +313,14 @@ const HeroSection: React.FC<HeroSectionProps> = ({
                     onClick={() => {
                       if (result.type === 'product') {
                         onQuickView?.(result.data as Product);
-                      } else if (result.type === 'pedigree') {
-                        onViewPedigree?.(result.data as Pet);
                       } else {
-                        onViewPetDetails?.(result.data as Pet);
+                        // Allow both pets and pedigree results to open details first
+                        // User can navigate to pedigree from details if needed
+                        if (onViewPetDetails) {
+                          onViewPetDetails(result.data as Pet);
+                        } else if (onViewPedigree) {
+                          onViewPedigree(result.data as Pet);
+                        }
                       }
                       setShowDropdown(false);
                       setSearchQuery('');
@@ -373,53 +383,13 @@ const HeroSection: React.FC<HeroSectionProps> = ({
         }`}>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
           {suggestions.map((card, index) => (
-            <button
+            <SuggestionCardItem
               key={card.id}
-              onClick={() => handleCardClick(card)}
-              className="group relative bg-white rounded-3xl p-4 hover:shadow-xl transition-all duration-300 border border-foreground/10 hover:border-primary/30 hover:-translate-y-2 overflow-hidden"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              {/* Card Image or Icon */}
-              {card.image ? (
-                <div className="aspect-square rounded-2xl overflow-hidden mb-3 bg-muted">
-                  <img
-                    src={card.image}
-                    alt={card.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                </div>
-              ) : (
-                <div className="aspect-square rounded-2xl flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10 mb-3 text-primary group-hover:scale-110 transition-transform duration-300">
-                  {card.icon}
-                </div>
-              )}
-
-              {/* Card Badge */}
-              <div className="absolute top-2 right-2">
-                <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm shadow-sm">
-                  {card.type === 'register' && t('hero.badges.action')}
-                  {card.type === 'pet' && t('hero.badges.pet')}
-                  {card.type === 'product' && t('hero.badges.shop')}
-                  {card.type === 'pedigree' && t('hero.badges.tree')}
-                </span>
-              </div>
-
-              {/* Card Content */}
-              <div className="text-left">
-                <h3 className="font-bold text-sm text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
-                  {card.title}
-                </h3>
-                {card.subtitle && (
-                  <p className="text-xs text-foreground/50 line-clamp-1">
-                    {/* Don't translate subtitle if it contains specific data */}
-                    {card.type === 'pedigree' ? t('common.viewPedigree') : card.subtitle}
-                  </p>
-                )}
-              </div>
-
-              {/* Hover overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl pointer-events-none" />
-            </button>
+              card={card}
+              index={index}
+              onClick={handleCardClick}
+              t={t}
+            />
           ))}
         </div>
 
@@ -442,6 +412,79 @@ const HeroSection: React.FC<HeroSectionProps> = ({
         </div>
       </div>
     </section>
+  );
+};
+
+
+interface SuggestionCardItemProps {
+  card: SuggestionCard;
+  index: number;
+  onClick: (card: SuggestionCard) => void;
+  t: (key: string) => string;
+}
+
+const SuggestionCardItem: React.FC<SuggestionCardItemProps> = ({ card, index, onClick, t }) => {
+  const [imageError, setImageError] = useState(false);
+
+  // Determine if we should show placeholder (no image OR error loading)
+  // But we must NOT show placeholder if it's an ICON card (register card)
+  const isImageCard = card.type !== 'register' && card.image;
+  const showPlaceholder = (isImageCard && imageError) || (card.type !== 'register' && !card.image);
+
+  return (
+    <button
+      onClick={() => onClick(card)}
+      className="group relative bg-white rounded-3xl p-4 hover:shadow-xl transition-all duration-300 border border-foreground/10 hover:border-primary/30 hover:-translate-y-2 overflow-hidden"
+      style={{ animationDelay: `${index * 100}ms` }}
+    >
+      {/* Card Image or Icon */}
+      {card.type === 'register' ? (
+        <div className="aspect-square rounded-2xl flex items-center justify-center bg-gradient-to-br from-primary/10 to-accent/10 mb-3 text-primary group-hover:scale-110 transition-transform duration-300">
+          {card.icon}
+        </div>
+      ) : showPlaceholder ? (
+        <div className="aspect-square rounded-2xl overflow-hidden mb-3 bg-[#F5F1E8] flex flex-col items-center justify-center p-2 text-center">
+          <span className="text-2xl mb-1 opacity-30">📷</span>
+          <span className="text-[10px] font-medium text-foreground/40 font-mono leading-tight">waiting owner update</span>
+        </div>
+      ) : (
+        <div className="aspect-square rounded-2xl overflow-hidden mb-3 bg-muted">
+          <img
+            src={card.image}
+            alt={card.title}
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            onError={() => setImageError(true)}
+          />
+        </div>
+      )}
+
+      {/* Card Badge */}
+      <div className="absolute top-2 right-2">
+        <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm shadow-sm">
+          {card.type === 'register' && t('hero.badges.action')}
+          {card.type === 'pet' && t('hero.badges.pet')}
+          {card.type === 'product' && t('hero.badges.shop')}
+          {card.type === 'pedigree' && t('hero.badges.tree')}
+          {card.type === 'puppy' && '🐶 Puppy'}
+        </span>
+      </div>
+
+      {/* Card Content */}
+      <div className="text-left">
+        <h3 className="font-bold text-sm text-foreground mb-1 line-clamp-2 group-hover:text-primary transition-colors">
+          {card.title}
+        </h3>
+        {card.subtitle && (
+          <p className="text-xs text-foreground/50 line-clamp-1">
+            {/* Don't translate subtitle if it contains specific data */}
+            {card.type === 'pedigree' ? t('common.viewPedigree') : card.subtitle}
+          </p>
+        )}
+      </div>
+
+      {/* Hover overlay */}
+      <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl pointer-events-none" />
+    </button>
   );
 };
 

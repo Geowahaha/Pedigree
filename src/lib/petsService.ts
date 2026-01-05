@@ -68,7 +68,7 @@ export async function searchPets(query: string, limit: number = 20): Promise<Pet
 
     const { data, error } = await supabase
         .from('pets')
-        .select('*')
+        .select('*, owner:profiles!owner_id(full_name, email, verified_breeder)')
         .or(`name.ilike.%${query}%,breed.ilike.%${query}%`)
         .limit(limit);
 
@@ -82,7 +82,7 @@ export async function searchPets(query: string, limit: number = 20): Promise<Pet
 export async function getRandomPets(limit: number = 6): Promise<Pet[]> {
     const { data, error } = await supabase
         .from('pets')
-        .select('*')
+        .select('*, owner:profiles!owner_id(full_name, email, verified_breeder)')
         .limit(limit)
         .order('created_at', { ascending: false });
 
@@ -96,7 +96,7 @@ export async function getRandomPets(limit: number = 6): Promise<Pet[]> {
 export async function getPetsForSale(limit: number = 20): Promise<Pet[]> {
     const { data, error } = await supabase
         .from('pets')
-        .select('*')
+        .select('*, owner:profiles!owner_id(full_name, email, verified_breeder)')
         .eq('for_sale', true)
         .eq('available', true)
         .limit(limit)
@@ -199,11 +199,21 @@ export async function generateRegistrationNumber(
  * Map Supabase pet to Pet interface
  */
 function mapSupabasePetToPet(data: any): Pet {
+    // Sanitize type based on breed
+    const breedLower = (data.breed || '').toLowerCase();
+    let finalType: 'dog' | 'cat' = data.type || 'dog';
+
+    if (breedLower.includes('dog') || breedLower.includes('hura') || breedLower.includes('หมา') || breedLower.includes('สุนัข') || breedLower.includes('retriever') || breedLower.includes('shepherd') || breedLower.includes('terrier')) {
+        finalType = 'dog';
+    } else if (breedLower.includes('cat') || breedLower.includes('แมว') || breedLower.includes('persian') || breedLower.includes('shorthair') || breedLower.includes('maine coon')) {
+        finalType = 'cat';
+    }
+
     return {
         id: data.id,
         name: data.name,
         breed: data.breed,
-        type: 'dog', // Default
+        type: finalType,
         gender: data.gender || 'male',
         birthDate: data.birthday,
         age: calculateAge(data.birthday),
@@ -211,8 +221,10 @@ function mapSupabasePetToPet(data: any): Pet {
         color: data.color || '',
         location: data.location || 'Thailand',
         registrationNumber: data.registration_number,
-        image: data.image_url || '/placeholder-pet.jpg',
-        owner: data.owner_id,
+        image: data.image_url || '', // Empty string if missing, let UI handle fallback
+        // Prioritize: 1. Profile Name (if joined) 2. Legacy Airtable Name 3. ID 4. Unknown
+        owner: data.owner?.full_name || data.owner_name || 'Unknown',
+        owner_id: data.owner_id, // Important for chat!
         price: data.price || 0,
         available: data.available ?? true,
         for_sale: data.for_sale ?? false,
@@ -237,4 +249,22 @@ function calculateAge(birthday?: string): number {
     const today = new Date();
     const age = today.getFullYear() - birthDate.getFullYear();
     return Math.max(0, age);
+}
+
+/**
+ * Get direct children (offspring) of a pet
+ */
+export async function getPetOffspring(petId: string): Promise<Pet[]> {
+    const { data, error } = await supabase
+        .from('pets')
+        .select('*')
+        .or(`father_id.eq.${petId},mother_id.eq.${petId}`)
+        .order('birthday', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching offspring:', error);
+        return [];
+    }
+
+    return (data || []).map(mapSupabasePetToPet);
 }

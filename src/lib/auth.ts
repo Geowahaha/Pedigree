@@ -22,14 +22,23 @@ export interface AuthUser {
 }
 
 // Sign up with email and password
-export async function signUp(email: string, password: string, fullName: string, accountType: 'breeder' | 'buyer' = 'breeder') {
+export async function signUp(
+  email: string,
+  password: string,
+  fullName: string,
+  accountType: 'breeder' | 'buyer' = 'breeder',
+  nickname: string = '',
+  avatarUrl: string = ''
+) {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
         full_name: fullName,
-        account_type: accountType
+        account_type: accountType,
+        nickname: nickname,
+        avatar_url: avatarUrl
       }
     }
   });
@@ -42,14 +51,30 @@ export async function signUp(email: string, password: string, fullName: string, 
       .from('profiles')
       .update({
         full_name: fullName,
-        account_type: accountType
+        account_type: accountType,
+        nickname: nickname,
+        avatar_url: avatarUrl
       })
       .eq('id', data.user.id);
 
     if (profileError) console.error('Profile update error:', profileError);
+
+    // Welcome Notification
+    try {
+      const { createUserNotification } = await import('@/lib/database');
+      await createUserNotification({
+        user_id: data.user.id,
+        type: 'system',
+        title: 'Welcome to Petdegree! 🐾',
+        message: `Hi ${nickname || fullName}! We're so happy you're here. Start exploring or register your first pet today.`,
+        payload: { action: 'welcome' }
+      });
+    } catch (e) {
+      console.error("Welcome notification failed", e);
+    }
   }
 
-  return data;
+  return data.user;
 }
 
 // Sign in with email and password
@@ -76,24 +101,36 @@ export async function getSession() {
   return session;
 }
 
-// Get current user with profile
+// Get current user with profile (OPTIMIZED)
 export async function getCurrentUser(): Promise<AuthUser | null> {
-  const { data: { user }, error } = await supabase.auth.getUser();
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
 
-  if (error || !user) return null;
+    if (error || !user) return null;
 
-  // Fetch profile
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+    // Fetch profile in parallel with a timeout to prevent hanging
+    const profilePromise = supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => data)
+      .catch(() => null); // Return null if profile doesn't exist
 
-  return {
-    id: user.id,
-    email: user.email || '',
-    profile: profile as UserProfile | null
-  };
+    const profile = await Promise.race([
+      profilePromise,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)) // 3s timeout
+    ]);
+
+    return {
+      id: user.id,
+      email: user.email || '',
+      profile: profile as UserProfile | null
+    };
+  } catch (error) {
+    console.error('Error getting current user:', error);
+    return null;
+  }
 }
 
 // Update user profile
@@ -112,21 +149,39 @@ export async function updateProfile(userId: string, updates: Partial<UserProfile
   return data;
 }
 
-// Listen to auth state changes
+// Listen to auth state changes (OPTIMIZED)
 export function onAuthStateChange(callback: (user: AuthUser | null) => void) {
   return supabase.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
+      try {
+        // Fetch profile with timeout
+        const profilePromise = supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single()
+          .then(({ data }) => data)
+          .catch(() => null);
 
-      callback({
-        id: session.user.id,
-        email: session.user.email || '',
-        profile: profile as UserProfile | null
-      });
+        const profile = await Promise.race([
+          profilePromise,
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)) // 2s timeout
+        ]);
+
+        callback({
+          id: session.user.id,
+          email: session.user.email || '',
+          profile: profile as UserProfile | null
+        });
+      } catch (error) {
+        console.error('Error in auth state change:', error);
+        // Still callback with user but no profile
+        callback({
+          id: session.user.id,
+          email: session.user.email || '',
+          profile: null
+        });
+      }
     } else {
       callback(null);
     }

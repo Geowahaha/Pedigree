@@ -10,6 +10,7 @@ import SearchSection from './SearchSection';
 import MarketplaceSection from './MarketplaceSection';
 import Footer from './Footer';
 import RegisterPetModal from './modals/RegisterPetModal';
+import PetRegistrationModal from './PetRegistrationModal'; // Using OCR version as primary
 import PedigreeModal from './modals/PedigreeModal';
 import CartModal from './modals/CartModal';
 import AuthModal from './modals/AuthModal';
@@ -20,6 +21,7 @@ import AdminPanel from './AdminPanel';
 import BackToTop from './BackToTop';
 import TestimonialsSection from './TestimonialsSection';
 import CTASection from './CTASection';
+import ChatManager from './ChatManager';
 
 interface CartItem {
   product: Product;
@@ -289,7 +291,7 @@ const AppLayout: React.FC = () => {
       <Footer />
 
       {/* Modals */}
-      <RegisterPetModal
+      <PetRegistrationModal
         isOpen={registerModalOpen}
         onClose={() => setRegisterModalOpen(false)}
         onSuccess={handlePetRegistered}
@@ -333,6 +335,9 @@ const AppLayout: React.FC = () => {
         isOpen={adminPanelOpen}
         onClose={() => setAdminPanelOpen(false)}
       />
+
+      {/* Chat Manager - Handles notification-triggered chats */}
+      <ChatManager />
 
       {/* Back to Top Button */}
       <BackToTop />

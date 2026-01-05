@@ -22,6 +22,11 @@ const PetCard: React.FC<PetCardProps> = ({ pet, onViewPedigree, onViewDetails })
     return `${years} year${years > 1 ? 's' : ''}`;
   };
 
+  const [imageError, setImageError] = React.useState(false);
+
+  // Check if we should show the placeholder (no image or error loading)
+  const showPlaceholder = !pet.image || imageError;
+
   return (
     <div className="group bg-white rounded-2xl overflow-hidden border border-[#8B9D83]/15 hover:border-[#8B9D83]/30 transition-all duration-300 hover:shadow-xl hover:shadow-[#8B9D83]/10 hover:-translate-y-1">
       {/* Image - Clickable to view details */}
@@ -38,21 +43,22 @@ const PetCard: React.FC<PetCardProps> = ({ pet, onViewPedigree, onViewDetails })
         }}
         aria-label={`View details for ${pet.name}`}
       >
-        <img
-          src={pet.image}
-          alt={pet.name}
-          loading="eager"
-          decoding="async"
-          fetchPriority="high"
-          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-          onError={(e) => {
-            // Fallback to default image if loading fails
-            const target = e.target as HTMLImageElement;
-            target.src = pet.type === 'dog'
-              ? 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=500&h=500&fit=crop'
-              : 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=500&h=500&fit=crop';
-          }}
-        />
+        {showPlaceholder ? (
+          <div className="w-full h-full bg-[#F5F1E8] flex flex-col items-center justify-center p-4 text-center">
+            <span className="text-4xl mb-2 opacity-30">📷</span>
+            <span className="text-sm font-medium text-foreground/40 font-mono">waiting owner update</span>
+          </div>
+        ) : (
+          <img
+            src={pet.image}
+            alt={pet.name}
+            loading="eager"
+            decoding="async"
+            fetchpriority="high"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+            onError={() => setImageError(true)}
+          />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
         {/* Click to view indicator */}
@@ -94,20 +100,20 @@ const PetCard: React.FC<PetCardProps> = ({ pet, onViewPedigree, onViewDetails })
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onViewPedigree(pet);
+              onViewDetails(pet);
             }}
             className="flex-1 py-2 px-3 rounded-lg bg-white/95 text-[#2C2C2C] text-xs font-medium hover:bg-white transition-colors shadow-md"
           >
-            View Pedigree
+            View Details
           </button>
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onViewDetails(pet);
+              onViewPedigree(pet);
             }}
             className="py-2 px-3 rounded-lg bg-[#2C2C2C]/90 text-white text-xs font-medium hover:bg-[#2C2C2C] transition-colors shadow-md"
           >
-            Details
+            Pedigree
           </button>
         </div>
       </div>

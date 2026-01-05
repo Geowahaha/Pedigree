@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pet, pets } from '@/data/petData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,6 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import PetRegistrationModal from './PetRegistrationModal';
+import { getPublicPets, createPet, updatePet, deletePet, getAdminNotifications, getUsers, deleteUser, markNotificationAsRead, AdminNotification, Pet as DbPet } from '@/lib/database';
+import { uploadPetImage } from '@/lib/storage';
+import { UserProfile } from '@/lib/auth';
 
 interface AdminPanelProps {
     isOpen: boolean;
@@ -19,11 +23,65 @@ interface AdminPanelProps {
 const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState<'pets' | 'verifications' | 'users'>('pets');
+    const [activeTab, setActiveTab] = useState<'pets' | 'verifications' | 'users' | 'notifications'>('pets');
     const [editingPet, setEditingPet] = useState<Pet | null>(null);
     const [isCreating, setIsCreating] = useState(false);
-    const [petList, setPetList] = useState<Pet[]>(pets);
+    const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+    const [petList, setPetList] = useState<Pet[]>([]);
+    const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+    const [userList, setUserList] = useState<UserProfile[]>([]);
     const [selectedPets, setSelectedPets] = useState<string[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // Initial Load
+    useEffect(() => {
+        if (isOpen) {
+            refreshData();
+        }
+    }, [isOpen]);
+
+    const refreshData = async () => {
+        setLoading(true);
+        try {
+            // Fetch Pets
+            const dbPets = await getPublicPets();
+            const convertedPets = dbPets.map(convertDbPet);
+            setPetList(convertedPets);
+
+            // Fetch Notifications
+            const notifs = await getAdminNotifications();
+            setNotifications(notifs);
+
+            // Fetch Users
+            const users = await getUsers();
+            setUserList(users);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const convertDbPet = (dbPet: DbPet): Pet => ({
+        id: dbPet.id,
+        name: dbPet.name,
+        breed: dbPet.breed,
+        type: (dbPet.type as 'dog' | 'cat') || 'dog',
+        birthDate: dbPet.birth_date,
+        gender: dbPet.gender || 'male',
+        image: dbPet.image_url || 'https://via.placeholder.com/150',
+        color: dbPet.color || '',
+        registrationNumber: dbPet.registration_number || '',
+        healthCertified: dbPet.health_certified,
+        location: dbPet.location || 'Bangkok',
+        owner: dbPet.owner_name || 'System',
+        parentIds: {
+            sire: dbPet.pedigree?.sire_id || '',
+            dam: dbPet.pedigree?.dam_id || '',
+            sireStatus: 'verified', // Mock for now till DB update
+            damStatus: 'verified'
+        }
+    });
 
     // Filter logic for Pets tab
     const filteredPets = petList.filter(pet =>
@@ -53,23 +111,73 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         parentIds: { sire: '', dam: '', sireStatus: 'verified', damStatus: 'verified' }
     };
 
-    const handleSavePet = (pet: Pet) => {
-        if (isCreating) {
-            const newPet = { ...pet, id: `pet-${Date.now()}` };
-            setPetList([newPet, ...petList]);
-            alert(`Created new pet: ${newPet.name}`);
-        } else {
-            const updatedList = petList.map(p => p.id === pet.id ? pet : p);
-            setPetList(updatedList);
-            alert(`Updated pet: ${pet.name}`);
+    const handleSavePet = async (pet: Pet) => {
+        try {
+            // Mapping UI 'owner' state (which is now ID or 'Admin') to owner_id
+            const ownerId = pet.owner && pet.owner !== 'Admin' ? pet.owner : undefined;
+
+            // Handle "unknown" parents as null
+            const motherId = pet.parentIds?.dam && pet.parentIds.dam !== 'unknown' ? pet.parentIds.dam : undefined;
+            const fatherId = pet.parentIds?.sire && pet.parentIds.sire !== 'unknown' ? pet.parentIds.sire : undefined;
+
+            if (isCreating) {
+                await createPet({
+                    name: pet.name,
+                    breed: pet.breed,
+                    type: pet.type as 'dog' | 'cat',
+                    gender: pet.gender,
+                    birth_date: pet.birthDate || new Date().toISOString(),
+                    image_url: pet.image,
+                    color: pet.color,
+                    health_certified: pet.healthCertified,
+                    location: pet.location,
+                    registration_number: pet.registrationNumber,
+                    mother_id: motherId,
+                    father_id: fatherId,
+                    owner_id: ownerId
+                });
+                alert(`Created new pet: ${pet.name}`);
+            } else {
+                await updatePet(pet.id, {
+                    name: pet.name,
+                    breed: pet.breed,
+                    type: pet.type as 'dog' | 'cat',
+                    gender: pet.gender,
+                    birth_date: pet.birthDate,
+                    image_url: pet.image,
+                    color: pet.color,
+                    registration_number: pet.registrationNumber,
+                    health_certified: pet.healthCertified,
+                    location: pet.location,
+                    mother_id: motherId,
+                    father_id: fatherId,
+                    ...(ownerId ? { owner_id: ownerId } : {})
+                });
+                alert(`Updated pet: ${pet.name}`);
+            }
+            refreshData();
+            setEditingPet(null);
+            setIsCreating(false);
+        } catch (error: any) {
+            console.error("Save failed:", error);
+            alert(`Failed to save: ${error?.message || "Unknown error"}`);
         }
-        setEditingPet(null);
-        setIsCreating(false);
     };
 
-    const handleDeletePet = (id: string) => {
+    const handleDeletePet = async (id: string) => {
         if (confirm("Are you sure you want to delete this pet? This action cannot be undone.")) {
-            setPetList(petList.filter(p => p.id !== id));
+            try {
+                // Check if it's a real DB pet (UUID) or static mock
+                if (id.includes('-')) {
+                    // Likely UUID or our temp ID. Try DB delete.
+                    await deletePet(id);
+                }
+                // Also update local list
+                setPetList(prev => prev.filter(p => p.id !== id));
+            } catch (err) {
+                // Fallback for static pets
+                setPetList(prev => prev.filter(p => p.id !== id));
+            }
         }
     };
 
@@ -162,9 +270,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                         </div>
                         System Administration
                     </DialogTitle>
-                    <Button variant="ghost" size="icon" onClick={onClose}>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </Button>
+                    {/* Close button removed as per user request to rely on default Dialog close or reduce clutter */}
                 </div>
 
                 <div className="flex-1 overflow-hidden flex">
@@ -200,6 +306,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                                 User Management
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('notifications')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'notifications' ? 'bg-primary/10 text-primary' : 'text-gray-600 hover:bg-gray-50'}`}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                                Notifications
+                                {notifications.filter(n => n.status === 'unread').length > 0 && (
+                                    <span className="ml-auto bg-red-500 text-white py-0.5 px-2 rounded-full text-xs">{notifications.filter(n => n.status === 'unread').length}</span>
+                                )}
                             </button>
                         </nav>
                     </div>
@@ -237,7 +353,25 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label>Registration No.</Label>
-                                                    <Input value={editingPet.registrationNumber || ''} onChange={e => setEditingPet({ ...editingPet, registrationNumber: e.target.value })} placeholder="TRD-XXXX" />
+                                                    <div className="flex gap-2">
+                                                        <Input
+                                                            value={editingPet.registrationNumber || ''}
+                                                            onChange={e => setEditingPet({ ...editingPet, registrationNumber: e.target.value })}
+                                                            placeholder="TRD-XXXX"
+                                                        />
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => {
+                                                                const year = new Date().getFullYear();
+                                                                const random = Math.floor(1000 + Math.random() * 9000); // 4 digit random
+                                                                const newId = `TRD-${year}-${random}`;
+                                                                setEditingPet({ ...editingPet, registrationNumber: newId });
+                                                            }}
+                                                            title="Generate ID"
+                                                        >
+                                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                                        </Button>
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -267,7 +401,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
                                             <div className="space-y-2">
                                                 <Label>Breed</Label>
-                                                <Input value={editingPet.breed} onChange={e => setEditingPet({ ...editingPet, breed: e.target.value })} />
+                                                <Select
+                                                    value={editingPet.breed}
+                                                    onValueChange={(val) => setEditingPet({ ...editingPet, breed: val })}
+                                                >
+                                                    <SelectTrigger className="bg-white">
+                                                        <SelectValue placeholder="Select Breed" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Thai Ridgeback Dog">Thai Ridgeback Dog</SelectItem>
+                                                        <SelectItem value="Thai Bangkaew">Thai Bangkaew</SelectItem>
+                                                        <SelectItem value="Poodle">Poodle</SelectItem>
+                                                        <SelectItem value="Golden Retriever">Golden Retriever</SelectItem>
+                                                        <SelectItem value="Other">Other (Type manually)</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                {/* Fallback for manual entry if needed, but for now Select covers 90% */}
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-4">
@@ -290,21 +439,77 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label>Photo URL</Label>
-                                                <div className="flex gap-2">
-                                                    <div className="flex-1">
-                                                        <Input value={editingPet.image} onChange={e => setEditingPet({ ...editingPet, image: e.target.value })} className="text-xs font-mono" />
+                                                <Label>Pet Photo</Label>
+                                                <div className="flex gap-4 items-start">
+                                                    <div className="w-24 h-24 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden flex items-center justify-center bg-gray-50 relative group">
+                                                        {editingPet.image ? (
+                                                            <img src={editingPet.image} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                        )}
+                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <label className="cursor-pointer text-white text-xs font-bold text-center px-2">
+                                                                Change
+                                                                <input
+                                                                    type="file"
+                                                                    className="hidden"
+                                                                    accept="image/*"
+                                                                    onChange={async (e) => {
+                                                                        if (e.target.files?.[0]) {
+                                                                            const file = e.target.files[0];
+                                                                            try {
+                                                                                // Show local preview immediately
+                                                                                const previewUrl = URL.createObjectURL(file);
+                                                                                setEditingPet({ ...editingPet, image: previewUrl });
+
+                                                                                // Upload to Cloud
+                                                                                const publicUrl = await uploadPetImage(file);
+
+                                                                                // Update with real URL
+                                                                                setEditingPet(prev => prev ? ({ ...prev, image: publicUrl }) : null);
+                                                                            } catch (err) {
+                                                                                console.error(err);
+                                                                                alert('Failed to upload image. Please try again.');
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </label>
+                                                        </div>
                                                     </div>
-                                                    <div className="w-10 h-10 rounded border overflow-hidden bg-gray-100 flex-shrink-0">
-                                                        <img src={editingPet.image} alt="" className="w-full h-full object-cover" />
+                                                    <div className="flex-1 space-y-2">
+                                                        <Input
+                                                            value={editingPet.image}
+                                                            onChange={e => setEditingPet({ ...editingPet, image: e.target.value })}
+                                                            placeholder="or paste Image URL..."
+                                                            className="text-xs font-mono"
+                                                        />
+                                                        <p className="text-xs text-muted-foreground">
+                                                            Upload a photo or paste a direct URL. Recommended size: 500x500px.
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">
-                                                    <Label>Owner</Label>
-                                                    <Input value={editingPet.owner} onChange={e => setEditingPet({ ...editingPet, owner: e.target.value })} />
+                                                    <Label>Owner (Admin Override)</Label>
+                                                    <Select
+                                                        value={editingPet.owner}
+                                                        onValueChange={(val) => setEditingPet({ ...editingPet, owner: val })}
+                                                    >
+                                                        <SelectTrigger className="bg-white">
+                                                            <SelectValue placeholder="Select Owner" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Admin">Admin (System)</SelectItem>
+                                                            {userList.map(u => (
+                                                                <SelectItem key={u.id} value={u.id}>
+                                                                    {u.full_name || u.email}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label>Location</Label>
@@ -326,19 +531,32 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-2">
                                                         <div className="flex justify-between">
-                                                            <Label className="text-xs uppercase">Sire (ID)</Label>
+                                                            <Label className="text-xs uppercase">Sire (Father)</Label>
                                                             <Label className="text-xs uppercase text-right">Status</Label>
                                                         </div>
                                                         <div className="flex gap-2">
-                                                            <Input
+                                                            <Select
                                                                 value={editingPet.parentIds?.sire || ''}
-                                                                onChange={e => setEditingPet({
+                                                                onValueChange={(val) => setEditingPet({
                                                                     ...editingPet,
-                                                                    parentIds: { ...editingPet.parentIds, sire: e.target.value, sireStatus: editingPet.parentIds?.sireStatus || 'verified' }
+                                                                    parentIds: { ...editingPet.parentIds, sire: val, sireStatus: editingPet.parentIds?.sireStatus || 'verified' }
                                                                 } as any)}
-                                                                placeholder="Sire ID"
-                                                                className="h-8 text-xs flex-1"
-                                                            />
+                                                            >
+                                                                <SelectTrigger className="h-8 text-xs flex-1 bg-white">
+                                                                    <SelectValue placeholder="Select Sire" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="unknown">Unknown / None</SelectItem>
+                                                                    {petList
+                                                                        .filter(p => p.gender?.toLowerCase() === 'male' && p.id !== editingPet.id)
+                                                                        .map(p => (
+                                                                            <SelectItem key={p.id} value={p.id}>
+                                                                                {p.name} {p.registrationNumber ? `(${p.registrationNumber})` : ''}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                </SelectContent>
+                                                            </Select>
+
                                                             <Select
                                                                 value={editingPet.parentIds?.sireStatus || 'verified'}
                                                                 onValueChange={(val: any) => setEditingPet({
@@ -357,19 +575,32 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                     </div>
                                                     <div className="space-y-2">
                                                         <div className="flex justify-between">
-                                                            <Label className="text-xs uppercase">Dam (ID)</Label>
+                                                            <Label className="text-xs uppercase">Dam (Mother)</Label>
                                                             <Label className="text-xs uppercase text-right">Status</Label>
                                                         </div>
                                                         <div className="flex gap-2">
-                                                            <Input
+                                                            <Select
                                                                 value={editingPet.parentIds?.dam || ''}
-                                                                onChange={e => setEditingPet({
+                                                                onValueChange={(val) => setEditingPet({
                                                                     ...editingPet,
-                                                                    parentIds: { ...editingPet.parentIds, dam: e.target.value, damStatus: editingPet.parentIds?.damStatus || 'verified' }
+                                                                    parentIds: { ...editingPet.parentIds, dam: val, damStatus: editingPet.parentIds?.damStatus || 'verified' }
                                                                 } as any)}
-                                                                placeholder="Dam ID"
-                                                                className="h-8 text-xs flex-1"
-                                                            />
+                                                            >
+                                                                <SelectTrigger className="h-8 text-xs flex-1 bg-white">
+                                                                    <SelectValue placeholder="Select Dam" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="unknown">Unknown / None</SelectItem>
+                                                                    {petList
+                                                                        .filter(p => p.gender?.toLowerCase() === 'female' && p.id !== editingPet.id)
+                                                                        .map(p => (
+                                                                            <SelectItem key={p.id} value={p.id}>
+                                                                                {p.name} {p.registrationNumber ? `(${p.registrationNumber})` : ''}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                </SelectContent>
+                                                            </Select>
+
                                                             <Select
                                                                 value={editingPet.parentIds?.damStatus || 'verified'}
                                                                 onValueChange={(val: any) => setEditingPet({
@@ -442,7 +673,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                             className="pl-9 bg-white"
                                         />
                                     </div>
-                                    <Button className="ml-auto bg-primary text-white shadow-sm hover:bg-primary/90" onClick={startCreate}>
+                                    <Button className="ml-auto bg-white border border-gray-200 text-gray-700 shadow-sm hover:bg-gray-50 mr-2" onClick={() => setShowRegistrationModal(true)}>
+                                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                        OCR Register
+                                    </Button>
+                                    <Button className="bg-primary text-white shadow-sm hover:bg-primary/90" onClick={startCreate}>
                                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                                         Add New Record
                                     </Button>
@@ -564,7 +799,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                     </div>
                                 )}
                             </div>
-                        ) : (
+                        ) : activeTab === 'users' ? (
                             /* 4. USER MANAGEMENT TAB */
                             <div className="flex-1 flex flex-col min-h-0">
                                 <div className="p-4 border-b flex gap-4 bg-gray-50/50">
@@ -593,56 +828,134 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y">
-                                                {[
-                                                    { id: 1, name: 'Admin User', email: 'admin@petdegree.com', role: 'Administrator', status: 'Active', joined: '2023-01-15' },
-                                                    { id: 2, name: 'John Doe', email: 'john@example.com', role: 'Breeder', status: 'Active', joined: '2023-03-10' },
-                                                    { id: 3, name: 'Jane Smith', email: 'jane@example.com', role: 'User', status: 'Inactive', joined: '2023-05-22' },
-                                                    { id: 4, name: 'Robert Johnson', email: 'rob@kennels.com', role: 'Breeder', status: 'Active', joined: '2023-06-01' },
-                                                    { id: 5, name: 'Emily Davis', email: 'emily@davis.com', role: 'User', status: 'Active', joined: '2023-07-14' },
-                                                ].map(user => (
-                                                    <tr key={user.id} className="hover:bg-gray-50">
-                                                        <td className="px-4 py-3">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                                                                    {user.name.charAt(0)}
-                                                                </div>
-                                                                <div>
-                                                                    <div className="font-bold text-gray-900">{user.name}</div>
-                                                                    <div className="text-xs text-gray-500">{user.email}</div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${user.role === 'Administrator' ? 'bg-purple-100 text-purple-800' :
-                                                                user.role === 'Breeder' ? 'bg-blue-100 text-blue-800' :
-                                                                    'bg-gray-100 text-gray-800'
-                                                                }`}>
-                                                                {user.role}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className={`w-2 h-2 rounded-full ${user.status === 'Active' ? 'bg-green-500' : 'bg-gray-300'}`} />
-                                                                <span className="text-gray-700">{user.status}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-gray-500 font-mono text-xs">
-                                                            {user.joined}
-                                                        </td>
-                                                        <td className="px-4 py-3 text-right">
-                                                            <Button size="icon" variant="ghost" className="h-8 w-8 text-gray-400 hover:text-gray-600">
-                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>
-                                                            </Button>
-                                                        </td>
+                                                {userList.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={5} className="py-8 text-center text-gray-400">No users found.</td>
                                                     </tr>
-                                                ))}
+                                                ) : (
+                                                    userList.map(user => (
+                                                        <tr key={user.id} className="hover:bg-gray-50">
+                                                            <td className="px-4 py-3">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs overflow-hidden">
+                                                                        {user.avatar_url ? (
+                                                                            <img src={user.avatar_url} alt={user.full_name || 'User'} className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            (user.full_name || user.email || 'U').charAt(0).toUpperCase()
+                                                                        )}
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="font-bold text-gray-900">{user.full_name || 'Unnamed User'}</div>
+                                                                        <div className="text-xs text-gray-500">{user.email}</div>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-3">
+                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
+                                                                    user.account_type === 'breeder' ? 'bg-blue-100 text-blue-800' :
+                                                                        'bg-gray-100 text-gray-800'
+                                                                    }`}>
+                                                                    {user.role || user.account_type || 'User'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-4 py-3">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className={`w-2 h-2 rounded-full ${user.verified_breeder ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                                                    <span className="text-gray-700">{user.verified_breeder ? 'Verified' : 'Unverified'}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-3 text-gray-500 font-mono text-xs">
+                                                                {new Date(user.created_at).toLocaleDateString()}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right">
+                                                                <Button
+                                                                    size="icon"
+                                                                    variant="ghost"
+                                                                    className="h-8 w-8 text-gray-400 hover:text-red-600"
+                                                                    onClick={async () => {
+                                                                        if (confirm('Are you sure you want to delete this user profile? This action cannot be undone.')) {
+                                                                            try {
+                                                                                await deleteUser(user.id);
+                                                                                refreshData();
+                                                                            } catch (e) {
+                                                                                alert('Failed to delete user');
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                                </Button>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
                             </div>
-                        )}
+                        ) : activeTab === 'notifications' ? (
+                            /* 5. NOTIFICATIONS TAB */
+                            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+                                <h2 className="text-xl font-bold mb-4">System Notifications</h2>
+                                <div className="space-y-4">
+                                    {notifications.length === 0 ? (
+                                        <p className="text-gray-500 text-center py-8">No notifications.</p>
+                                    ) : (
+                                        notifications.map(n => (
+                                            <div key={n.id} className={`p-4 rounded-xl border flex gap-4 ${n.status === 'unread' ? 'bg-white border-primary/30 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-70'}`}>
+                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 
+                                                    ${n.type === 'new_pet' ? 'bg-green-100 text-green-600' :
+                                                        n.type === 'breeding_report' ? 'bg-red-100 text-red-600' :
+                                                            'bg-blue-100 text-blue-600'}`}>
+                                                    {n.type === 'new_pet' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>}
+                                                    {n.type === 'breeding_report' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
+                                                    {n.type === 'verification_request' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex justify-between items-start">
+                                                        <h4 className="font-bold text-gray-900">{n.title}</h4>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs text-gray-500 whitespace-nowrap">{new Date(n.created_at).toLocaleDateString()}</span>
+                                                            {n.status === 'unread' && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="h-6 text-[10px] text-primary hover:text-primary/80 hover:bg-primary/5"
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        await markNotificationAsRead(n.id);
+                                                                        refreshData();
+                                                                    }}
+                                                                >
+                                                                    Mark Read
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-sm text-gray-600 mt-1">{n.message}</p>
+                                                    {n.reference_id && (
+                                                        <div className="mt-2 text-xs font-mono bg-gray-100 inline-block px-2 py-1 rounded text-gray-500">
+                                                            Ref: {n.reference_id}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
+
+                    <PetRegistrationModal
+                        isOpen={showRegistrationModal}
+                        onClose={() => setShowRegistrationModal(false)}
+                        onSuccess={() => {
+                            refreshData();
+                            setShowRegistrationModal(false);
+                        }}
+                    />
                 </div>
             </DialogContent>
         </Dialog>
