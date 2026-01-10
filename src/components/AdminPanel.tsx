@@ -11,19 +11,96 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import PetRegistrationModal from './PetRegistrationModal';
-import { getPublicPets, createPet, updatePet, deletePet, getAdminNotifications, getUsers, deleteUser, markNotificationAsRead, AdminNotification, Pet as DbPet } from '@/lib/database';
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { getPublicPets, createPet, updatePet, deletePet, getAdminNotifications, getUsers, deleteUser, markNotificationAsRead, createUserNotification, AdminNotification, Pet as DbPet } from '@/lib/database';
+import { supabase } from '@/lib/supabase';
 import { uploadPetImage } from '@/lib/storage';
 import { UserProfile } from '@/lib/auth';
+import { reindexAllPets, indexPet, generatePetDescription } from '@/lib/ai/vectorService';
 
 interface AdminPanelProps {
     isOpen: boolean;
     onClose: () => void;
 }
 
+type BreedingMatchAdmin = {
+    id: string;
+    sire_id: string | null;
+    dam_id: string | null;
+    match_date: string | null;
+    due_date: string | null;
+    status: string;
+    description?: string | null;
+};
+
+type BreedingReservationAdmin = {
+    id: string;
+    sire_id: string | null;
+    dam_id: string | null;
+    user_id: string | null;
+    user_contact: string | null;
+    user_note: string | null;
+    status: string;
+    created_at: string;
+    user?: { full_name?: string | null };
+};
+
+type PendingCommentAdmin = {
+    id: string;
+    pet_id: string;
+    user_id: string;
+    content: string;
+    created_at: string;
+    is_approved: boolean;
+    user?: { full_name?: string | null };
+    pet?: { name?: string | null };
+};
+
+type ChatMessageAdmin = {
+    id: string;
+    room_id: string;
+    sender_id: string | null;
+    content: string;
+    message_type?: string | null;
+    created_at: string;
+};
+
+type FaqEntryAdmin = {
+    id: string;
+    status: 'draft' | 'approved' | 'archived';
+    is_active: boolean;
+    scope: 'any' | 'global' | 'pet';
+    category?: string | null;
+    question_th?: string | null;
+    question_en?: string | null;
+    answer_th?: string | null;
+    answer_en?: string | null;
+    keywords?: string[] | null;
+    priority?: number | null;
+    source?: string | null;
+    source_query_id?: string | null;
+    created_at?: string;
+    updated_at?: string;
+};
+
+type QueryPoolItem = {
+    id: string;
+    created_at: string;
+    query: string;
+    normalized_query?: string | null;
+    lang?: string | null;
+    source?: string | null;
+    intent?: string | null;
+    result?: string | null;
+    context_pet_name?: string | null;
+};
+
 const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
+    const fallbackPetImage = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIj48cmVjdCB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiM5Y2EzYWYiPlBldDwvdGV4dD48L3N2Zz4=';
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState<'pets' | 'verifications' | 'users' | 'notifications'>('pets');
+    const [activeTab, setActiveTab] = useState<'pets' | 'verifications' | 'puppy' | 'users' | 'notifications' | 'moderation' | 'ai'>('pets');
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [editingPet, setEditingPet] = useState<Pet | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [showRegistrationModal, setShowRegistrationModal] = useState(false);
@@ -32,6 +109,83 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const [userList, setUserList] = useState<UserProfile[]>([]);
     const [selectedPets, setSelectedPets] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
+    const [breedingMatches, setBreedingMatches] = useState<BreedingMatchAdmin[]>([]);
+    const [breedingReservations, setBreedingReservations] = useState<BreedingReservationAdmin[]>([]);
+    const [breedingLoading, setBreedingLoading] = useState(false);
+    const [pendingComments, setPendingComments] = useState<PendingCommentAdmin[]>([]);
+    const [recentChatMessages, setRecentChatMessages] = useState<ChatMessageAdmin[]>([]);
+    const [moderationLoading, setModerationLoading] = useState(false);
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiTab, setAiTab] = useState<'faq' | 'pool'>('faq');
+    const [faqFilter, setFaqFilter] = useState<'all' | 'draft' | 'approved' | 'archived'>('draft');
+    const [faqEntries, setFaqEntries] = useState<FaqEntryAdmin[]>([]);
+    const [queryPool, setQueryPool] = useState<QueryPoolItem[]>([]);
+    const [showAllQueries, setShowAllQueries] = useState(false);
+    const [faqForm, setFaqForm] = useState({
+        id: '',
+        status: 'draft' as 'draft' | 'approved' | 'archived',
+        scope: 'any' as 'any' | 'global' | 'pet',
+        category: '',
+        questionTh: '',
+        questionEn: '',
+        answerTh: '',
+        answerEn: '',
+        keywords: '',
+        priority: 0,
+        sourceQueryId: ''
+    });
+    const [faqError, setFaqError] = useState('');
+    const [matchModalOpen, setMatchModalOpen] = useState(false);
+    const [matchError, setMatchError] = useState('');
+    const [matchForm, setMatchForm] = useState({
+        sireId: '',
+        damId: '',
+        matchDate: '',
+        status: 'planned',
+        description: ''
+    });
+
+    const resetMatchForm = () => {
+        setMatchForm({
+            sireId: '',
+            damId: '',
+            matchDate: '',
+            status: 'planned',
+            description: ''
+        });
+    };
+
+    const resetFaqForm = () => {
+        setFaqForm({
+            id: '',
+            status: 'draft',
+            scope: 'any',
+            category: '',
+            questionTh: '',
+            questionEn: '',
+            answerTh: '',
+            answerEn: '',
+            keywords: '',
+            priority: 0,
+            sourceQueryId: ''
+        });
+        setFaqError('');
+    };
+
+    const normalizeKeywords = (value: string) => {
+        return value
+            .split(/[,\\n]/)
+            .map(item => item.trim())
+            .filter(Boolean);
+    };
+
+    const handleMatchModalChange = (open: boolean) => {
+        setMatchModalOpen(open);
+        if (!open) {
+            setMatchError('');
+            resetMatchForm();
+        }
+    };
 
     // Initial Load
     useEffect(() => {
@@ -55,10 +209,203 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
             // Fetch Users
             const users = await getUsers();
             setUserList(users);
+
+            // Fetch Puppy Coming Soon data
+            await loadBreedingAdmin();
+
+            // Fetch Moderation data
+            await loadModerationData();
+
+            // Fetch AI Library data
+            await loadAiLibrary();
         } catch (error) {
             console.error(error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const addDays = (value: string, days: number) => {
+        const base = new Date(value);
+        if (Number.isNaN(base.getTime())) return null;
+        const next = new Date(base);
+        next.setDate(next.getDate() + days);
+        return next.toISOString().split('T')[0];
+    };
+
+    const loadBreedingAdmin = async () => {
+        setBreedingLoading(true);
+        try {
+            const { data: matches } = await supabase
+                .from('breeding_matches')
+                .select('id, sire_id, dam_id, match_date, due_date, status, description')
+                .order('match_date', { ascending: false });
+
+            const { data: reservations } = await supabase
+                .from('breeding_reservations')
+                .select('id, sire_id, dam_id, user_id, user_contact, user_note, status, created_at, user:profiles!user_id(full_name)')
+                .order('created_at', { ascending: true });
+
+            setBreedingMatches((matches || []) as BreedingMatchAdmin[]);
+            setBreedingReservations((reservations || []) as BreedingReservationAdmin[]);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setBreedingLoading(false);
+        }
+    };
+
+    const loadModerationData = async () => {
+        setModerationLoading(true);
+        try {
+            const { data: comments } = await supabase
+                .from('pet_comments')
+                .select('id, pet_id, user_id, content, created_at, is_approved, user:profiles!user_id(full_name), pet:pets!pet_id(name)')
+                .eq('is_approved', false)
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+            const { data: chatMessages } = await supabase
+                .from('chat_messages')
+                .select('id, room_id, sender_id, content, message_type, created_at')
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+            setPendingComments((comments || []) as PendingCommentAdmin[]);
+            setRecentChatMessages((chatMessages || []) as ChatMessageAdmin[]);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setModerationLoading(false);
+        }
+    };
+
+    const loadAiLibrary = async () => {
+        setAiLoading(true);
+        try {
+            const { data: faqData, error: faqError } = await supabase
+                .from('ai_faq_entries')
+                .select('id, status, is_active, scope, category, question_th, question_en, answer_th, answer_en, keywords, priority, source, source_query_id, created_at, updated_at')
+                .order('updated_at', { ascending: false })
+                .limit(300);
+            if (faqError) throw faqError;
+            setFaqEntries((faqData || []) as FaqEntryAdmin[]);
+
+            const { data: queryData, error: queryError } = await supabase
+                .from('ai_query_pool')
+                .select('id, created_at, query, normalized_query, lang, source, intent, result, context_pet_name')
+                .order('created_at', { ascending: false })
+                .limit(300);
+            if (queryError) throw queryError;
+            setQueryPool((queryData || []) as QueryPoolItem[]);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setAiLoading(false);
+        }
+    };
+
+    const handleSelectFaq = (entry: FaqEntryAdmin) => {
+        setFaqForm({
+            id: entry.id,
+            status: entry.status || 'draft',
+            scope: (entry.scope || 'any') as 'any' | 'global' | 'pet',
+            category: entry.category || '',
+            questionTh: entry.question_th || '',
+            questionEn: entry.question_en || '',
+            answerTh: entry.answer_th || '',
+            answerEn: entry.answer_en || '',
+            keywords: (entry.keywords || []).join(', '),
+            priority: entry.priority || 0,
+            sourceQueryId: entry.source_query_id || ''
+        });
+        setFaqError('');
+    };
+
+    const handleUseQueryAsFaq = (item: QueryPoolItem) => {
+        const isThai = item.lang === 'th' || /[\u0E01-\u0E59]/.test(item.query);
+        setFaqForm({
+            id: '',
+            status: 'draft',
+            scope: 'global',
+            category: item.intent || '',
+            questionTh: isThai ? item.query : '',
+            questionEn: isThai ? '' : item.query,
+            answerTh: '',
+            answerEn: '',
+            keywords: item.normalized_query || item.query,
+            priority: 0,
+            sourceQueryId: item.id
+        });
+        setFaqError('');
+        setAiTab('faq');
+    };
+
+    const handleSaveFaq = async (nextStatus?: 'draft' | 'approved' | 'archived') => {
+        const questionTh = faqForm.questionTh.trim();
+        const questionEn = faqForm.questionEn.trim();
+        const answerTh = faqForm.answerTh.trim();
+        const answerEn = faqForm.answerEn.trim();
+        if (!questionTh && !questionEn) {
+            setFaqError('Please add a question (Thai or English).');
+            return;
+        }
+        if (!answerTh && !answerEn) {
+            setFaqError('Please add an answer (Thai or English).');
+            return;
+        }
+        const payload = {
+            status: nextStatus || faqForm.status,
+            is_active: true,
+            scope: faqForm.scope,
+            category: faqForm.category || null,
+            question_th: questionTh || null,
+            question_en: questionEn || null,
+            answer_th: answerTh || null,
+            answer_en: answerEn || null,
+            keywords: normalizeKeywords(faqForm.keywords),
+            priority: Number(faqForm.priority) || 0,
+            source_query_id: faqForm.sourceQueryId || null,
+            source_query: questionTh || questionEn || null
+        };
+
+        try {
+            if (faqForm.id) {
+                const { error } = await supabase
+                    .from('ai_faq_entries')
+                    .update(payload)
+                    .eq('id', faqForm.id);
+                if (error) throw error;
+            } else {
+                const { data, error } = await supabase
+                    .from('ai_faq_entries')
+                    .insert(payload)
+                    .select('id')
+                    .single();
+                if (error) throw error;
+                setFaqForm(prev => ({ ...prev, id: data?.id || '' }));
+            }
+            setFaqError('');
+            await loadAiLibrary();
+        } catch (error) {
+            console.error(error);
+            setFaqError('Failed to save FAQ entry.');
+        }
+    };
+
+    const handleDeleteFaq = async (id: string) => {
+        if (!confirm('Delete this FAQ entry?')) return;
+        try {
+            const { error } = await supabase
+                .from('ai_faq_entries')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+            if (faqForm.id === id) resetFaqForm();
+            await loadAiLibrary();
+        } catch (error) {
+            console.error(error);
+            alert('Failed to delete FAQ entry.');
         }
     };
 
@@ -69,19 +416,41 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         type: (dbPet.type as 'dog' | 'cat') || 'dog',
         birthDate: dbPet.birth_date,
         gender: dbPet.gender || 'male',
-        image: dbPet.image_url || 'https://via.placeholder.com/150',
+        image: dbPet.image_url || fallbackPetImage,
         color: dbPet.color || '',
         registrationNumber: dbPet.registration_number || '',
         healthCertified: dbPet.health_certified,
         location: dbPet.location || 'Bangkok',
         owner: dbPet.owner_name || 'System',
+        owner_id: dbPet.owner_id,
         parentIds: {
             sire: dbPet.pedigree?.sire_id || '',
             dam: dbPet.pedigree?.dam_id || '',
-            sireStatus: 'verified', // Mock for now till DB update
-            damStatus: 'verified'
+            sireStatus: (dbPet.father_verified_status as any) || 'verified',
+            damStatus: (dbPet.mother_verified_status as any) || 'verified'
         }
     });
+
+    const formatShortId = (value?: string | null) => {
+        if (!value) return '-';
+        if (value.length <= 8) return value;
+        return `${value.slice(0, 4)}...${value.slice(-4)}`;
+    };
+
+    const getUserLabel = (userId?: string | null) => {
+        if (!userId) return 'Unknown';
+        const found = userList.find(user => user.id === userId);
+        return found?.full_name || found?.email || formatShortId(userId);
+    };
+
+    const getPetById = (petId?: string | null) => petList.find(pet => pet.id === petId);
+
+    const getPetLabel = (petId?: string | null) => {
+        const pet = getPetById(petId);
+        return pet ? pet.name : formatShortId(petId);
+    };
+
+    const getMatchKey = (sireId?: string | null, damId?: string | null) => `${sireId || 'none'}:${damId || 'none'}`;
 
     // Filter logic for Pets tab
     const filteredPets = petList.filter(pet =>
@@ -94,6 +463,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const pendingVerifications = petList.filter(pet =>
         pet.parentIds && (pet.parentIds.sireStatus === 'pending' || pet.parentIds.damStatus === 'pending')
     );
+    const faqDraftCount = faqEntries.filter(entry => entry.status === 'draft').length;
+    const handledQueryIds = new Set(
+        faqEntries.map(entry => entry.source_query_id).filter(Boolean) as string[]
+    );
+    const visibleQueries = showAllQueries
+        ? queryPool
+        : queryPool.filter(item => !handledQueryIds.has(item.id));
+    const aiQueueCount = visibleQueries.length;
+    const filteredFaqEntries = faqFilter === 'all'
+        ? faqEntries
+        : faqEntries.filter(entry => entry.status === faqFilter);
+
+    const reservationsByMatch = React.useMemo(() => {
+        const grouped: Record<string, BreedingReservationAdmin[]> = {};
+        breedingReservations.forEach(reservation => {
+            const key = getMatchKey(reservation.sire_id, reservation.dam_id);
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(reservation);
+        });
+        return grouped;
+    }, [breedingReservations]);
+
+    const dueDatePreview = matchForm.matchDate ? addDays(matchForm.matchDate, 63) : null;
 
     // Empty template for new pet
     const emptyPet: Pet = {
@@ -136,9 +528,36 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     father_id: fatherId,
                     owner_id: ownerId
                 });
+
+                // NOTE: createPet in database.ts might not return the ID. 
+                // Ensuring we index requires the ID. 
+                // For now, we will rely on refreshData() to get the ID, 
+                // OR we'd need to fetch the latest pet created by this user.
+                // However, since 'createPet' isn't guaranteed to return ID here without checking database.ts,
+                // I will add a small timeout to fetch and index the latest pet, or just alert user.
+                // BETTER: Let's assume the user will 'Re-index' periodically or I'll implement a 'getLatest' helper if needed.
+                // BUT, to be "Smart", I'll try to find the pet I just created by name/owner to index it.
+
+                // Let's try to index AFTER refreshData logic if possible, or just skip auto-index on create for now 
+                // if I can't get ID easily. (Updating is safe as we have ID).
+
+                // Wait, I can search for it immediately.
                 alert(`Created new pet: ${pet.name}`);
+
+                // Attempt Auto-Index for specific pet creation
+                setTimeout(async () => {
+                    try {
+                        // Find the pet we just made (by name/owner)
+                        const dbPets = await getPublicPets();
+                        const created = dbPets.find(p => p.name === pet.name && p.breed === pet.breed);
+                        if (created) {
+                            const textData = generatePetDescription(convertDbPet(created));
+                            indexPet(created.id, textData);
+                        }
+                    } catch (e) { console.error("Create-time index failed", e) }
+                }, 1000); // 1s delay to ensure DB propagation
             } else {
-                await updatePet(pet.id, {
+                const response = await updatePet(pet.id, {
                     name: pet.name,
                     breed: pet.breed,
                     type: pet.type as 'dog' | 'cat',
@@ -154,6 +573,11 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     ...(ownerId ? { owner_id: ownerId } : {})
                 });
                 alert(`Updated pet: ${pet.name}`);
+
+                // --- AUTO-INDEX FOR AI ---
+                // Fire and forget (don't block UI)
+                const textData = generatePetDescription(pet);
+                indexPet(pet.id, textData).catch(err => console.error("Auto-index failed", err));
             }
             refreshData();
             setEditingPet(null);
@@ -181,20 +605,46 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         }
     };
 
-    const handleVerify = (petId: string, type: 'sire' | 'dam', action: 'verified' | 'rejected') => {
-        const updatedList = petList.map(p => {
-            if (p.id === petId && p.parentIds) {
-                return {
-                    ...p,
-                    parentIds: {
-                        ...p.parentIds,
-                        [type === 'sire' ? 'sireStatus' : 'damStatus']: action
-                    }
-                };
+    const handleVerify = async (petId: string, type: 'sire' | 'dam', action: 'verified' | 'rejected') => {
+        try {
+            // Update DB
+            const field = type === 'sire' ? 'father_verified_status' : 'mother_verified_status';
+            await updatePet(petId, {
+                [field]: action
+            });
+
+            // Notify Pet Owner
+            const pet = petList.find(p => p.id === petId);
+            if (pet && pet.owner_id) { // Ensure owner_id is available
+                await createUserNotification({
+                    user_id: pet.owner_id,
+                    type: 'verification',
+                    title: `Pedigree Verification Update`,
+                    message: `The ${type === 'sire' ? 'father' : 'mother'} verification for your pet ${pet.name} has been ${action}.`,
+                    payload: { pet_id: petId }
+                });
             }
-            return p;
-        });
-        setPetList(updatedList);
+
+            // Update Local State directly for speed, then refresh
+            setPetList(prev => prev.map(p => {
+                if (p.id === petId && p.parentIds) {
+                    return {
+                        ...p,
+                        parentIds: {
+                            ...p.parentIds,
+                            [type === 'sire' ? 'sireStatus' : 'damStatus']: action
+                        }
+                    };
+                }
+                return p;
+            }));
+
+            // Optional: Refresh in background to sync
+            // refreshData(); 
+        } catch (error) {
+            console.error("Verification failed:", error);
+            alert("Failed to update verification status.");
+        }
     };
 
     const startCreate = () => {
@@ -247,52 +697,334 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         alert(`Exported ${petsToExport.length} pet(s) to CSV`);
     };
 
-    const bulkDelete = () => {
+    const bulkDelete = async () => {
         if (selectedPets.length === 0) {
             alert('No pets selected');
             return;
         }
         if (confirm(`Are you sure you want to delete ${selectedPets.length} selected pet(s)? This action cannot be undone.`)) {
-            setPetList(petList.filter(p => !selectedPets.includes(p.id)));
-            setSelectedPets([]);
-            alert(`Deleted ${selectedPets.length} pet(s)`);
+            try {
+                // Delete from DB (Parallel)
+                await Promise.all(selectedPets.map(id => deletePet(id)));
+
+                setPetList(petList.filter(p => !selectedPets.includes(p.id)));
+                setSelectedPets([]);
+                alert(`Deleted ${selectedPets.length} pet(s)`);
+            } catch (error) {
+                console.error("Bulk delete failed:", error);
+                alert("Failed to delete some pets. Please try again.");
+            }
+        }
+    };
+
+    const handleCreateMatch = async () => {
+        if (!matchForm.sireId || !matchForm.damId || !matchForm.matchDate) {
+            setMatchError('Please fill in all required fields.');
+            return;
+        }
+        setMatchError('');
+        try {
+            const dueDate = addDays(matchForm.matchDate, 63);
+            const { error } = await supabase
+                .from('breeding_matches')
+                .insert({
+                    sire_id: matchForm.sireId,
+                    dam_id: matchForm.damId,
+                    match_date: matchForm.matchDate,
+                    due_date: dueDate,
+                    status: matchForm.status,
+                    description: matchForm.description || null
+                });
+
+            if (error) throw error;
+            setMatchModalOpen(false);
+            resetMatchForm();
+            await loadBreedingAdmin();
+        } catch (error) {
+            console.error(error);
+            setMatchError('Failed to add match.');
+        }
+    };
+
+    const handleUpdateMatchStatus = async (matchId: string, status: string) => {
+        try {
+            const { error } = await supabase
+                .from('breeding_matches')
+                .update({ status })
+                .eq('id', matchId);
+            if (error) throw error;
+            setBreedingMatches(prev => prev.map(match => match.id === matchId ? { ...match, status } : match));
+        } catch (error) {
+            console.error(error);
+            alert('Failed to update match.');
+        }
+    };
+
+    const handleDeleteMatch = async (matchId: string) => {
+        if (!confirm('Delete this match?')) return;
+        try {
+            const { error } = await supabase
+                .from('breeding_matches')
+                .delete()
+                .eq('id', matchId);
+            if (error) throw error;
+            setBreedingMatches(prev => prev.filter(match => match.id !== matchId));
+        } catch (error) {
+            console.error(error);
+            alert('Failed to delete match.');
+        }
+    };
+
+    const handleApproveCommentAdmin = async (commentId: string) => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const { error } = await supabase
+                .from('pet_comments')
+                .update({
+                    is_approved: true,
+                    approved_by: user?.id || null,
+                    approved_at: new Date().toISOString()
+                })
+                .eq('id', commentId);
+            if (error) throw error;
+            setPendingComments(prev => prev.filter(comment => comment.id !== commentId));
+        } catch (error) {
+            console.error(error);
+            alert('Failed to approve comment.');
+        }
+    };
+
+    const handleDeleteCommentAdmin = async (commentId: string) => {
+        if (!confirm('Delete this comment?')) return;
+        try {
+            const { error } = await supabase
+                .from('pet_comments')
+                .delete()
+                .eq('id', commentId);
+            if (error) throw error;
+            setPendingComments(prev => prev.filter(comment => comment.id !== commentId));
+        } catch (error) {
+            console.error(error);
+            alert('Failed to delete comment.');
+        }
+    };
+
+    const handleDeleteChatMessage = async (messageId: string) => {
+        if (!confirm('Delete this message?')) return;
+        try {
+            const { error } = await supabase
+                .from('chat_messages')
+                .delete()
+                .eq('id', messageId);
+            if (error) throw error;
+            setRecentChatMessages(prev => prev.filter(message => message.id !== messageId));
+        } catch (error) {
+            console.error(error);
+            alert('Failed to delete message.');
+        }
+    };
+
+    const handleToggleBreederVerification = async (userId: string, nextValue: boolean) => {
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ verified_breeder: nextValue })
+                .eq('id', userId);
+            if (error) throw error;
+
+            setUserList(prev => prev.map(user => (
+                user.id === userId ? { ...user, verified_breeder: nextValue } : user
+            )));
+
+            try {
+                await createUserNotification({
+                    user_id: userId,
+                    type: 'verification',
+                    title: nextValue ? 'Breeder Verified' : 'Breeder Verification Updated',
+                    message: nextValue
+                        ? 'Your breeder account has been approved by admin.'
+                        : 'Your breeder verification has been updated by admin.',
+                    payload: { verified_breeder: nextValue }
+                });
+            } catch (notifError) {
+                console.error('Failed to send verification notification', notifError);
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Failed to update breeder verification.');
+        }
+    };
+
+    const handleUpdateReservationStatus = async (reservation: BreedingReservationAdmin, status: string) => {
+        try {
+            const { error } = await supabase
+                .from('breeding_reservations')
+                .update({ status })
+                .eq('id', reservation.id);
+            if (error) throw error;
+            setBreedingReservations(prev => prev.map(item => item.id === reservation.id ? { ...item, status } : item));
+
+            if (reservation.user_id) {
+                await createUserNotification({
+                    user_id: reservation.user_id,
+                    type: 'puppy',
+                    title: 'Reservation Update',
+                    message: `Your reservation status is now ${status}.`,
+                    payload: { reservation_id: reservation.id }
+                });
+            }
+        } catch (error) {
+            console.error(error);
+            alert('Failed to update reservation.');
         }
     };
 
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-6xl max-h-[95vh] h-[90vh] flex flex-col p-0 gap-0 bg-gray-50/50">
-                <div className="p-6 border-b bg-white flex justify-between items-center">
-                    <DialogTitle className="text-2xl font-bold flex items-center gap-3 text-primary">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+            <DialogContent className="max-w-6xl max-h-[95vh] h-[90vh] flex flex-col p-0 gap-0 bg-[#0A0A0A] border-[#C5A059]/20">
+                <div className="p-4 md:p-6 border-b border-[#C5A059]/20 bg-[#0D0D0D] flex justify-between items-center sticky top-0 z-20">
+                    <div className="flex items-center gap-3">
+                        {/* Mobile Menu Trigger */}
+                        <div className="md:hidden">
+                            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                                <SheetTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="-ml-2">
+                                        <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
+                                    </Button>
+                                </SheetTrigger>
+                                <SheetContent side="left" className="w-72 p-0">
+                                    <div className="p-4 border-b bg-primary/5">
+                                        <h2 className="text-lg font-bold text-primary">Admin Menu</h2>
+                                    </div>
+                                    <nav className="p-4 space-y-1">
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => { setActiveTab('pets'); setEditingPet(null); setMobileMenuOpen(false); }}
+                                            className={`w-full justify-start gap-3 ${activeTab === 'pets' ? 'bg-primary/10 text-primary' : 'text-gray-600'}`}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                                            Manage Pets
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => { setActiveTab('verifications'); setEditingPet(null); setMobileMenuOpen(false); }}
+                                            className={`w-full justify-start gap-3 ${activeTab === 'verifications' ? 'bg-primary/10 text-primary' : 'text-gray-600'}`}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            Verifications
+                                            {pendingVerifications.length > 0 && (
+                                                <span className="ml-auto bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs">{pendingVerifications.length}</span>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => { setActiveTab('puppy'); setEditingPet(null); setMobileMenuOpen(false); }}
+                                            className={`w-full justify-start gap-3 ${activeTab === 'puppy' ? 'bg-primary/10 text-primary' : 'text-gray-600'}`}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.567-3 3.5S10.343 15 12 15s3-1.567 3-3.5S13.657 8 12 8zm7 3.5c0-1.147-.249-2.21-.695-3.172l1.576-1.576-1.414-1.414-1.576 1.576A7.48 7.48 0 0012 4.5a7.48 7.48 0 00-3.891 1.114L6.533 4.038 5.12 5.452l1.576 1.576A7.482 7.482 0 005 11.5c0 4.142 3.134 7.5 7 7.5s7-3.358 7-7.5z" /></svg>
+                                            Puppy Coming Soon
+                                            {breedingMatches.length > 0 && (
+                                                <span className="ml-auto bg-blue-100 text-blue-600 py-0.5 px-2 rounded-full text-xs">{breedingMatches.length}</span>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => { setActiveTab('users'); setMobileMenuOpen(false); }}
+                                            className={`w-full justify-start gap-3 ${activeTab === 'users' ? 'bg-primary/10 text-primary' : 'text-gray-600'}`}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+                                            User Management
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => { setActiveTab('moderation'); setMobileMenuOpen(false); }}
+                                            className={`w-full justify-start gap-3 ${activeTab === 'moderation' ? 'bg-primary/10 text-primary' : 'text-gray-600'}`}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m2 10H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" /></svg>
+                                            Moderation
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => { setActiveTab('ai'); setMobileMenuOpen(false); }}
+                                            className={`w-full justify-start gap-3 ${activeTab === 'ai' ? 'bg-primary/10 text-primary' : 'text-gray-600'}`}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364-1.414 1.414M7.05 16.95l-1.414 1.414m11.314 0-1.414-1.414M7.05 7.05 5.636 5.636" /></svg>
+                                            AI Library
+                                            {(faqDraftCount > 0 || aiQueueCount > 0) && (
+                                                <span className="ml-auto bg-amber-100 text-amber-700 py-0.5 px-2 rounded-full text-xs">
+                                                    {faqDraftCount || aiQueueCount}
+                                                </span>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => { setActiveTab('notifications'); setMobileMenuOpen(false); }}
+                                            className={`w-full justify-start gap-3 ${activeTab === 'notifications' ? 'bg-primary/10 text-primary' : 'text-gray-600'}`}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                                            Notifications
+                                            {notifications.filter(n => n.status === 'unread').length > 0 && (
+                                                <span className="ml-auto bg-red-500 text-white py-0.5 px-2 rounded-full text-xs">{notifications.filter(n => n.status === 'unread').length}</span>
+                                            )}
+                                        </Button>
+                                    </nav>
+                                </SheetContent>
+                            </Sheet>
                         </div>
-                        System Administration
-                    </DialogTitle>
-                    {/* Close button removed as per user request to rely on default Dialog close or reduce clutter */}
+                        <DialogTitle className="text-xl md:text-2xl font-bold flex items-center gap-3 text-[#C5A059]">
+                            <div className="p-2 bg-[#C5A059]/10 rounded-lg hidden md:block">
+                                <svg className="w-6 h-6 text-[#C5A059]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+                            </div>
+                            System Administration
+                        </DialogTitle>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-hidden flex">
                     {/* Sidebar */}
-                    <div className="w-64 bg-white border-r hidden md:block pt-4 text-sm">
-                        <div className="bg-primary/5 mx-4 p-3 rounded-xl mb-6">
-                            <p className="text-xs font-semibold text-primary/70 uppercase tracking-wider mb-1">Total Records</p>
-                            <p className="text-2xl font-bold text-primary">{petList.length}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{pendingVerifications.length} Pending Actions</p>
+                    <div className="w-64 bg-[#0D0D0D] border-r border-[#C5A059]/10 hidden md:block pt-4 text-sm">
+                        <div className="bg-[#C5A059]/10 mx-4 p-3 rounded-xl mb-6 border border-[#C5A059]/20">
+                            <p className="text-xs font-semibold text-[#C5A059]/70 uppercase tracking-wider mb-1">Total Records</p>
+                            <p className="text-2xl font-bold text-[#C5A059]">{petList.length}</p>
+                            <p className="text-xs text-[#B8B8B8]/60 mt-1">{pendingVerifications.length} Pending Actions</p>
+
+                            {/* AI Vector Indexing Button */}
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="w-full mt-3 text-xs border-[#C5A059]/20 text-[#C5A059] hover:bg-[#C5A059]/10 bg-[#1A1A1A]"
+                                onClick={async () => {
+                                    if (confirm("This will scan ALL pets and generate AI embeddings for smart search. It may take a while. Continue?")) {
+                                        setLoading(true);
+                                        try {
+                                            const count = await reindexAllPets();
+                                            alert(`Successfully indexed ${count} pets for Smart Search!`);
+                                        } catch (e) {
+                                            alert("Indexing failed.");
+                                            console.error(e);
+                                        } finally {
+                                            setLoading(false);
+                                        }
+                                    }
+                                }}
+                            >
+                                <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                                Re-index AI Search
+                            </Button>
                         </div>
 
                         <nav className="space-y-1 px-2">
                             <button
                                 onClick={() => { setActiveTab('pets'); setEditingPet(null); }}
-                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'pets' ? 'bg-primary/10 text-primary' : 'text-gray-600 hover:bg-gray-50'}`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'pets' ? 'bg-[#C5A059]/10 text-[#C5A059]' : 'text-[#B8B8B8] hover:bg-[#1A1A1A]'}`}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                                 Manage Pets
                             </button>
                             <button
                                 onClick={() => { setActiveTab('verifications'); setEditingPet(null); }}
-                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'verifications' ? 'bg-primary/10 text-primary' : 'text-gray-600 hover:bg-gray-50'}`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'verifications' ? 'bg-[#C5A059]/10 text-[#C5A059]' : 'text-[#B8B8B8] hover:bg-[#1A1A1A]'}`}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                 Verifications
@@ -301,15 +1033,44 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                 )}
                             </button>
                             <button
+                                onClick={() => { setActiveTab('puppy'); setEditingPet(null); }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'puppy' ? 'bg-[#C5A059]/10 text-[#C5A059]' : 'text-[#B8B8B8] hover:bg-[#1A1A1A]'}`}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 1.567-3 3.5S10.343 15 12 15s3-1.567 3-3.5S13.657 8 12 8zm7 3.5c0-1.147-.249-2.21-.695-3.172l1.576-1.576-1.414-1.414-1.576 1.576A7.48 7.48 0 0012 4.5a7.48 7.48 0 00-3.891 1.114L6.533 4.038 5.12 5.452l1.576 1.576A7.482 7.482 0 005 11.5c0 4.142 3.134 7.5 7 7.5s7-3.358 7-7.5z" /></svg>
+                                Puppy Coming Soon
+                                {breedingMatches.length > 0 && (
+                                    <span className="ml-auto bg-blue-100 text-blue-600 py-0.5 px-2 rounded-full text-xs">{breedingMatches.length}</span>
+                                )}
+                            </button>
+                            <button
                                 onClick={() => setActiveTab('users')}
-                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'users' ? 'bg-primary/10 text-primary' : 'text-gray-600 hover:bg-gray-50'}`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'users' ? 'bg-[#C5A059]/10 text-[#C5A059]' : 'text-[#B8B8B8] hover:bg-[#1A1A1A]'}`}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                                 User Management
                             </button>
                             <button
+                                onClick={() => setActiveTab('moderation')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'moderation' ? 'bg-[#C5A059]/10 text-[#C5A059]' : 'text-[#B8B8B8] hover:bg-[#1A1A1A]'}`}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m2 10H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" /></svg>
+                                Moderation
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('ai')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'ai' ? 'bg-[#C5A059]/10 text-[#C5A059]' : 'text-[#B8B8B8] hover:bg-[#1A1A1A]'}`}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364-1.414 1.414M7.05 16.95l-1.414 1.414m11.314 0-1.414-1.414M7.05 7.05 5.636 5.636" /></svg>
+                                AI Library
+                                {(faqDraftCount > 0 || aiQueueCount > 0) && (
+                                    <span className="ml-auto bg-amber-100 text-amber-700 py-0.5 px-2 rounded-full text-xs">
+                                        {faqDraftCount || aiQueueCount}
+                                    </span>
+                                )}
+                            </button>
+                            <button
                                 onClick={() => setActiveTab('notifications')}
-                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'notifications' ? 'bg-primary/10 text-primary' : 'text-gray-600 hover:bg-gray-50'}`}
+                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'notifications' ? 'bg-[#C5A059]/10 text-[#C5A059]' : 'text-[#B8B8B8] hover:bg-[#1A1A1A]'}`}
                             >
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
                                 Notifications
@@ -321,17 +1082,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     </div>
 
                     {/* Main Content Area */}
-                    <div className="flex-1 flex flex-col min-w-0 bg-white">
+                    <div className="flex-1 flex flex-col min-w-0 bg-[#1A1A1A]">
                         {/* 1. PET EDITOR (Overlay on 'pets' tab) */}
                         {activeTab === 'pets' && editingPet ? (
                             <div className="flex-1 flex flex-col h-full">
-                                <div className="p-4 border-b flex items-center justify-between bg-gray-50">
-                                    <h3 className="font-bold text-lg text-gray-800">
+                                <div className="p-4 border-b border-[#C5A059]/10 flex items-center justify-between bg-[#0D0D0D]">
+                                    <h3 className="font-bold text-lg text-[#F5F5F0]">
                                         {isCreating ? 'Create New Entry' : `Editing: ${editingPet.name}`}
                                     </h3>
                                     <div className="flex gap-2">
-                                        <Button variant="outline" onClick={() => { setEditingPet(null); setIsCreating(false); }}>Cancel</Button>
-                                        <Button onClick={() => handleSavePet(editingPet)} className="bg-primary text-white hover:bg-primary/90">
+                                        <Button variant="outline" onClick={() => { setEditingPet(null); setIsCreating(false); }} className="border-[#C5A059]/20 text-[#B8B8B8] hover:bg-[#1A1A1A]">Cancel</Button>
+                                        <Button onClick={() => handleSavePet(editingPet)} className="bg-[#C5A059] text-[#0A0A0A] hover:bg-[#D4C4B5]">
                                             {isCreating ? 'Create Record' : 'Save Changes'}
                                         </Button>
                                     </div>
@@ -341,7 +1102,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                     <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 pb-20">
                                         {/* Basic Info */}
                                         <div className="space-y-6">
-                                            <div className="flex items-center gap-2 pb-2 border-b text-primary font-semibold">
+                                            <div className="flex items-center gap-2 pb-2 border-b border-[#C5A059]/20 text-[#C5A059] font-semibold">
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" /></svg>
                                                 Identity
                                             </div>
@@ -775,7 +1536,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                         {pet.parentIds?.sire && pet.parentIds.sireStatus === 'pending' && (
                                                             <div className="flex items-center gap-3 bg-blue-50 p-2 rounded-lg border border-blue-100">
                                                                 <span className="text-xs font-bold text-blue-700 uppercase">Sire Connection</span>
-                                                                <div className="text-sm font-mono">{pet.parentIds.sire}</div>
+                                                                <div>
+                                                                    <div className="text-sm font-semibold text-gray-800">{getPetLabel(pet.parentIds.sire)}</div>
+                                                                    <div className="text-[10px] text-gray-400 font-mono">{formatShortId(pet.parentIds.sire)}</div>
+                                                                </div>
                                                                 <div className="flex gap-1 ml-2">
                                                                     <Button size="sm" className="h-7 bg-green-600 hover:bg-green-700" onClick={() => handleVerify(pet.id, 'sire', 'verified')}>Approve</Button>
                                                                     <Button size="sm" variant="destructive" className="h-7" onClick={() => handleVerify(pet.id, 'sire', 'rejected')}>Reject</Button>
@@ -785,7 +1549,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                         {pet.parentIds?.dam && pet.parentIds.damStatus === 'pending' && (
                                                             <div className="flex items-center gap-3 bg-pink-50 p-2 rounded-lg border border-pink-100">
                                                                 <span className="text-xs font-bold text-pink-700 uppercase">Dam Connection</span>
-                                                                <div className="text-sm font-mono">{pet.parentIds.dam}</div>
+                                                                <div>
+                                                                    <div className="text-sm font-semibold text-gray-800">{getPetLabel(pet.parentIds.dam)}</div>
+                                                                    <div className="text-[10px] text-gray-400 font-mono">{formatShortId(pet.parentIds.dam)}</div>
+                                                                </div>
                                                                 <div className="flex gap-1 ml-2">
                                                                     <Button size="sm" className="h-7 bg-green-600 hover:bg-green-700" onClick={() => handleVerify(pet.id, 'dam', 'verified')}>Approve</Button>
                                                                     <Button size="sm" variant="destructive" className="h-7" onClick={() => handleVerify(pet.id, 'dam', 'rejected')}>Reject</Button>
@@ -796,6 +1563,118 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : activeTab === 'puppy' ? (
+                            /* 4. PUPPY COMING SOON TAB */
+                            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                                    <div>
+                                        <h2 className="text-xl font-bold">Puppy Coming Soon</h2>
+                                        <p className="text-xs text-gray-500">Manage breeding matches and reservations.</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="outline" onClick={loadBreedingAdmin}>
+                                            Refresh
+                                        </Button>
+                                        <Button className="bg-primary text-white hover:bg-primary/90" onClick={() => { setMatchError(''); resetMatchForm(); setMatchModalOpen(true); }}>
+                                            Add Match
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {breedingLoading ? (
+                                    <div className="text-center py-12 bg-white rounded-xl border border-dashed">
+                                        <p className="text-gray-500">Loading matches...</p>
+                                    </div>
+                                ) : breedingMatches.length === 0 ? (
+                                    <div className="text-center py-12 bg-white rounded-xl border border-dashed">
+                                        <p className="text-gray-500">No breeding matches found.</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {breedingMatches.map(match => {
+                                            const key = getMatchKey(match.sire_id, match.dam_id);
+                                            const reservations = reservationsByMatch[key] || [];
+                                            return (
+                                                <div key={match.id} className="bg-white p-4 rounded-xl border shadow-sm">
+                                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                                                        <div>
+                                                            <div className="text-lg font-bold text-gray-900">
+                                                                {getPetLabel(match.sire_id)} + {getPetLabel(match.dam_id)}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">
+                                                                Match date: {match.match_date || '-'} | Due: {match.due_date || '-'}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <select
+                                                                value={match.status || 'planned'}
+                                                                onChange={(e) => handleUpdateMatchStatus(match.id, e.target.value)}
+                                                                className="border border-gray-200 rounded-md px-2 py-1 text-xs"
+                                                            >
+                                                                <option value="planned">Planned</option>
+                                                                <option value="mated">Mated</option>
+                                                                <option value="confirmed">Confirmed</option>
+                                                                <option value="born">Born</option>
+                                                                <option value="failed">Cancelled</option>
+                                                            </select>
+                                                            <Button size="sm" className="h-8 bg-green-600 hover:bg-green-700" onClick={() => handleUpdateMatchStatus(match.id, 'confirmed')}>
+                                                                Approve
+                                                            </Button>
+                                                            <Button size="sm" variant="destructive" className="h-8" onClick={() => handleDeleteMatch(match.id)}>
+                                                                Delete
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+
+                                                    {match.description && (
+                                                        <p className="text-sm text-gray-600 mt-2">{match.description}</p>
+                                                    )}
+
+                                                    <div className="mt-4 border-t pt-3">
+                                                        <div className="flex items-center justify-between text-sm font-semibold text-gray-700">
+                                                            <span>Reservations</span>
+                                                            <span className="text-xs text-gray-500">{reservations.length}</span>
+                                                        </div>
+                                                        {reservations.length === 0 ? (
+                                                            <p className="text-xs text-gray-500 mt-2">No reservations.</p>
+                                                        ) : (
+                                                            <div className="mt-2 space-y-2">
+                                                                {reservations.map(reservation => (
+                                                                    <div key={reservation.id} className="flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs text-gray-600 border border-gray-100 rounded-lg px-3 py-2">
+                                                                        <div>
+                                                                            <div className="font-semibold text-gray-800">
+                                                                                {reservation.user?.full_name || 'Member'}
+                                                                            </div>
+                                                                            <div>Contact: {reservation.user_contact || '-'}</div>
+                                                                            {reservation.user_note && (
+                                                                                <div>Note: {reservation.user_note}</div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className="text-gray-400">
+                                                                                {reservation.created_at ? new Date(reservation.created_at).toLocaleDateString() : '-'}
+                                                                            </span>
+                                                                            <span className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-[10px] font-semibold capitalize">
+                                                                                {reservation.status || 'pending'}
+                                                                            </span>
+                                                                            <Button size="sm" className="h-7 bg-green-600 hover:bg-green-700" onClick={() => handleUpdateReservationStatus(reservation, 'approved')}>
+                                                                                Approve
+                                                                            </Button>
+                                                                            <Button size="sm" variant="destructive" className="h-7" onClick={() => handleUpdateReservationStatus(reservation, 'rejected')}>
+                                                                                Reject
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -868,23 +1747,34 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                                 {new Date(user.created_at).toLocaleDateString()}
                                                             </td>
                                                             <td className="px-4 py-3 text-right">
-                                                                <Button
-                                                                    size="icon"
-                                                                    variant="ghost"
-                                                                    className="h-8 w-8 text-gray-400 hover:text-red-600"
-                                                                    onClick={async () => {
-                                                                        if (confirm('Are you sure you want to delete this user profile? This action cannot be undone.')) {
-                                                                            try {
-                                                                                await deleteUser(user.id);
-                                                                                refreshData();
-                                                                            } catch (e) {
-                                                                                alert('Failed to delete user');
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="outline"
+                                                                        className="h-8"
+                                                                        onClick={() => handleToggleBreederVerification(user.id, !user.verified_breeder)}
+                                                                        disabled={user.role === 'admin'}
+                                                                    >
+                                                                        {user.verified_breeder ? 'Revoke' : 'Approve'}
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="icon"
+                                                                        variant="ghost"
+                                                                        className="h-8 w-8 text-gray-400 hover:text-red-600"
+                                                                        onClick={async () => {
+                                                                            if (confirm('Are you sure you want to delete this user profile? This action cannot be undone.')) {
+                                                                                try {
+                                                                                    await deleteUser(user.id);
+                                                                                    refreshData();
+                                                                                } catch (e) {
+                                                                                    alert('Failed to delete user');
+                                                                                }
                                                                             }
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                                </Button>
+                                                                        }}
+                                                                    >
+                                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                                    </Button>
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     ))
@@ -893,6 +1783,371 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                         </table>
                                     </div>
                                 </div>
+                            </div>
+                        ) : activeTab === 'moderation' ? (
+                            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                                    <div>
+                                        <h2 className="text-xl font-bold">Content Moderation</h2>
+                                        <p className="text-xs text-gray-500">Approve comments and remove abusive messages.</p>
+                                    </div>
+                                    <Button variant="outline" onClick={loadModerationData} disabled={moderationLoading}>
+                                        {moderationLoading ? 'Refreshing...' : 'Refresh'}
+                                    </Button>
+                                </div>
+                                <div className="grid gap-6 lg:grid-cols-2">
+                                    <div className="bg-white rounded-xl border shadow-sm p-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="font-semibold text-gray-900">Pending Comments</h3>
+                                            <span className="text-xs text-gray-500">{pendingComments.length} pending</span>
+                                        </div>
+                                        {pendingComments.length === 0 ? (
+                                            <p className="text-sm text-gray-500">No pending comments.</p>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {pendingComments.map(comment => (
+                                                    <div key={comment.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="min-w-0">
+                                                                <div className="text-xs text-gray-500">
+                                                                    {(comment.pet?.name || formatShortId(comment.pet_id))} | {(comment.user?.full_name || getUserLabel(comment.user_id))}
+                                                                </div>
+                                                                <p className="text-sm text-gray-800 mt-1 break-words">{comment.content}</p>
+                                                                <div className="text-[10px] text-gray-400 mt-1">
+                                                                    {new Date(comment.created_at).toLocaleString()}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex flex-col gap-1">
+                                                                <Button size="sm" className="h-7 bg-green-600 hover:bg-green-700" onClick={() => handleApproveCommentAdmin(comment.id)}>
+                                                                    Approve
+                                                                </Button>
+                                                                <Button size="sm" variant="destructive" className="h-7" onClick={() => handleDeleteCommentAdmin(comment.id)}>
+                                                                    Delete
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="bg-white rounded-xl border shadow-sm p-4">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="font-semibold text-gray-900">Recent Chat Messages</h3>
+                                            <span className="text-xs text-gray-500">{recentChatMessages.length} messages</span>
+                                        </div>
+                                        {recentChatMessages.length === 0 ? (
+                                            <p className="text-sm text-gray-500">No recent messages.</p>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {recentChatMessages.map(message => (
+                                                    <div key={message.id} className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="min-w-0">
+                                                                <div className="text-xs text-gray-500 flex items-center gap-2">
+                                                                    <span>Room {formatShortId(message.room_id)}</span>
+                                                                    <span>|</span>
+                                                                    <span>{getUserLabel(message.sender_id)}</span>
+                                                                    {message.message_type && message.message_type !== 'text' && (
+                                                                        <span className="text-[9px] uppercase tracking-wide font-semibold bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">
+                                                                            {message.message_type}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <p className="text-sm text-gray-800 mt-1 break-words">{message.content}</p>
+                                                                <div className="text-[10px] text-gray-400 mt-1">
+                                                                    {new Date(message.created_at).toLocaleString()}
+                                                                </div>
+                                                            </div>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="destructive"
+                                                                className="h-7"
+                                                                onClick={() => handleDeleteChatMessage(message.id)}
+                                                            >
+                                                                Delete
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : activeTab === 'ai' ? (
+                            <div className="flex-1 flex flex-col min-h-0 p-6 bg-gray-50/30">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                                    <div>
+                                        <h2 className="text-xl font-bold">AI Library</h2>
+                                        <p className="text-xs text-gray-500">Approve FAQ answers and review the query pool.</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="outline" onClick={loadAiLibrary} disabled={aiLoading}>
+                                            {aiLoading ? 'Refreshing...' : 'Refresh'}
+                                        </Button>
+                                        <Button onClick={resetFaqForm} className="bg-primary text-white hover:bg-primary/90">
+                                            New FAQ
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <Tabs value={aiTab} onValueChange={(value) => setAiTab(value as 'faq' | 'pool')} className="flex-1 min-h-0">
+                                    <TabsList className="mb-4">
+                                        <TabsTrigger value="faq">FAQ Entries</TabsTrigger>
+                                        <TabsTrigger value="pool">Query Pool</TabsTrigger>
+                                    </TabsList>
+
+                                    <TabsContent value="faq" className="flex-1 min-h-0">
+                                        <div className="grid gap-4 lg:grid-cols-[360px,1fr] h-full">
+                                            <div className="bg-white rounded-xl border shadow-sm flex flex-col min-h-0">
+                                                <div className="p-3 border-b flex items-center gap-2">
+                                                    <Select value={faqFilter} onValueChange={(value) => setFaqFilter(value as any)}>
+                                                        <SelectTrigger className="h-8 text-xs w-36">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all">All</SelectItem>
+                                                            <SelectItem value="draft">Draft</SelectItem>
+                                                            <SelectItem value="approved">Approved</SelectItem>
+                                                            <SelectItem value="archived">Archived</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <span className="text-xs text-gray-500 ml-auto">{filteredFaqEntries.length} items</span>
+                                                </div>
+                                                <ScrollArea className="flex-1">
+                                                    <div className="p-3 space-y-2">
+                                                        {filteredFaqEntries.length === 0 ? (
+                                                            <p className="text-sm text-gray-500">No FAQ entries.</p>
+                                                        ) : (
+                                                            filteredFaqEntries.map(entry => (
+                                                                <button
+                                                                    key={entry.id}
+                                                                    onClick={() => handleSelectFaq(entry)}
+                                                                    className={`w-full text-left border rounded-lg p-3 hover:bg-gray-50 transition ${faqForm.id === entry.id ? 'border-primary/40 bg-primary/5' : 'border-gray-100'}`}
+                                                                >
+                                                                    <div className="flex items-start justify-between gap-2">
+                                                                        <div className="min-w-0">
+                                                                            <div className="text-sm font-semibold text-gray-900 truncate">
+                                                                                {entry.question_th || entry.question_en || 'Untitled FAQ'}
+                                                                            </div>
+                                                                            <div className="text-[11px] text-gray-500 mt-1">
+                                                                                {entry.scope} • {entry.category || 'general'}
+                                                                            </div>
+                                                                        </div>
+                                                                        <span className={`text-[10px] uppercase px-2 py-0.5 rounded-full ${entry.status === 'approved' ? 'bg-green-100 text-green-700' : entry.status === 'archived' ? 'bg-gray-200 text-gray-600' : 'bg-amber-100 text-amber-700'}`}>
+                                                                            {entry.status}
+                                                                        </span>
+                                                                    </div>
+                                                                </button>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </ScrollArea>
+                                            </div>
+
+                                            <div className="bg-white rounded-xl border shadow-sm flex flex-col min-h-0">
+                                                <div className="p-4 border-b flex items-center justify-between gap-2">
+                                                    <div>
+                                                        <h3 className="font-semibold text-gray-900">FAQ Editor</h3>
+                                                        <p className="text-xs text-gray-500">Save drafts, then approve when ready.</p>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <Button variant="outline" onClick={resetFaqForm} size="sm">Clear</Button>
+                                                        {faqForm.id && (
+                                                            <Button variant="destructive" onClick={() => handleDeleteFaq(faqForm.id)} size="sm">Delete</Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <ScrollArea className="flex-1">
+                                                    <div className="p-4 space-y-4">
+                                                        {faqError && (
+                                                            <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                                                                {faqError}
+                                                            </div>
+                                                        )}
+                                                        <div className="grid gap-4 md:grid-cols-2">
+                                                            <div className="space-y-2">
+                                                                <Label>Status</Label>
+                                                                <Select
+                                                                    value={faqForm.status}
+                                                                    onValueChange={(value) => setFaqForm(prev => ({ ...prev, status: value as any }))}
+                                                                >
+                                                                    <SelectTrigger className="bg-white">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="draft">Draft</SelectItem>
+                                                                        <SelectItem value="approved">Approved</SelectItem>
+                                                                        <SelectItem value="archived">Archived</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label>Scope</Label>
+                                                                <Select
+                                                                    value={faqForm.scope}
+                                                                    onValueChange={(value) => setFaqForm(prev => ({ ...prev, scope: value as any }))}
+                                                                >
+                                                                    <SelectTrigger className="bg-white">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="any">Any</SelectItem>
+                                                                        <SelectItem value="global">Global</SelectItem>
+                                                                        <SelectItem value="pet">Pet Only</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                        </div>
+                                                        <div className="grid gap-4 md:grid-cols-2">
+                                                            <div className="space-y-2">
+                                                                <Label>Category</Label>
+                                                                <Input
+                                                                    value={faqForm.category}
+                                                                    onChange={(e) => setFaqForm(prev => ({ ...prev, category: e.target.value }))}
+                                                                    placeholder="marketplace, breeding, health..."
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label>Priority</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    value={faqForm.priority}
+                                                                    onChange={(e) => setFaqForm(prev => ({ ...prev, priority: Number(e.target.value) || 0 }))}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Question (TH)</Label>
+                                                            <Input
+                                                                value={faqForm.questionTh}
+                                                                onChange={(e) => setFaqForm(prev => ({ ...prev, questionTh: e.target.value }))}
+                                                                placeholder="คำถามภาษาไทย"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Question (EN)</Label>
+                                                            <Input
+                                                                value={faqForm.questionEn}
+                                                                onChange={(e) => setFaqForm(prev => ({ ...prev, questionEn: e.target.value }))}
+                                                                placeholder="English question"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Answer (TH)</Label>
+                                                            <Textarea
+                                                                value={faqForm.answerTh}
+                                                                onChange={(e) => setFaqForm(prev => ({ ...prev, answerTh: e.target.value }))}
+                                                                placeholder="คำตอบภาษาไทย"
+                                                                rows={4}
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Answer (EN)</Label>
+                                                            <Textarea
+                                                                value={faqForm.answerEn}
+                                                                onChange={(e) => setFaqForm(prev => ({ ...prev, answerEn: e.target.value }))}
+                                                                placeholder="English answer"
+                                                                rows={4}
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Keywords (comma separated)</Label>
+                                                            <Input
+                                                                value={faqForm.keywords}
+                                                                onChange={(e) => setFaqForm(prev => ({ ...prev, keywords: e.target.value }))}
+                                                                placeholder="puppy, litter, จองคิว"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>Source Query ID</Label>
+                                                            <Input value={faqForm.sourceQueryId} readOnly className="bg-gray-50 text-xs" />
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-2 pt-2">
+                                                            <Button variant="outline" onClick={() => handleSaveFaq('draft')}>
+                                                                Save Draft
+                                                            </Button>
+                                                            <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleSaveFaq('approved')}>
+                                                                Approve
+                                                            </Button>
+                                                            <Button variant="outline" onClick={() => handleSaveFaq('archived')}>
+                                                                Archive
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </ScrollArea>
+                                            </div>
+                                        </div>
+                                    </TabsContent>
+
+                                    <TabsContent value="pool" className="flex-1 min-h-0">
+                                        <div className="grid gap-4 lg:grid-cols-[360px,1fr] h-full">
+                                            <div className="bg-white rounded-xl border shadow-sm flex flex-col min-h-0">
+                                                <div className="p-3 border-b flex items-center gap-2">
+                                                    <Label className="text-xs">Show handled</Label>
+                                                    <Checkbox
+                                                        checked={showAllQueries}
+                                                        onCheckedChange={(value) => setShowAllQueries(Boolean(value))}
+                                                    />
+                                                    <span className="text-xs text-gray-500 ml-auto">{visibleQueries.length} queries</span>
+                                                </div>
+                                                <ScrollArea className="flex-1">
+                                                    <div className="p-3 space-y-2">
+                                                        {visibleQueries.length === 0 ? (
+                                                            <p className="text-sm text-gray-500">No queries to review.</p>
+                                                        ) : (
+                                                            visibleQueries.map(item => {
+                                                                const handled = handledQueryIds.has(item.id);
+                                                                return (
+                                                                    <div key={item.id} className="border rounded-lg p-3 bg-white">
+                                                                        <div className="flex items-start justify-between gap-2">
+                                                                            <div className="min-w-0">
+                                                                                <div className="text-sm font-semibold text-gray-900 break-words">{item.query}</div>
+                                                                                <div className="text-[11px] text-gray-500 mt-1">
+                                                                                    {item.intent || 'general'} • {item.lang || 'auto'} • {new Date(item.created_at).toLocaleDateString()}
+                                                                                </div>
+                                                                            </div>
+                                                                            {handled && (
+                                                                                <span className="text-[10px] uppercase px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                                                                                    handled
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex items-center gap-2 mt-3">
+                                                                            <Button size="sm" variant="outline" className="h-7" onClick={() => handleUseQueryAsFaq(item)}>
+                                                                                Create Draft
+                                                                            </Button>
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })
+                                                        )}
+                                                    </div>
+                                                </ScrollArea>
+                                            </div>
+
+                                            <div className="bg-white rounded-xl border shadow-sm flex flex-col min-h-0">
+                                                <div className="p-4 border-b">
+                                                    <h3 className="font-semibold text-gray-900">FAQ Editor</h3>
+                                                    <p className="text-xs text-gray-500">Select a query to create a draft answer.</p>
+                                                </div>
+                                                <ScrollArea className="flex-1">
+                                                    <div className="p-4">
+                                                        <div className="flex flex-col gap-3">
+                                                            <Button onClick={() => setAiTab('faq')} className="bg-primary text-white hover:bg-primary/90">
+                                                                Open FAQ Editor
+                                                            </Button>
+                                                            <p className="text-xs text-gray-500">
+                                                                Use "Create Draft" to prefill a new FAQ answer, then approve it in the FAQ tab.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </ScrollArea>
+                                            </div>
+                                        </div>
+                                    </TabsContent>
+                                </Tabs>
                             </div>
                         ) : activeTab === 'notifications' ? (
                             /* 5. NOTIFICATIONS TAB */
@@ -956,6 +2211,115 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                             setShowRegistrationModal(false);
                         }}
                     />
+
+                    <Dialog open={matchModalOpen} onOpenChange={handleMatchModalChange}>
+                        <DialogContent className="max-w-xl">
+                            <DialogHeader>
+                                <DialogTitle>Add Breeding Match</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                                {matchError && (
+                                    <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                                        {matchError}
+                                    </div>
+                                )}
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label>Sire *</Label>
+                                        <Select
+                                            value={matchForm.sireId}
+                                            onValueChange={(value) => setMatchForm(prev => ({ ...prev, sireId: value }))}
+                                        >
+                                            <SelectTrigger className="bg-white">
+                                                <SelectValue placeholder="Select sire" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {petList.length === 0 ? (
+                                                    <SelectItem value="none" disabled>No pets available</SelectItem>
+                                                ) : (
+                                                    petList.map(pet => (
+                                                        <SelectItem key={pet.id} value={pet.id}>
+                                                            {pet.name} ({pet.breed})
+                                                        </SelectItem>
+                                                    ))
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Dam *</Label>
+                                        <Select
+                                            value={matchForm.damId}
+                                            onValueChange={(value) => setMatchForm(prev => ({ ...prev, damId: value }))}
+                                        >
+                                            <SelectTrigger className="bg-white">
+                                                <SelectValue placeholder="Select dam" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {petList.length === 0 ? (
+                                                    <SelectItem value="none" disabled>No pets available</SelectItem>
+                                                ) : (
+                                                    petList.map(pet => (
+                                                        <SelectItem key={pet.id} value={pet.id}>
+                                                            {pet.name} ({pet.breed})
+                                                        </SelectItem>
+                                                    ))
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label>Match date *</Label>
+                                        <Input
+                                            type="date"
+                                            value={matchForm.matchDate}
+                                            onChange={(e) => setMatchForm(prev => ({ ...prev, matchDate: e.target.value }))}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Due date (auto)</Label>
+                                        <Input value={dueDatePreview || ''} placeholder="Auto" disabled />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Status</Label>
+                                    <Select
+                                        value={matchForm.status}
+                                        onValueChange={(value) => setMatchForm(prev => ({ ...prev, status: value }))}
+                                    >
+                                        <SelectTrigger className="bg-white">
+                                            <SelectValue placeholder="Select status" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="planned">Planned</SelectItem>
+                                            <SelectItem value="mated">Mated</SelectItem>
+                                            <SelectItem value="confirmed">Confirmed</SelectItem>
+                                            <SelectItem value="born">Born</SelectItem>
+                                            <SelectItem value="failed">Cancelled</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Description</Label>
+                                    <Textarea
+                                        value={matchForm.description}
+                                        onChange={(e) => setMatchForm(prev => ({ ...prev, description: e.target.value }))}
+                                        placeholder="Optional notes for this breeding match"
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end gap-2 pt-2">
+                                <Button variant="outline" onClick={() => handleMatchModalChange(false)}>
+                                    Cancel
+                                </Button>
+                                <Button className="bg-primary text-white hover:bg-primary/90" onClick={handleCreateMatch}>
+                                    Save Match
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </DialogContent>
         </Dialog>

@@ -10,7 +10,7 @@ ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 0;
 -- 2. PET LIKES (Thumbtack/Heart)
 CREATE TABLE IF NOT EXISTS public.pet_likes (
     pet_id UUID REFERENCES public.pets(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
     PRIMARY KEY (pet_id, user_id)
 );
@@ -19,9 +19,12 @@ CREATE TABLE IF NOT EXISTS public.pet_likes (
 CREATE TABLE IF NOT EXISTS public.pet_comments (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     pet_id UUID REFERENCES public.pets(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     parent_id UUID REFERENCES public.pet_comments(id) ON DELETE CASCADE, -- For replies
+    is_approved BOOLEAN DEFAULT false,
+    approved_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    approved_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
@@ -37,9 +40,44 @@ CREATE POLICY "Auth toggle likes" ON pet_likes FOR INSERT TO authenticated WITH 
 CREATE POLICY "Auth remove likes" ON pet_likes FOR DELETE TO authenticated USING (auth.uid() = user_id);
 
 -- COMMENTS: Everyone can view, Auth can post
-CREATE POLICY "Public view comments" ON pet_comments FOR SELECT USING (true);
+CREATE POLICY "Public view approved comments" ON pet_comments FOR SELECT USING (is_approved = true);
+CREATE POLICY "Users view own comments" ON pet_comments FOR SELECT TO authenticated USING (auth.uid() = user_id);
 CREATE POLICY "Auth post comments" ON pet_comments FOR INSERT TO authenticated WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Auth delete own comments" ON pet_comments FOR DELETE TO authenticated USING (auth.uid() = user_id);
+
+CREATE POLICY "Admins manage comments" ON pet_comments FOR ALL
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+    )
+);
+
+CREATE POLICY "Admins manage likes" ON pet_likes FOR ALL
+TO authenticated
+USING (
+    EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+    )
+)
+WITH CHECK (
+    EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+    )
+);
 
 -- 5. HELPER FUNCTION: Increment View Count
 -- Safe increment function to avoid race conditions

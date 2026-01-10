@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import PetDetailsModal from './modals/PetDetailsModal';
 import PetRegistrationModal from './PetRegistrationModal';
-import { getUserPets } from '@/lib/database';
+import { createUserNotification, getUserPets } from '@/lib/database';
 
 interface BreederDashboardProps {
     onClose: () => void;
@@ -77,7 +77,6 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
         setPendingRequests(prev => prev.filter(req => req.id !== id));
 
         try {
-            const { createUserNotification } = await import('@/lib/database');
             if (user) {
                 await createUserNotification({
                     user_id: user.id,
@@ -97,7 +96,6 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
         if (note) {
             setPendingRequests(prev => prev.filter(req => req.id !== id));
             try {
-                const { createUserNotification } = await import('@/lib/database');
                 if (user) {
                     await createUserNotification({
                         user_id: user.id,
@@ -423,7 +421,6 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                                         e.stopPropagation();
                                         alert(`Proposal sent to ${match.pet.name}'s owner!`);
                                         try {
-                                            const { createUserNotification } = await import('@/lib/database');
                                             if (user) {
                                                 await createUserNotification({
                                                     user_id: user.id,

@@ -43,7 +43,7 @@ const TreeNode: React.FC<TreeNodeProps> = ({ pet, role, currentDepth, maxDepth, 
                 {/* Card */}
                 {pet ? (
                     <button
-                        onClick={() => onPetClick(pet)}
+                        onClick={() => onPetClick?.(pet)}
                         className={cn(
                             "relative overflow-hidden rounded-xl border-2 transition-all duration-300 hover:shadow-2xl hover:scale-105 group-hover:border-primary text-left bg-white",
                             currentDepth === 0 ? "w-72 shadow-xl" : currentDepth === 1 ? "w-48" : "w-36"

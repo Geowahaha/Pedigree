@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { createUserNotification } from '@/lib/database';
 
 export interface UserProfile {
   id: string;
@@ -11,6 +12,7 @@ export interface UserProfile {
   phone: string | null;
   bio: string | null;
   verified_breeder: boolean;
+  trd_balance: number; // TRD Coin Balance
   created_at: string;
   updated_at: string;
 }
@@ -61,7 +63,6 @@ export async function signUp(
 
     // Welcome Notification
     try {
-      const { createUserNotification } = await import('@/lib/database');
       await createUserNotification({
         user_id: data.user.id,
         type: 'system',

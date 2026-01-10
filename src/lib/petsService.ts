@@ -45,8 +45,8 @@ export async function createPet(input: CreatePetInput): Promise<Pet> {
  */
 export async function getPetById(id: string): Promise<Pet | null> {
     const { data, error } = await supabase
-        .from('pets_with_parents')
-        .select('*')
+        .from('pets')
+        .select('*, owner:profiles!owner_id(full_name, email, verified_breeder, avatar_url, location)')
         .eq('id', id)
         .single();
 
@@ -215,13 +215,13 @@ function mapSupabasePetToPet(data: any): Pet {
         breed: data.breed,
         type: finalType,
         gender: data.gender || 'male',
-        birthDate: data.birthday,
-        age: calculateAge(data.birthday),
+        birthDate: data.birthday || data.birth_date,
+        age: calculateAge(data.birthday || data.birth_date),
         weight: data.weight || 0,
         color: data.color || '',
         location: data.location || 'Thailand',
         registrationNumber: data.registration_number,
-        image: data.image_url || '', // Empty string if missing, let UI handle fallback
+        image: data.image_url || data.image || '', // Empty string if missing, let UI handle fallback
         // Prioritize: 1. Profile Name (if joined) 2. Legacy Airtable Name 3. ID 4. Unknown
         owner: data.owner?.full_name || data.owner_name || 'Unknown',
         owner_id: data.owner_id, // Important for chat!

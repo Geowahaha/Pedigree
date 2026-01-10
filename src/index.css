@@ -1,153 +1,240 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+/* ==========================================================================
+   PETDEGREE - Luxury Black & Gold Theme
+   "Quiet Luxury" - Premium, Sophisticated, Timeless
+   ========================================================================== */
+
+/* Import Premium Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Import Design Systems */
+@import './styles/luxury-design-system.css';
+@import './styles/zen-design-system.css';
 @import './styles/utilities.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   LUXURY THEME - CSS Variables
+   ========================================================================== */
+
 @layer base {
   :root {
-    /* Cream Background */
-    --background: 40 33% 94%;
-    /* Dark Grey Text */
-    --foreground: 0 0% 17%;
+    /* ═══════════════════════════════════════════════════════════════════
+       LUXURY COLOR PALETTE
+       ═══════════════════════════════════════════════════════════════════ */
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 17%;
+    /* Dark Background */
+    --background: 0 0% 4%;
+    /* #0A0A0A - Pure Luxury Black */
+    --foreground: 40 8% 95%;
+    /* #F5F5F0 - Off White */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 17%;
+    /* Cards */
+    --card: 0 0% 10%;
+    /* #1A1A1A - Charcoal */
+    --card-foreground: 40 8% 95%;
+    /* #F5F5F0 */
 
-    /* Sage Green Primary */
-    --primary: 95 14% 58%;
-    --primary-foreground: 0 0% 100%;
+    /* Popovers & Modals */
+    --popover: 0 0% 8%;
+    /* #141414 */
+    --popover-foreground: 40 8% 95%;
 
-    /* Darker Green Secondary */
-    --secondary: 95 12% 44%;
-    --secondary-foreground: 0 0% 100%;
+    /* Primary - Gold */
+    --primary: 40 43% 55%;
+    /* #C5A059 - Rich Gold */
+    --primary-foreground: 0 0% 4%;
+    /* #0A0A0A - Black text on gold */
 
-    /* Terracotta Accent */
-    --accent: 7 48% 59%;
-    --accent-foreground: 0 0% 100%;
+    /* Secondary - Dark Gray */
+    --secondary: 0 0% 16%;
+    /* #2A2A2A */
+    --secondary-foreground: 40 8% 95%;
 
-    --muted: 40 20% 90%;
-    --muted-foreground: 0 0% 40%;
+    /* Accent - Champagne */
+    --accent: 35 30% 80%;
+    /* #D4C4B5 - Champagne */
+    --accent-foreground: 0 0% 4%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    /* Muted */
+    --muted: 0 0% 12%;
+    /* #1F1F1F */
+    --muted-foreground: 0 0% 72%;
+    /* #B8B8B8 */
 
-    --border: 95 14% 58%;
-    --input: 95 14% 58%;
-    --ring: 95 14% 58%;
+    /* Destructive */
+    --destructive: 0 40% 40%;
+    --destructive-foreground: 40 8% 95%;
 
-    --radius: 0.75rem;
-    /* More rounded for modern feel */
+    /* Borders & Inputs */
+    --border: 40 43% 55% / 0.15;
+    /* Gold with transparency */
+    --input: 40 43% 55% / 0.15;
+    --ring: 40 43% 55%;
+    /* Gold focus ring */
+
+    /* Radius - More angular for luxury feel */
+    --radius: 0.25rem;
+
+    /* ═══════════════════════════════════════════════════════════════════
+       LUXURY SPECIFIC COLORS
+       ═══════════════════════════════════════════════════════════════════ */
+    --lux-black: #0A0A0A;
+    --lux-charcoal: #1A1A1A;
+    --lux-dark-gray: #2A2A2A;
+    --lux-medium-gray: #3A3A3A;
+    --lux-light-gray: #B8B8B8;
+    --lux-off-white: #F5F5F0;
+    --lux-pure-white: #FFFFFF;
+
+    --lux-gold-dark: #8B7355;
+    --lux-gold: #C5A059;
+    --lux-gold-light: #D4C4B5;
+    --lux-champagne: #E5DDD0;
+    --lux-cream: #F8F5F0;
   }
 
+  /* Dark mode is the default for luxury theme */
   .dark {
-    /* Dark Mode Defaults */
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 95 14% 58%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 95 12% 44%;
-    --secondary-foreground: 210 40% 98%;
-
-    --accent: 7 48% 59%;
-    --accent-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 95 14% 58%;
+    --background: 0 0% 4%;
+    --foreground: 40 8% 95%;
+    --card: 0 0% 10%;
+    --card-foreground: 40 8% 95%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 40 8% 95%;
+    --primary: 40 43% 55%;
+    --primary-foreground: 0 0% 4%;
+    --secondary: 0 0% 16%;
+    --secondary-foreground: 40 8% 95%;
+    --accent: 35 30% 80%;
+    --accent-foreground: 0 0% 4%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 72%;
+    --destructive: 0 40% 40%;
+    --destructive-foreground: 40 8% 95%;
+    --border: 40 43% 55% / 0.15;
+    --input: 40 43% 55% / 0.15;
+    --ring: 40 43% 55%;
   }
 }
+
+/* ==========================================================================
+   BASE STYLES
+   ========================================================================== */
 
 @layer base {
   * {
     @apply border-border;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     font-feature-settings: 'liga', 'kern';
+    background-color: #0A0A0A;
+    color: #F5F5F0;
+    overflow-x: hidden;
   }
 
+  /* Headings - Use Playfair Display for elegance */
   h1,
   h2,
-  h3,
+  h3 {
+    font-family: 'Playfair Display', 'Georgia', serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
   h4,
   h5,
   h6 {
-    @apply font-bold tracking-tight;
-    text-rendering: optimizeLegibility;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.01em;
   }
 
-  /* Better selection styling */
+  /* Links */
+  a {
+    color: var(--lux-gold);
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+
+  a:hover {
+    color: var(--lux-champagne);
+  }
+
+  /* Selection */
   ::selection {
-    background-color: hsl(var(--primary) / 0.2);
-    color: hsl(var(--foreground));
+    background-color: rgba(197, 160, 89, 0.3);
+    color: var(--lux-off-white);
   }
 
-  /* Focus visible for accessibility */
+  /* Focus states */
   *:focus-visible {
-    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+    @apply outline-none;
+    box-shadow: 0 0 0 2px var(--lux-gold);
   }
 
-  /* Smooth images */
+  /* Images */
   img {
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
+    max-width: 100%;
+    height: auto;
   }
 }
 
-/* Glassmorphism Utilities */
+/* ==========================================================================
+   GLASSMORPHISM - Luxury Dark Style
+   ========================================================================== */
+
 @layer utilities {
   .glass {
-    @apply bg-white/10 backdrop-blur-md border border-white/20;
+    background: rgba(26, 26, 26, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(197, 160, 89, 0.1);
   }
 
   .glass-dark {
-    @apply bg-black/10 backdrop-blur-md border border-white/10;
+    background: rgba(10, 10, 10, 0.9);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(197, 160, 89, 0.1);
   }
 
   .glass-card {
-    @apply bg-white/70 backdrop-blur-lg border border-white/40 shadow-xl;
+    background: rgba(26, 26, 26, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(197, 160, 89, 0.15);
+  }
+
+  .glass-gold {
+    background: rgba(197, 160, 89, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(197, 160, 89, 0.3);
   }
 }
 
-/* Animations */
+/* ==========================================================================
+   ANIMATIONS
+   ========================================================================== */
+
 @keyframes float {
-  0% {
+
+  0%,
+  100% {
     transform: translateY(0px);
   }
 
   50% {
     transform: translateY(-10px);
   }
-
-  100% {
-    transform: translateY(0px);
-  }
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
 }
 
 @keyframes shimmer {
@@ -158,10 +245,6 @@
   100% {
     transform: translateX(100%);
   }
-}
-
-.animate-shimmer {
-  animation: shimmer 2s infinite;
 }
 
 @keyframes gradient {
@@ -176,25 +259,138 @@
   }
 }
 
+@keyframes gold-pulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(197, 160, 89, 0.1);
+  }
+
+  50% {
+    box-shadow: 0 0 40px rgba(197, 160, 89, 0.3);
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
 .animate-gradient {
   background-size: 200% 200%;
   animation: gradient 3s ease infinite;
 }
 
-/* Scrollbar */
+.animate-gold-pulse {
+  animation: gold-pulse 3s ease-in-out infinite;
+}
+
+.animate-fade-up {
+  animation: fade-up 0.6s ease-out forwards;
+}
+
+/* ==========================================================================
+   SCROLLBAR - Luxury Style
+   ========================================================================== */
+
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-muted;
+  background: #0A0A0A;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-primary/50 rounded-full hover:bg-primary transition-colors;
+  background: linear-gradient(180deg, #C5A059 0%, #8B7355 100%);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #D4C4B5 0%, #C5A059 100%);
 }
 
 html {
   scroll-behavior: smooth;
+  scrollbar-color: #C5A059 #0A0A0A;
+  scrollbar-width: thin;
+}
+
+/* ==========================================================================
+   UTILITY OVERRIDES FOR LUXURY THEME
+   ========================================================================== */
+
+@layer utilities {
+
+  /* Gold gradient text */
+  .text-gold-gradient {
+    background: linear-gradient(135deg, #8B7355 0%, #C5A059 30%, #E5DDD0 50%, #C5A059 70%, #8B7355 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Subtle gold border glow */
+  .border-gold-glow {
+    border: 1px solid rgba(197, 160, 89, 0.3);
+    box-shadow: 0 0 20px rgba(197, 160, 89, 0.1);
+  }
+
+  /* Dark overlay */
+  .overlay-dark {
+    background: linear-gradient(180deg, rgba(10, 10, 10, 0) 0%, rgba(10, 10, 10, 0.9) 100%);
+  }
+
+  /* Noise texture */
+  .noise {
+    position: relative;
+  }
+
+  .noise::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+  }
+}
+
+/* ==========================================================================
+   RESPONSIVE TYPOGRAPHY SCALE
+   ========================================================================== */
+
+@layer base {
+  html {
+    font-size: 16px;
+  }
+
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    html {
+      font-size: 18px;
+    }
+  }
 }

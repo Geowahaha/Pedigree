@@ -1,15 +1,32 @@
+/**
+ * SearchSection - Pet Search & Breeding Pairs
+ * 
+ * Zen Design System Applied
+ * "Simplicity is the ultimate sophistication." - Leonardo da Vinci
+ * 
+ * Design Principles:
+ * - Clean, purposeful typography
+ * - Generous whitespace for visual breathing room
+ * - Subtle micro-animations for engagement
+ * - Premium color palette (emerald/teal accents)
+ */
+
 import React, { useState, useMemo, useEffect } from 'react';
-import { pets as staticPets, breeds, locations, Pet } from '@/data/petData';
-import { useNavigate } from 'react-router-dom';
+import { breeds, locations, Pet } from '@/data/petData';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { getPublicPets, searchPets, Pet as DbPet, createReservation, submitChatRequest, submitReport } from '@/lib/database';
-import SkeletonCard from './SkeletonCard';
+import PuppyComingSoonSection from './PuppyComingSoonSection';
 
 interface SearchSectionProps {
   onViewPedigree: (pet: Pet) => void;
   onViewDetails: (pet: Pet) => void;
+  onRequireAuth?: () => void;
 }
 
-const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDetails }) => {
+const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDetails, onRequireAuth }) => {
+  const { user } = useAuth();
+  const { language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [petType, setPetType] = useState<'all' | 'dog' | 'cat'>('all');
   const [selectedBreed, setSelectedBreed] = useState('');
@@ -56,6 +73,9 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
       }, 2000);
     } catch (err) {
       console.error(err);
+      if (`${err}`.includes('Not authenticated')) {
+        onRequireAuth?.();
+      }
       setSubmitStatus('error');
     }
   };
@@ -179,6 +199,10 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
   }, [breedingPairs, searchQuery, petType, selectedBreed]);
 
   const openInteraction = (type: 'reserve' | 'chat' | 'report', sire: Pet, dam: Pet, ownerName?: string) => {
+    if (type === 'reserve' && !user) {
+      onRequireAuth?.();
+      return;
+    }
     setModalType(type);
     setSelectedInteraction({ sire, dam, ownerName });
     setModalOpen(true);
@@ -194,43 +218,60 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
   };
 
   return (
-    <section id="search" className="py-20 lg:py-28 bg-[#F5F1E8]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center mb-12">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-[#8B9D83]/10 text-[#6B7D63] text-sm font-medium mb-4">
-            Advanced Search
+    <section id="search" className="py-24 lg:py-32 bg-gradient-to-b from-background via-emerald-50/20 to-background relative overflow-hidden">
+      {/* Background decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-40 right-1/4 w-[500px] h-[500px] bg-emerald-100/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute bottom-40 left-1/4 w-[400px] h-[400px] bg-teal-100/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Section Header - Zen Typography */}
+        <div className="text-center mb-16 space-y-6">
+          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-emerald-50 text-emerald-700 text-sm font-semibold tracking-wide border border-emerald-100 shadow-sm">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {language === 'th' ? 'ค้นหาขั้นสูง' : 'Advanced Search'}
           </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-[#2C2C2C] mb-4">
-            Find Your Perfect Match
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
+            <span className="text-foreground">{language === 'th' ? 'ค้นหา' : 'Find Your'} </span>
+            <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
+              {language === 'th' ? 'คู่ที่สมบูรณ์แบบ' : 'Perfect Match'}
+            </span>
           </h2>
-          <p className="text-lg text-[#2C2C2C]/60 max-w-2xl mx-auto">
-            Search through our comprehensive database of registered pets by breed, location, or bloodline.
+          <p className="text-lg sm:text-xl text-foreground/60 max-w-2xl mx-auto leading-relaxed">
+            {language === 'th'
+              ? 'ค้นหาจากฐานข้อมูลสัตว์เลี้ยงที่ลงทะเบียน ตามสายพันธุ์ สถานที่ หรือสายเลือด'
+              : 'Search through our comprehensive database of registered pets by breed, location, or bloodline.'
+            }
           </p>
         </div>
 
         {/* Featured Breeding Matches Strategy */}
-        <div className="mb-16">
-          <FeaturedMatch allPets={allPets} onInteraction={openInteraction} onDetailClick={onViewDetails} />
+        <div className="mb-20">
+          <PuppyComingSoonSection onViewDetails={onViewDetails} onRequireAuth={onRequireAuth} />
         </div>
 
-        {/* Search Box */}
-        <div className="bg-white rounded-2xl p-6 lg:p-8 shadow-xl shadow-[#8B9D83]/10 mb-8">
+        {/* Search Box - Premium Glass Effect */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 lg:p-10 shadow-2xl shadow-emerald-100/30 border border-white/50 mb-12">
           {/* Main Search */}
-          <div className="relative mb-6">
-            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#2C2C2C]/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+          <div className="relative mb-8 group">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center group-focus-within:bg-emerald-100 transition-colors">
+              <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
             <input
               type="text"
-              placeholder="Search by name, breed, or registration number..."
+              placeholder={language === 'th' ? 'ค้นหาตามชื่อ สายพันธุ์ หรือเลขทะเบียน...' : 'Search by name, breed, or registration number...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all text-[#2C2C2C] placeholder:text-[#2C2C2C]/40"
+              className="w-full pl-20 pr-6 py-5 rounded-2xl border-2 border-emerald-100/50 bg-white/70 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 outline-none transition-all text-foreground text-lg placeholder:text-foreground/40 shadow-inner"
             />
             {searching && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                <svg className="w-5 h-5 animate-spin text-[#8B9D83]" fill="none" viewBox="0 0 24 24">
+              <div className="absolute right-5 top-1/2 -translate-y-1/2">
+                <svg className="w-6 h-6 animate-spin text-emerald-500" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
@@ -238,34 +279,38 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
             )}
           </div>
 
-          {/* Filters Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Filters Grid - Refined */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {/* Pet Type */}
-            <div>
-              <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Pet Type</label>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-foreground/80">
+                {language === 'th' ? 'ประเภท' : 'Pet Type'}
+              </label>
               <select
                 value={petType}
                 onChange={(e) => {
                   setPetType(e.target.value as 'all' | 'dog' | 'cat');
                   setSelectedBreed('');
                 }}
-                className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all text-[#2C2C2C] bg-white"
+                className="w-full px-4 py-3.5 rounded-xl border-2 border-emerald-100/50 bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-foreground cursor-pointer hover:border-emerald-200"
               >
-                <option value="all">All Types</option>
-                <option value="dog">Dogs</option>
-                <option value="cat">Cats</option>
+                <option value="all">{language === 'th' ? 'ทั้งหมด' : 'All Types'}</option>
+                <option value="dog">{language === 'th' ? 'สุนัข' : 'Dogs'}</option>
+                <option value="cat">{language === 'th' ? 'แมว' : 'Cats'}</option>
               </select>
             </div>
 
             {/* Breed */}
-            <div>
-              <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Breed</label>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-foreground/80">
+                {language === 'th' ? 'สายพันธุ์' : 'Breed'}
+              </label>
               <select
                 value={selectedBreed}
                 onChange={(e) => setSelectedBreed(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all text-[#2C2C2C] bg-white"
+                className="w-full px-4 py-3.5 rounded-xl border-2 border-emerald-100/50 bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-foreground cursor-pointer hover:border-emerald-200"
               >
-                <option value="">All Breeds</option>
+                <option value="">{language === 'th' ? 'ทุกสายพันธุ์' : 'All Breeds'}</option>
                 {availableBreeds.map(breed => (
                   <option key={breed} value={breed}>{breed}</option>
                 ))}
@@ -273,14 +318,16 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
             </div>
 
             {/* Location */}
-            <div>
-              <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Location</label>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-foreground/80">
+                {language === 'th' ? 'พื้นที่' : 'Location'}
+              </label>
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#8B9D83] focus:ring-2 focus:ring-[#8B9D83]/20 outline-none transition-all text-[#2C2C2C] bg-white"
+                className="w-full px-4 py-3.5 rounded-xl border-2 border-emerald-100/50 bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-foreground cursor-pointer hover:border-emerald-200"
               >
-                <option value="">All Locations</option>
+                <option value="">{language === 'th' ? 'ทุกพื้นที่' : 'All Locations'}</option>
                 {locations.map(loc => (
                   <option key={loc} value={loc}>{loc}</option>
                 ))}
@@ -288,99 +335,140 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
             </div>
 
             {/* Health Certified */}
-            <div>
-              <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Certification</label>
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-foreground/80">
+                {language === 'th' ? 'การรับรอง' : 'Certification'}
+              </label>
               <button
                 onClick={() => setHealthCertified(!healthCertified)}
-                className={`w-full px-4 py-3 rounded-xl border transition-all flex items-center justify-center gap-2 ${healthCertified
-                  ? 'border-[#8B9D83] bg-[#8B9D83]/10 text-[#6B7D63]'
-                  : 'border-[#8B9D83]/20 text-[#2C2C2C]/60 hover:border-[#8B9D83]/40'
+                className={`w-full px-4 py-3.5 rounded-xl border-2 transition-all flex items-center justify-center gap-2 font-medium ${healthCertified
+                  ? 'border-emerald-400 bg-emerald-50 text-emerald-700 shadow-sm'
+                  : 'border-emerald-100/50 text-foreground/60 hover:border-emerald-200 hover:bg-emerald-50/30'
                   }`}
               >
-                <svg className={`w-5 h-5 ${healthCertified ? 'text-[#8B9D83]' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+                <svg className={`w-5 h-5 transition-colors ${healthCertified ? 'text-emerald-600' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
-                Health Certified
+                {language === 'th' ? 'ผ่านการตรวจสุขภาพ' : 'Health Certified'}
               </button>
             </div>
           </div>
 
           {/* Clear Filters */}
-          <div className="flex items-center justify-between mt-6 pt-6 border-t border-[#8B9D83]/10">
-            <p className="text-sm text-[#2C2C2C]/60">
-              Found <span className="font-semibold text-[#2C2C2C]">{filteredPairs.length}</span> proven breeding pairs
+          <div className="flex items-center justify-between mt-8 pt-8 border-t border-emerald-100">
+            <p className="text-sm text-foreground/60">
+              {language === 'th' ? 'พบ' : 'Found'} <span className="font-bold text-emerald-600 text-base">{filteredPairs.length}</span> {language === 'th' ? 'คู่ผสมพันธุ์' : 'proven breeding pairs'}
             </p>
             <button
               onClick={() => { setSearchQuery(''); setPetType('all'); setSelectedBreed(''); }}
-              className="text-sm text-[#C97064] hover:text-[#B86054] font-medium transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-rose-500 hover:text-rose-600 font-semibold transition-colors"
             >
-              Clear all filters
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              {language === 'th' ? 'ล้างตัวกรอง' : 'Clear all filters'}
             </button>
           </div>
         </div>
 
         {/* Results */}
-        <div className="space-y-4">
+        <div className="space-y-8">
           {loading ? (
-            <div className="grid grid-cols-1 gap-6">
-              <div className="h-64 bg-gray-100 rounded-3xl animate-pulse"></div>
-              <div className="h-64 bg-gray-100 rounded-3xl animate-pulse"></div>
+            <div className="grid grid-cols-1 gap-8">
+              {[1, 2].map((i) => (
+                <div key={i} className="h-72 bg-gradient-to-r from-emerald-50/50 to-teal-50/50 rounded-3xl animate-pulse" />
+              ))}
             </div>
           ) : filteredPairs.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 text-center">
-              <svg className="w-16 h-16 mx-auto text-[#8B9D83]/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-xl font-semibold text-[#2C2C2C] mb-2">No mating pairs found</h3>
-              <p className="text-[#2C2C2C]/60">Try different search terms or filters.</p>
+            <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-16 text-center border border-white/50 shadow-xl">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-50 flex items-center justify-center">
+                <svg className="w-10 h-10 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-3">
+                {language === 'th' ? 'ไม่พบคู่ผสมพันธุ์' : 'No mating pairs found'}
+              </h3>
+              <p className="text-foreground/60 text-lg">
+                {language === 'th' ? 'ลองใช้คำค้นหาหรือตัวกรองอื่น' : 'Try different search terms or filters.'}
+              </p>
             </div>
           ) : (
             filteredPairs.map((pair, idx) => (
-              <div key={idx} className="bg-white rounded-3xl p-6 shadow-xl shadow-[#8B9D83]/5 border border-[#8B9D83]/10 mb-8 overflow-hidden hover:shadow-[#8B9D83]/10 transition-shadow">
+              <div
+                key={idx}
+                className="group bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl shadow-emerald-100/20 border border-white/50 hover:shadow-2xl hover:shadow-emerald-100/30 transition-all duration-300 hover:-translate-y-1"
+              >
                 {/* Pair Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-                  <h3 className="text-xl font-bold text-[#2C2C2C] flex items-center gap-2">
-                    <span className="bg-[#C97064]/10 p-2 rounded-full text-[#C97064] text-xs">❤️ PROVEN PAIR</span>
-                    {pair.sire.breed} Match
-                  </h3>
-                  <div className="flex items-center gap-2 bg-[#F5F1E8] px-3 py-1.5 rounded-full self-start md:self-auto">
-                    <div className="text-xs font-medium text-[#2C2C2C]/70">
-                      Rated <span className="text-[#C97064] font-bold">5.0</span>
-                    </div>
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-100">
+                      <span className="text-lg">❤️</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-rose-600">Proven Pair</span>
+                    </span>
+                    <h3 className="text-xl font-bold text-foreground">
+                      {pair.sire.breed} Match
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-amber-50 border border-amber-100">
+                    <svg className="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    <span className="text-sm font-bold text-amber-700">5.0</span>
                   </div>
                 </div>
 
                 {/* Sire & Dam Row */}
-                <div className="flex flex-col lg:flex-row items-center gap-4 lg:gap-8 mb-8">
+                <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10 mb-10">
                   {/* Sire */}
-                  <div className="flex-1 w-full bg-[#8B9D83]/5 rounded-2xl p-4 flex gap-4 items-center cursor-pointer hover:bg-[#8B9D83]/10 transition-colors"
-                    onClick={() => onViewDetails(pair.sire)}>
-                    <img src={pair.sire.image || ''} className="w-20 h-20 rounded-full object-cover border-4 border-blue-100" alt="Sire"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-600 font-bold">SIRE</span>
-                        <span className="font-bold truncate max-w-[120px]">{pair.sire.name}</span>
+                  <div
+                    className="flex-1 w-full bg-gradient-to-br from-blue-50/80 to-sky-50/50 rounded-2xl p-5 flex gap-5 items-center cursor-pointer hover:from-blue-100/80 hover:to-sky-100/50 transition-all duration-200 border border-blue-100/50 group/sire"
+                    onClick={() => onViewDetails(pair.sire)}
+                  >
+                    <div className="relative">
+                      <img
+                        src={pair.sire.image || ''}
+                        className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-lg group-hover/sire:scale-105 transition-transform"
+                        alt="Sire"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">♂</div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-blue-500 text-white font-bold uppercase tracking-wider">Sire</span>
                       </div>
-                      <p className="text-xs text-[#2C2C2C]/60">{pair.sire.color || 'Unknown Color'}</p>
-                      <p className="text-xs text-[#8B9D83] mt-1 hover:underline">View Profile</p>
+                      <h4 className="font-bold text-lg text-foreground truncate">{pair.sire.name}</h4>
+                      <p className="text-sm text-foreground/60">{pair.sire.color || 'Unknown Color'}</p>
+                      <p className="text-xs text-emerald-600 mt-2 font-medium group-hover/sire:underline">View Profile →</p>
                     </div>
                   </div>
 
-                  <div className="text-[#C97064] font-bold text-xl">+</div>
+                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-rose-400 to-pink-500 text-white font-bold text-xl shadow-lg shadow-rose-200">
+                    +
+                  </div>
 
                   {/* Dam */}
-                  <div className="flex-1 w-full bg-[#8B9D83]/5 rounded-2xl p-4 flex gap-4 items-center flex-row-reverse text-right cursor-pointer hover:bg-[#8B9D83]/10 transition-colors"
-                    onClick={() => onViewDetails(pair.dam)}>
-                    <img src={pair.dam.image || ''} className="w-20 h-20 rounded-full object-cover border-4 border-pink-100" alt="Dam"
-                      onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                    <div>
-                      <div className="flex items-center gap-2 mb-1 justify-end">
-                        <span className="font-bold truncate max-w-[120px]">{pair.dam.name}</span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] bg-pink-100 text-pink-600 font-bold">DAM</span>
+                  <div
+                    className="flex-1 w-full bg-gradient-to-br from-pink-50/80 to-rose-50/50 rounded-2xl p-5 flex gap-5 items-center flex-row-reverse text-right cursor-pointer hover:from-pink-100/80 hover:to-rose-100/50 transition-all duration-200 border border-pink-100/50 group/dam"
+                    onClick={() => onViewDetails(pair.dam)}
+                  >
+                    <div className="relative">
+                      <img
+                        src={pair.dam.image || ''}
+                        className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-lg group-hover/dam:scale-105 transition-transform"
+                        alt="Dam"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                      <div className="absolute -bottom-2 -left-2 w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">♀</div>
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2 justify-end">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-pink-500 text-white font-bold uppercase tracking-wider">Dam</span>
                       </div>
-                      <p className="text-xs text-[#2C2C2C]/60">{pair.dam.color || 'Unknown Color'}</p>
-                      <p className="text-xs text-[#8B9D83] mt-1 hover:underline">View Profile</p>
+                      <h4 className="font-bold text-lg text-foreground truncate">{pair.dam.name}</h4>
+                      <p className="text-sm text-foreground/60">{pair.dam.color || 'Unknown Color'}</p>
+                      <p className="text-xs text-emerald-600 mt-2 font-medium group-hover/dam:underline">← View Profile</p>
                     </div>
                   </div>
                 </div>
@@ -419,24 +507,26 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3 mt-6 justify-end">
+                <div className="flex flex-col sm:flex-row items-center gap-4 mt-8 pt-6 border-t border-emerald-50">
                   <button
                     onClick={() => openInteraction('report', pair.sire, pair.dam)}
-                    className="text-xs text-[#2C2C2C]/40 hover:text-[#C97064] mr-auto transition-colors self-center sm:self-end mb-2 sm:mb-0">
-                    Report Issue
+                    className="text-sm text-foreground/40 hover:text-rose-500 transition-colors mr-auto hidden sm:block">
+                    {language === 'th' ? 'รายงานปัญหา' : 'Report Issue'}
                   </button>
-                  <button
-                    onClick={() => openInteraction('chat', pair.sire, pair.dam, pair.sire.owner)}
-                    className="px-6 py-2 rounded-full border border-[#8B9D83]/30 text-[#6B7D63] font-bold text-sm hover:bg-[#8B9D83]/5 transition-colors flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                    Chat with Owner
-                  </button>
-                  <button
-                    onClick={() => openInteraction('reserve', pair.sire, pair.dam)}
-                    className="px-6 py-2 rounded-full bg-[#C97064] text-white font-bold text-sm hover:bg-[#B86054] transition-colors shadow-lg shadow-[#C97064]/20 flex items-center justify-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                    Reserve Puppy
-                  </button>
+                  <div className="flex gap-3 w-full sm:w-auto">
+                    <button
+                      onClick={() => openInteraction('chat', pair.sire, pair.dam, pair.sire.owner)}
+                      className="flex-1 sm:flex-none px-6 py-3 rounded-xl border-2 border-emerald-200 text-emerald-700 font-semibold text-sm hover:bg-emerald-50 hover:border-emerald-300 transition-all flex items-center justify-center gap-2">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                      {language === 'th' ? 'แชทกับเจ้าของ' : 'Chat with Owner'}
+                    </button>
+                    <button
+                      onClick={() => openInteraction('reserve', pair.sire, pair.dam)}
+                      className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-sm hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 hover:-translate-y-0.5">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                      {language === 'th' ? 'จองลูกสุนัข' : 'Reserve Puppy'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -542,229 +632,5 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
   );
 };
 
-// Add navigate hook usage
-const FeaturedMatch: React.FC<{ allPets: Pet[], onInteraction: (type: 'reserve' | 'chat' | 'report', sire: Pet, dam: Pet, ownerName?: string) => void, onDetailClick: (pet: Pet) => void }> = ({ allPets, onInteraction, onDetailClick }) => {
-  const navigate = useNavigate();
-  // Try to find the specific "Boontum + Boonnum" pair
-  // Find a pair that actually has children to display real history
-  const match = useMemo(() => {
-    // 1. Try to find the specific "Boontum + Violin" pair first (User Request)
-    const boontum = allPets.find(p => p.name.includes('Boontum') || p.name.includes('บุญทุ่ม'));
-    const violin = allPets.find(p => p.name.includes('Violin') || p.name.includes('ไวโอลิน'));
-
-    if (boontum && violin) {
-      return { sire: boontum, dam: violin, isHighlight: true };
-    }
-
-    // 2. Fallback: Find ANY pair that has children in our loaded list
-    // This makes the UI dynamic based on real family connections
-    const petsWithParents = allPets.filter(p => p.parentIds && p.parentIds.sire && p.parentIds.dam);
-    if (petsWithParents.length > 0) {
-      // Get standard pair from the first child found
-      const child = petsWithParents[0];
-      const sire = allPets.find(p => p.id === child.parentIds?.sire);
-      const dam = allPets.find(p => p.id === child.parentIds?.dam);
-
-      if (sire && dam) {
-        return { sire, dam, isHighlight: true };
-      }
-    }
-
-    // 3. Last Resort: Random Fallback (if no relations found at all)
-    const males = allPets.filter(p => p.gender === 'male' && p.image && p.image !== '');
-    const females = allPets.filter(p => p.gender === 'female' && p.image && p.image !== '');
-
-    if (males.length === 0 || females.length === 0) return null;
-
-    return {
-      sire: males[Math.floor(Math.random() * males.length)],
-      dam: females[Math.floor(Math.random() * females.length)],
-      isHighlight: false
-    };
-  }, [allPets]);
-
-  // Find confirmed offspring for this specific pair (e.g. Boontum + Violin)
-  const offspring = useMemo(() => {
-    if (!match) return [];
-    return allPets.filter(p =>
-      p.parentIds?.sire === match.sire.id &&
-      p.parentIds?.dam === match.dam.id
-    );
-  }, [allPets, match]);
-
-  if (!match) return null;
-
-  return (
-    <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-xl shadow-[#8B9D83]/5 border border-[#8B9D83]/10 relative overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <div className="absolute top-0 right-0 p-4 opacity-50">
-        <svg className="w-32 h-32 text-[#8B9D83]/5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
-      </div>
-
-      <div className="relative z-10">
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
-          <h3 className="text-2xl font-bold text-[#2C2C2C] flex items-center gap-2">
-            <span className="bg-[#C97064]/10 p-2 rounded-full text-[#C97064]">❤️</span>
-            Recommended Mating Pair
-            {match.isHighlight && (
-              <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-700 font-bold border border-yellow-200">
-                ✨ Quality Breeding Match
-              </span>
-            )}
-          </h3>
-
-          {/* Social Proof Badge */}
-          <div className="flex items-center gap-2 bg-[#F5F1E8] px-3 py-1.5 rounded-full">
-            <div className="flex -space-x-2">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="w-6 h-6 rounded-full bg-gray-300 border-2 border-white" />
-              ))}
-            </div>
-            <div className="text-xs font-medium text-[#2C2C2C]/70">
-              <span className="text-[#C97064] font-bold">5.0</span> (12 Reviews)
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col lg:flex-row items-center gap-8">
-          {/* Sire Card */}
-          <div className="flex-1 w-full bg-[#8B9D83]/5 rounded-2xl p-4 flex gap-4 items-center group cursor-pointer hover:bg-[#8B9D83]/10 transition-colors"
-            onClick={() => onDetailClick(match.sire)}>
-            <img src={match.sire.image} className="w-24 h-24 rounded-full object-cover border-4 border-blue-100 shadow-md" alt="Sire" />
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-100 text-blue-600 font-bold">SIRE</span>
-                <span className="text-xl font-bold truncate max-w-[150px]">{match.sire.name}</span>
-              </div>
-              <p className="text-sm text-[#2C2C2C]/60 line-clamp-1">{match.sire.breed}</p>
-              <button
-                className="text-xs text-[#8B9D83] font-medium mt-1 hover:underline text-left"
-              >
-                View Profile & Pedigree ↗
-              </button>
-            </div>
-          </div>
-
-          {/* Connection */}
-          <div className="flex flex-col items-center justify-center px-4">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#C97064] to-[#B86054] text-white flex items-center justify-center text-xl font-bold mb-2 shadow-lg shadow-[#C97064]/20 transform hover:scale-110 transition-transform">
-              +
-            </div>
-            <div className="text-center">
-              <p className="text-xs font-bold text-[#2C2C2C] uppercase tracking-wider mb-1">Status: Confirmed</p>
-              <div className="text-sm font-medium text-[#C97064] bg-[#C97064]/10 px-3 py-1 rounded-full">
-                Due: Mar 8, 2024
-              </div>
-            </div>
-          </div>
-
-          {/* Dam Card */}
-          <div className="flex-1 w-full bg-[#8B9D83]/5 rounded-2xl p-4 flex gap-4 items-center text-right flex-row-reverse border border-pink-100/50 group cursor-pointer hover:bg-[#8B9D83]/10 transition-colors"
-            onClick={() => onDetailClick(match.dam)}>
-            <img src={match.dam.image} className="w-24 h-24 rounded-full object-cover border-4 border-pink-100 shadow-md" alt="Dam" />
-            <div>
-              <div className="flex items-center gap-2 mb-1 justify-end">
-                <span className="text-xl font-bold truncate max-w-[150px]">{match.dam.name}</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] bg-pink-100 text-pink-600 font-bold">DAM</span>
-              </div>
-              <p className="text-sm text-[#2C2C2C]/60 line-clamp-1">{match.dam.breed}</p>
-              <button
-                className="text-xs text-[#8B9D83] font-medium mt-1 hover:underline text-right w-full"
-              >
-                View Profile & Pedigree ↗
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Verified Offspring Section */}
-        {offspring.length > 0 && (
-          <div className="mt-8 pt-8 border-t border-[#8B9D83]/10">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-xl font-bold text-[#2C2C2C] flex items-center gap-2">
-                🏆 Past Successful Offspring
-                <span className="text-xs font-normal text-[#2C2C2C]/50">({offspring.length} registered)</span>
-              </h4>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-              {offspring.slice(0, 6).map(child => (
-                <div
-                  key={child.id}
-                  onClick={(e) => { e.stopPropagation(); onDetailClick(child); }}
-                  className="bg-[#F5F1E8]/50 p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-[#F5F1E8] transition-colors group border border-transparent hover:border-[#8B9D83]/20"
-                >
-                  <img
-                    src={child.image && child.image !== '' ? child.image : 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80'}
-                    alt={child.name}
-                    onError={(e) => { e.currentTarget.src = 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&q=80'; }}
-                    className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
-                  />
-                  <div className="overflow-hidden">
-                    <p className="font-bold text-[#2C2C2C] text-sm truncate group-hover:text-[#C97064] transition-colors">{child.name}</p>
-                    <p className="text-xs text-[#2C2C2C]/50">{child.gender === 'male' ? 'Male' : 'Female'} • {child.birthDate ? new Date().getFullYear() - new Date(child.birthDate).getFullYear() + 'y' : 'Unknown'}</p>
-                  </div>
-                </div>
-              ))}
-
-              {/* Call to action for more, if there are more than 6 */}
-              {offspring.length > 6 && (
-                <div className="flex items-center justify-center p-3 rounded-xl border border-dashed border-[#8B9D83]/30 text-xs text-[#8B9D83] cursor-pointer hover:bg-[#8B9D83]/5 transition-colors">
-                  +{offspring.length - 6} More Offspring
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Community Comments (Mock) */}
-        {match.isHighlight && (
-          <div className="mt-6 pt-6 border-t border-[#8B9D83]/10">
-            <h4 className="text-sm font-bold text-[#2C2C2C] mb-3">Community Buzz</h4>
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              <div className="bg-[#F5F1E8] p-3 rounded-xl min-w-[250px] text-sm">
-                <p className="text-[#2C2C2C]/80 italic">"Exciting! My dog is from this pair and has great temperament."</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="w-5 h-5 bg-gray-300 rounded-full"></div>
-                  <span className="text-xs font-bold text-[#2C2C2C]/60">Somsak K.</span>
-                </div>
-              </div>
-              <div className="bg-[#F5F1E8] p-3 rounded-xl min-w-[250px] text-sm">
-                <p className="text-[#2C2C2C]/80 italic">"Quality breeding match! Can't wait for the puppies."</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="w-5 h-5 bg-gray-300 rounded-full"></div>
-                  <span className="text-xs font-bold text-[#2C2C2C]/60">Jenny T.</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="mt-8 flex flex-col sm:flex-row justify-center gap-4">
-          <button
-            onClick={() => onInteraction('reserve', match.sire, match.dam)}
-            className="px-8 py-3 rounded-full bg-[#C97064] text-white font-bold hover:bg-[#B86054] transition-all shadow-lg shadow-[#C97064]/20 flex items-center justify-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            Reserve Puppy Queue
-          </button>
-          <button
-            onClick={() => onInteraction('chat', match.sire, match.dam, match.sire.owner)}
-            className="px-8 py-3 rounded-full bg-white border-2 border-[#8B9D83]/20 text-[#6B7D63] font-bold hover:bg-[#8B9D83]/5 transition-all flex items-center justify-center gap-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-            Chat with Owner
-          </button>
-        </div>
-
-        <div className="mt-4 text-center">
-          <button
-            onClick={() => onInteraction('report', match.sire, match.dam)}
-            className="text-xs text-[#2C2C2C]/40 hover:text-[#C97064] transition-colors">
-            Report issue with this match
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 export default SearchSection;
+

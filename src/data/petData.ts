@@ -30,6 +30,16 @@ export interface Pet {
   medicalHistory?: string; // Added for Airtable
   airtableId?: string; // Added for Airtable sync
   owner_id?: string; // Added for Supabase/Chat features
+  boosted_until?: string | null; // VIP Promotion
+  created_at?: string; // Sorting
+  mother_id?: string | null;
+  father_id?: string | null;
+  // Media & External Card Support
+  media_type?: 'image' | 'video';
+  video_url?: string;
+  source?: 'internal' | 'instagram' | 'pinterest' | 'youtube';
+  external_link?: string;
+  is_sponsored?: boolean;
 }
 
 export interface Product {

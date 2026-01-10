@@ -51,6 +51,64 @@ ON chat_messages FOR UPDATE
 TO authenticated
 USING ( is_room_participant(room_id) );
 
+-- Admins can moderate all chat data
+DROP POLICY IF EXISTS "Admins manage chat rooms" ON chat_rooms;
+CREATE POLICY "Admins manage chat rooms"
+ON chat_rooms FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+DROP POLICY IF EXISTS "Admins manage chat participants" ON chat_participants;
+CREATE POLICY "Admins manage chat participants"
+ON chat_participants FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+DROP POLICY IF EXISTS "Admins manage chat messages" ON chat_messages;
+CREATE POLICY "Admins manage chat messages"
+ON chat_messages FOR ALL
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
 
 -- 2. FIX SAVED CARTS (406 Error)
 -- Ensure the table exists and has proper permissions

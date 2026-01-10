@@ -18,10 +18,12 @@ import ProductModal from './modals/ProductModal';
 import PetDetailsModal from './modals/PetDetailsModal';
 import BreederDashboard from './BreederDashboard';
 import AdminPanel from './AdminPanel';
+import BreederProfileModal from './modals/BreederProfileModal';
 import BackToTop from './BackToTop';
 import TestimonialsSection from './TestimonialsSection';
 import CTASection from './CTASection';
 import ChatManager from './ChatManager';
+import { AIChatOverlay } from './ai/AIChatOverlay';
 
 interface CartItem {
   product: Product;
@@ -45,10 +47,62 @@ const AppLayout: React.FC = () => {
   const [petDetailsModalOpen, setPetDetailsModalOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
+  const [breederProfileOpen, setBreederProfileOpen] = useState(false);
+  const [currentBreederId, setCurrentBreederId] = useState<string | null>(null);
+  const [isGlobalAIOpen, setIsGlobalAIOpen] = useState(false);
+  const [globalAIQuery, setGlobalAIQuery] = useState<string | undefined>(undefined);
 
   // Selected items
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  // Event Listeners for Custom Events
+  useEffect(() => {
+    const handleOpenBreeder = (e: any) => {
+      const userId = e.detail?.ownerId;
+      if (userId) {
+        setCurrentBreederId(userId);
+        setBreederProfileOpen(true);
+      }
+    };
+
+    const handleOpenPetDetails = (e: any) => {
+      const pet = e.detail?.pet;
+      if (pet) {
+        setSelectedPet(pet);
+        setPetDetailsModalOpen(true);
+      }
+    };
+
+    const handleOpenRegister = () => {
+      if (!user) {
+        setAuthModalOpen(true);
+      } else {
+        setRegisterModalOpen(true);
+      }
+    };
+
+    const handleOpenGlobalAI = (e: any) => {
+      if (e.detail?.query) {
+        setGlobalAIQuery(e.detail.query);
+      } else {
+        setGlobalAIQuery(undefined);
+      }
+      setIsGlobalAIOpen(true);
+    };
+
+    window.addEventListener('openBreederProfile', handleOpenBreeder);
+    window.addEventListener('openPetDetails', handleOpenPetDetails);
+    window.addEventListener('openRegisterPet', handleOpenRegister);
+    window.addEventListener('openGlobalAI', handleOpenGlobalAI);
+
+    return () => {
+      window.removeEventListener('openBreederProfile', handleOpenBreeder);
+      window.removeEventListener('openPetDetails', handleOpenPetDetails);
+      window.removeEventListener('openRegisterPet', handleOpenRegister);
+      window.removeEventListener('openGlobalAI', handleOpenGlobalAI);
+    };
+  }, [user]);
 
   // Load saved cart when user logs in
   useEffect(() => {
@@ -236,7 +290,15 @@ const AppLayout: React.FC = () => {
         onNavigate={handleNavigate}
         onAuthClick={() => setAuthModalOpen(true)}
         onDashboardClick={() => setDashboardOpen(true)}
-        onAdminClick={() => setAdminPanelOpen(true)} // New prop
+        onAdminClick={() => setAdminPanelOpen(true)}
+        onMyPetsClick={() => {
+          if (user) {
+            setCurrentBreederId(user.id);
+            setBreederProfileOpen(true);
+          } else {
+            setAuthModalOpen(true);
+          }
+        }}
       />
 
       {dashboardOpen && (
@@ -254,6 +316,7 @@ const AppLayout: React.FC = () => {
           onViewPedigree={handleViewPedigree}
           onViewPetDetails={handleViewPetDetails}
           onQuickView={handleQuickView}
+          onOpenAI={() => setIsGlobalAIOpen(true)}
         />
 
         {/* Pedigree Section */}
@@ -268,6 +331,7 @@ const AppLayout: React.FC = () => {
         <SearchSection
           onViewPedigree={handleViewPedigree}
           onViewDetails={handleViewPetDetails}
+          onRequireAuth={() => setAuthModalOpen(true)}
           key={`search-${refreshPets}`}
         />
 
@@ -334,6 +398,21 @@ const AppLayout: React.FC = () => {
       <AdminPanel
         isOpen={adminPanelOpen}
         onClose={() => setAdminPanelOpen(false)}
+      />
+
+      {/* Global AI Chat Overlay */}
+      <AIChatOverlay
+        isOpen={isGlobalAIOpen}
+        onClose={() => setIsGlobalAIOpen(false)}
+        currentPet={undefined} // Undefined triggers Global Advisor Mode
+        initialQuery={globalAIQuery}
+      />
+
+      <BreederProfileModal
+        isOpen={breederProfileOpen}
+        onClose={() => setBreederProfileOpen(false)}
+        userId={currentBreederId}
+        currentUserId={user?.id}
       />
 
       {/* Chat Manager - Handles notification-triggered chats */}

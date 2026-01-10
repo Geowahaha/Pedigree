@@ -13,28 +13,37 @@ interface HeaderProps {
   onAuthClick: () => void;
   onDashboardClick: () => void;
   onAdminClick: () => void;
+  onMyPetsClick: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, onNavigate, onAuthClick, onDashboardClick, onAdminClick }) => {
+const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, onNavigate, onAuthClick, onDashboardClick, onAdminClick, onMyPetsClick }) => {
   const { user, signOut } = useAuth();
   const { t, language, setLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   // Notification System
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotif, setShowNotif] = useState(false);
 
+  // Track scroll for header styling
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   useEffect(() => {
     if (user) {
-      // Initial load
       getUserNotifications(user.id).then(data => {
         setNotifications(data);
         setUnreadCount(data.filter(n => !n.is_read).length);
       });
 
-      // Subscribe to real-time updates
       const channel = supabase
         .channel('user-notifications')
         .on(
@@ -45,8 +54,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
             table: 'user_notifications',
             filter: `user_id=eq.${user.id}`
           },
-          (payload) => {
-            // Reload notifications when any change occurs
+          () => {
             getUserNotifications(user.id).then(data => {
               setNotifications(data);
               setUnreadCount(data.filter(n => !n.is_read).length);
@@ -64,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
   const navItems = [
     { id: 'home', label: t('nav.home') },
     { id: 'pedigree', label: t('nav.pedigree') },
-    { id: 'search', label: t('nav.breeding') }, // Using breeding key for Search Pets for now as mapped in translation
+    { id: 'search', label: t('nav.breeding') },
     { id: 'marketplace', label: t('nav.marketplace') },
   ];
 
@@ -83,115 +91,126 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 glass bg-background/80 border-b border-primary/20">
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
+          ? 'bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#C5A059]/20'
+          : 'bg-transparent border-b border-transparent'
+        }`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
-          {/* Logo */}
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => scrollToSection('home')}>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:scale-110 transition-transform duration-300">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+        <div className="flex items-center justify-between h-20 lg:h-24">
+
+          {/* Logo - Luxury Style */}
+          <div
+            className="flex items-center gap-4 cursor-pointer group"
+            onClick={() => scrollToSection('home')}
+          >
+            {/* Minimal Gold Icon */}
+            <div className="relative w-10 h-10 flex items-center justify-center">
+              <div className="absolute inset-0 border border-[#C5A059]/40 rotate-45 group-hover:rotate-[50deg] transition-transform duration-500" />
+              <svg className="w-5 h-5 text-[#C5A059]" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
               </svg>
             </div>
-            <span className="text-xl lg:text-2xl font-bold text-foreground tracking-tight group-hover:text-primary transition-colors">
-              Pet<span className="text-primary">degree</span>
-            </span>
+
+            {/* Logo Text - Serif Typography */}
+            <div className="flex flex-col">
+              <span className="font-['Playfair_Display',_Georgia,_serif] text-xl lg:text-2xl tracking-wide text-[#F5F5F0] group-hover:text-[#C5A059] transition-colors duration-300">
+                Pet<span className="text-[#C5A059]">degree</span>
+              </span>
+              <span className="text-[8px] lg:text-[9px] tracking-[0.3em] text-[#C5A059]/60 uppercase font-light">
+                Premium Bloodlines
+              </span>
+            </div>
           </div>
 
-          {/* Desktop Navigation */}
+          {/* Desktop Navigation - Minimal Luxury */}
           <nav className="hidden md:flex items-center gap-1">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => scrollToSection(item.id)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${activeSection === item.id
-                  ? 'bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20'
-                  : 'text-foreground/70 hover:text-foreground hover:bg-primary/5'
+                className={`relative px-5 py-2 text-xs tracking-[0.15em] uppercase font-medium transition-all duration-300 ${activeSection === item.id
+                    ? 'text-[#C5A059]'
+                    : 'text-[#B8B8B8] hover:text-[#F5F5F0]'
                   }`}
               >
                 {item.label}
+                {/* Active indicator - thin gold line */}
+                <span
+                  className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-px bg-[#C5A059] transition-all duration-300 ${activeSection === item.id ? 'w-full opacity-100' : 'w-0 opacity-0'
+                    }`}
+                />
               </button>
             ))}
           </nav>
 
-          {/* Language Selector (Desktop) */}
-          <div className="hidden md:flex items-center ml-2 mr-2">
+          {/* Language Selector */}
+          <div className="hidden md:flex items-center mr-4">
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value as any)}
-              className="bg-transparent text-sm font-medium text-foreground/80 border-none focus:ring-0 cursor-pointer hover:text-primary transition-colors"
+              className="bg-transparent text-[10px] tracking-[0.1em] uppercase font-medium text-[#B8B8B8] border-none focus:ring-0 cursor-pointer hover:text-[#C5A059] transition-colors"
             >
-              <option value="en">EN</option>
-              <option value="th">TH</option>
+              <option value="en" className="bg-[#1A1A1A] text-[#F5F5F0]">EN</option>
+              <option value="th" className="bg-[#1A1A1A] text-[#F5F5F0]">TH</option>
             </select>
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-3">
-            {/* Notification Bell (User) */}
+          <div className="flex items-center gap-4">
+
+            {/* Notifications - Luxury Style */}
             {user && (
               <div className="relative">
                 <button
                   onClick={() => setShowNotif(!showNotif)}
-                  className="p-2.5 rounded-full bg-white/50 hover:bg-white border border-primary/20 transition-all duration-300 relative hover:shadow-lg mr-2"
+                  className="relative p-2 text-[#B8B8B8] hover:text-[#C5A059] transition-colors duration-300"
                 >
-                  <svg className="w-5 h-5 text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                   </svg>
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white animate-pulse shadow-sm" />
+                    <span className="absolute top-1 right-1 w-2 h-2 bg-[#C5A059] rounded-full" />
                   )}
                 </button>
 
+                {/* Notification Dropdown - Luxury Dark */}
                 {showNotif && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowNotif(false)} />
-                    <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-white border border-[#8B9D83]/20 shadow-2xl z-20 overflow-hidden ring-1 ring-black/5">
-                      <div className="p-4 border-b border-[#8B9D83]/10 flex justify-between items-center bg-[#F5F1E8]">
-                        <h3 className="font-bold text-[#2C2C2C] text-sm">Notifications</h3>
-                        {unreadCount > 0 && <span className="px-2 py-0.5 bg-[#C97064] text-white text-[10px] uppercase font-bold tracking-wider rounded-full">{unreadCount} NEW</span>}
+                    <div className="absolute right-0 mt-4 w-80 bg-[#1A1A1A] border border-[#C5A059]/20 shadow-2xl z-20 overflow-hidden">
+                      <div className="p-4 border-b border-[#C5A059]/10 flex justify-between items-center">
+                        <h3 className="text-[10px] tracking-[0.2em] uppercase font-medium text-[#C5A059]">Notifications</h3>
+                        {unreadCount > 0 && (
+                          <span className="px-2 py-1 bg-[#C5A059] text-[#0A0A0A] text-[9px] tracking-wider font-bold">{unreadCount} NEW</span>
+                        )}
                       </div>
                       <div className="max-h-[60vh] overflow-y-auto">
                         {notifications.length === 0 ? (
-                          <div className="p-8 text-center text-gray-400 text-sm flex flex-col items-center">
-                            <svg className="w-10 h-10 text-gray-200 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
-                            No new notifications
+                          <div className="p-8 text-center text-[#B8B8B8]/50 text-xs">
+                            No notifications
                           </div>
                         ) : (
                           notifications.map(n => (
-                            <div key={n.id} className={`p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer ${!n.is_read ? 'bg-[#8B9D83]/5' : ''}`}
+                            <div
+                              key={n.id}
+                              className={`p-4 border-b border-[#C5A059]/5 hover:bg-[#C5A059]/5 cursor-pointer transition-colors ${!n.is_read ? 'bg-[#C5A059]/10' : ''}`}
                               onClick={() => {
-                                // Mark as read
                                 if (!n.is_read) {
                                   markUserNotifRead(n.id);
                                   setNotifications(prev => prev.map(p => p.id === n.id ? { ...p, is_read: true } : p));
                                   setUnreadCount(prev => Math.max(0, prev - 1));
                                 }
-
-                                // Handle chat_message notifications - open chat window
                                 if (n.type === 'chat_message' && n.payload?.room_id) {
                                   setShowNotif(false);
-                                  // Dispatch custom event to open chat
-                                  window.dispatchEvent(new CustomEvent('openChat', {
-                                    detail: { roomId: n.payload.room_id }
-                                  }));
+                                  window.dispatchEvent(new CustomEvent('openChat', { detail: { roomId: n.payload.room_id } }));
                                 }
                               }}
                             >
-                              <div className="flex gap-3">
-                                <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${!n.is_read ? 'bg-[#C97064] ring-2 ring-[#C97064]/20' : 'bg-transparent'}`} />
-                                <div>
-                                  <p className={`text-sm text-[#2C2C2C] ${!n.is_read ? 'font-bold' : 'font-medium'}`}>{n.title}</p>
-                                  <p className="text-xs text-gray-500 mt-1 leading-relaxed line-clamp-2">{n.message}</p>
-                                  <p className="text-[10px] text-gray-400 mt-2 font-medium">{new Date(n.created_at).toLocaleDateString()}</p>
-                                  {n.type === 'chat_message' && (
-                                    <button className="mt-2 text-[10px] font-bold text-[#8B9D83] hover:text-[#6B7D63] flex items-center gap-1">
-                                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                                      Open Chat
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
+                              <p className={`text-sm text-[#F5F5F0] ${!n.is_read ? 'font-medium' : 'font-normal'}`}>{n.title}</p>
+                              <p className="text-xs text-[#B8B8B8]/70 mt-1 line-clamp-2">{n.message}</p>
+                              <p className="text-[10px] text-[#C5A059]/50 mt-2">{new Date(n.created_at).toLocaleDateString()}</p>
                             </div>
                           ))
                         )}
@@ -202,113 +221,95 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
               </div>
             )}
 
-            {/* Cart Button */}
+            {/* Cart - Minimal Icon */}
             <button
               onClick={onCartClick}
-              className="relative p-2.5 rounded-full bg-white/50 hover:bg-white border border-primary/20 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
+              className="relative p-2 text-[#B8B8B8] hover:text-[#C5A059] transition-colors duration-300"
             >
-              <svg className="w-5 h-5 text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-accent text-white text-xs font-bold rounded-full flex items-center justify-center shadow-md animate-bounce">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#C5A059] text-[#0A0A0A] text-[10px] font-bold flex items-center justify-center">
                   {cartCount}
                 </span>
               )}
             </button>
 
-            {/* User Menu / Sign In */}
+            {/* User Menu / Sign In - Luxury Style */}
             {user ? (
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-full bg-white/50 hover:bg-white border border-primary/20 transition-all duration-300 hover:shadow-md"
+                  className="hidden sm:flex items-center gap-3 py-2 text-[#B8B8B8] hover:text-[#F5F5F0] transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-medium shadow-sm">
+                  {/* User Avatar */}
+                  <div className="w-9 h-9 border border-[#C5A059]/40 flex items-center justify-center text-[#C5A059] text-sm font-['Playfair_Display',_Georgia,_serif]">
                     {user.profile?.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
                   </div>
-                  <span className="text-sm font-medium text-foreground max-w-[120px] truncate">
-                    {user.profile?.full_name || user.email.split('@')[0]}
-                  </span>
-                  <svg className={`w-4 h-4 text-foreground/60 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg className={`w-3 h-3 text-[#C5A059]/60 transition-transform duration-300 ${userMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
-                {/* Dropdown Menu */}
+                {/* User Dropdown - Luxury Dark */}
                 {userMenuOpen && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setUserMenuOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-[#8B9D83]/20 shadow-xl z-20 py-2">
-                      <div className="px-4 py-3 border-b border-[#8B9D83]/10">
-                        <p className="text-sm font-medium text-[#2C2C2C]">{user.profile?.full_name || 'User'}</p>
-                        <p className="text-xs text-[#2C2C2C]/60 truncate">{user.email}</p>
-                        {user.profile && (
-                          <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium capitalize ${user.profile.role === 'admin'
-                            ? 'bg-purple-100 text-purple-700 ring-1 ring-purple-200'
-                            : user.profile.account_type === 'breeder'
-                              ? 'bg-[#8B9D83]/10 text-[#6B7D63]'
-                              : 'bg-blue-100 text-blue-700'
-                            }`}>
-                            {user.profile.role === 'admin' ? '👑 Admin' : user.profile.account_type}
+                    <div className="absolute right-0 mt-4 w-60 bg-[#1A1A1A] border border-[#C5A059]/20 shadow-2xl z-20">
+                      {/* User Info */}
+                      <div className="p-4 border-b border-[#C5A059]/10">
+                        <p className="text-sm font-medium text-[#F5F5F0]">{user.profile?.full_name || 'Member'}</p>
+                        <p className="text-[10px] text-[#B8B8B8]/60 mt-0.5 truncate">{user.email}</p>
+                        {user.profile?.role === 'admin' && (
+                          <span className="inline-block mt-2 px-2 py-0.5 bg-[#C5A059]/20 text-[#C5A059] text-[9px] tracking-wider font-bold uppercase">
+                            Admin
                           </span>
                         )}
                       </div>
-                      <div className="py-1">
-                        {/* Admin Panel - Only show for admin role */}
+
+                      {/* Menu Items */}
+                      <div className="py-2">
                         {user.profile?.role === 'admin' && (
                           <button
-                            onClick={() => {
-                              onAdminClick();
-                              setUserMenuOpen(false);
-                            }}
-                            className="w-full px-4 py-2 text-left text-sm text-foreground/70 hover:bg-background transition-colors flex items-center gap-3 font-semibold text-primary"
+                            onClick={() => { onAdminClick(); setUserMenuOpen(false); }}
+                            className="w-full px-4 py-3 text-left text-xs tracking-wide text-[#C5A059] hover:bg-[#C5A059]/10 transition-colors flex items-center gap-3"
                           >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                             Admin Panel
                           </button>
                         )}
                         <button
-                          onClick={() => {
-                            onDashboardClick();
-                            setUserMenuOpen(false);
-                          }}
-                          className="w-full px-4 py-2 text-left text-sm text-foreground/70 hover:bg-background transition-colors flex items-center gap-3 font-semibold text-primary"
+                          onClick={() => { onDashboardClick(); setUserMenuOpen(false); }}
+                          className="w-full px-4 py-3 text-left text-xs tracking-wide text-[#B8B8B8] hover:text-[#F5F5F0] hover:bg-[#C5A059]/5 transition-colors flex items-center gap-3"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                           </svg>
-                          {t('nav.breeding')} {/* Dashboard */}
+                          Dashboard
                         </button>
-                        <button className="w-full px-4 py-2 text-left text-sm text-[#2C2C2C]/70 hover:bg-[#F5F1E8] transition-colors flex items-center gap-3">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          My Profile
-                        </button>
-                        <button className="w-full px-4 py-2 text-left text-sm text-[#2C2C2C]/70 hover:bg-[#F5F1E8] transition-colors flex items-center gap-3">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                        <button
+                          onClick={() => { onMyPetsClick(); setUserMenuOpen(false); }}
+                          className="w-full px-4 py-3 text-left text-xs tracking-wide text-[#B8B8B8] hover:text-[#F5F5F0] hover:bg-[#C5A059]/5 transition-colors flex items-center gap-3"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                           </svg>
                           My Pets
                         </button>
-                        <button className="w-full px-4 py-2 text-left text-sm text-[#2C2C2C]/70 hover:bg-[#F5F1E8] transition-colors flex items-center gap-3">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                          </svg>
-                          My Orders
-                        </button>
                       </div>
-                      <div className="border-t border-[#8B9D83]/10 py-1">
+
+                      {/* Sign Out */}
+                      <div className="border-t border-[#C5A059]/10 py-2">
                         <button
                           onClick={handleSignOut}
-                          className="w-full px-4 py-2 text-left text-sm text-[#C97064] hover:bg-red-50 transition-colors flex items-center gap-3"
+                          className="w-full px-4 py-3 text-left text-xs tracking-wide text-[#8B4049] hover:bg-[#8B4049]/10 transition-colors flex items-center gap-3"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                           </svg>
                           {t('nav.signOut')}
                         </button>
@@ -320,11 +321,8 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
             ) : (
               <button
                 onClick={onAuthClick}
-                className="hidden sm:flex items-center gap-2 px-6 py-2.5 rounded-full bg-foreground text-background text-sm font-bold hover:bg-foreground/80 transition-all duration-300 shadow-lg hover:-translate-y-0.5"
+                className="hidden sm:flex items-center gap-2 px-6 py-2.5 border border-[#C5A059] text-[#C5A059] text-[10px] tracking-[0.15em] uppercase font-medium hover:bg-[#C5A059] hover:text-[#0A0A0A] transition-all duration-300"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
                 {t('nav.signIn')}
               </button>
             )}
@@ -332,73 +330,67 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2.5 rounded-xl bg-white/80 hover:bg-white border border-[#8B9D83]/20 transition-all"
+              className="md:hidden p-2 text-[#B8B8B8] hover:text-[#C5A059] transition-colors"
             >
-              <svg className="w-5 h-5 text-[#2C2C2C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
                 {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
                 )}
               </svg>
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - Luxury Dark */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-[#8B9D83]/20">
+          <div className="md:hidden py-6 border-t border-[#C5A059]/10">
             <nav className="flex flex-col gap-1">
               {navItems.map((item) => (
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
-                  className={`px-4 py-3 rounded-lg text-left text-sm font-medium transition-all ${activeSection === item.id
-                    ? 'bg-[#8B9D83]/15 text-[#6B7D63]'
-                    : 'text-[#2C2C2C]/70 hover:bg-[#8B9D83]/10'
+                  className={`px-4 py-3 text-left text-xs tracking-[0.1em] uppercase transition-all ${activeSection === item.id
+                      ? 'text-[#C5A059] border-l-2 border-[#C5A059] bg-[#C5A059]/5'
+                      : 'text-[#B8B8B8] hover:text-[#F5F5F0] border-l-2 border-transparent'
                     }`}
                 >
                   {item.label}
                 </button>
               ))}
+
+              {/* Mobile User Section */}
               {user ? (
-                <>
-                  <div className="mt-2 pt-2 border-t border-[#8B9D83]/20">
-                    <div className="px-4 py-2 flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-[#8B9D83] flex items-center justify-center text-white font-medium">
-                        {user.profile?.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-[#2C2C2C]">{user.profile?.full_name || 'User'}</p>
-                        <p className="text-xs text-[#2C2C2C]/60">{user.email}</p>
-                      </div>
+                <div className="mt-4 pt-4 border-t border-[#C5A059]/10">
+                  <div className="px-4 py-3 flex items-center gap-3">
+                    <div className="w-10 h-10 border border-[#C5A059]/40 flex items-center justify-center text-[#C5A059] font-['Playfair_Display']">
+                      {user.profile?.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm text-[#F5F5F0]">{user.profile?.full_name || 'Member'}</p>
+                      <p className="text-[10px] text-[#B8B8B8]/60">{user.email}</p>
                     </div>
                   </div>
                   <button
-                    onClick={() => {
-                      onDashboardClick();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="mt-2 px-4 py-3 rounded-lg text-left text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
+                    onClick={() => { onDashboardClick(); setMobileMenuOpen(false); }}
+                    className="w-full mt-2 px-4 py-3 text-left text-xs tracking-wide text-[#C5A059]"
                   >
-                    {t('nav.breeder_dashboard')}
+                    Dashboard
                   </button>
                   <button
                     onClick={handleSignOut}
-                    className="mt-2 px-4 py-3 rounded-lg text-left text-sm font-medium text-[#C97064] hover:bg-red-50 transition-colors"
+                    className="w-full px-4 py-3 text-left text-xs tracking-wide text-[#8B4049]"
                   >
-                    {t('nav.sign_out')}
+                    Sign Out
                   </button>
-                </>
+                </div>
               ) : (
                 <button
-                  onClick={() => {
-                    onAuthClick();
-                    setMobileMenuOpen(false);
-                  }}
-                  className="mt-2 px-4 py-3 rounded-lg bg-[#2C2C2C] text-white text-sm font-medium text-center"
+                  onClick={() => { onAuthClick(); setMobileMenuOpen(false); }}
+                  className="mt-4 mx-4 py-3 border border-[#C5A059] text-[#C5A059] text-xs tracking-[0.1em] uppercase text-center hover:bg-[#C5A059] hover:text-[#0A0A0A] transition-all"
                 >
-                  {t('nav.sign_in')}
+                  {t('nav.signIn')}
                 </button>
               )}
             </nav>

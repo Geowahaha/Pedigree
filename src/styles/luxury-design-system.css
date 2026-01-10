@@ -1,0 +1,681 @@
+/* ==========================================================================
+   LUXURY DESIGN SYSTEM - Petdegree
+   "Quiet Luxury" - Premium, Sophisticated, Timeless
+   
+   Philosophy:
+   - Elegance through restraint
+   - Premium materials: Black, Gold, Champagne
+   - Typography as art
+   - Negative space as design element
+   ========================================================================== */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LUXURY COLOR PALETTE
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+    :root {
+        /* Luxury Base Colors */
+        --lux-black: #0A0A0A;
+        --lux-charcoal: #1A1A1A;
+        --lux-dark-gray: #2A2A2A;
+        --lux-medium-gray: #3A3A3A;
+        --lux-light-gray: #B8B8B8;
+        --lux-off-white: #F5F5F0;
+        --lux-pure-white: #FFFFFF;
+
+        /* Gold Palette */
+        --lux-gold-dark: #8B7355;
+        --lux-gold: #C5A059;
+        --lux-gold-light: #D4C4B5;
+        --lux-champagne: #E5DDD0;
+        --lux-cream: #F8F5F0;
+
+        /* Semantic Colors */
+        --lux-success: #4A7C59;
+        --lux-warning: #C5A059;
+        --lux-error: #8B4049;
+        --lux-info: #4A6A8B;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHY - Premium Serif + Modern Sans
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Import Luxury Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer components {
+
+    /* Luxury Display - Hero Headlines */
+    .lux-display {
+        font-family: 'Playfair Display', 'Georgia', serif;
+        font-size: clamp(3rem, 8vw, 6rem);
+        font-weight: 400;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        color: var(--lux-off-white);
+    }
+
+    /* Luxury Heading 1 */
+    .lux-h1 {
+        font-family: 'Playfair Display', 'Georgia', serif;
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        font-weight: 500;
+        line-height: 1.1;
+        letter-spacing: -0.015em;
+        color: var(--lux-off-white);
+    }
+
+    /* Luxury Heading 2 */
+    .lux-h2 {
+        font-family: 'Playfair Display', 'Georgia', serif;
+        font-size: clamp(1.75rem, 4vw, 2.5rem);
+        font-weight: 500;
+        line-height: 1.15;
+        letter-spacing: -0.01em;
+        color: var(--lux-off-white);
+    }
+
+    /* Luxury Heading 3 */
+    .lux-h3 {
+        font-family: 'Cormorant Garamond', 'Georgia', serif;
+        font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+        font-weight: 600;
+        line-height: 1.2;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: var(--lux-gold);
+    }
+
+    /* Luxury Subtitle */
+    .lux-subtitle {
+        font-family: 'Cormorant Garamond', 'Georgia', serif;
+        font-size: 1.25rem;
+        font-weight: 400;
+        line-height: 1.6;
+        letter-spacing: 0.03em;
+        color: var(--lux-light-gray);
+    }
+
+    /* Luxury Body */
+    .lux-body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 1rem;
+        font-weight: 400;
+        line-height: 1.7;
+        letter-spacing: 0.01em;
+        color: var(--lux-light-gray);
+    }
+
+    /* Luxury Caption - Small elegant text */
+    .lux-caption {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 0.75rem;
+        font-weight: 500;
+        line-height: 1.4;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--lux-gold);
+    }
+
+    /* Gold Accent Text */
+    .lux-gold-text {
+        color: var(--lux-gold);
+    }
+
+    /* Gradient Gold Text */
+    .lux-gold-gradient {
+        background: linear-gradient(135deg, var(--lux-gold) 0%, var(--lux-champagne) 50%, var(--lux-gold) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LUXURY CARDS - Minimal, Premium
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+
+    /* Base Luxury Card */
+    .lux-card {
+        position: relative;
+        background: var(--lux-charcoal);
+        border: 1px solid rgba(197, 160, 89, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .lux-card:hover {
+        border-color: rgba(197, 160, 89, 0.3);
+        box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.5);
+        transform: translateY(-4px);
+    }
+
+    /* Glass Luxury Card */
+    .lux-card-glass {
+        position: relative;
+        background: rgba(26, 26, 26, 0.8);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(197, 160, 89, 0.15);
+        border-radius: 8px;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .lux-card-glass:hover {
+        border-color: rgba(197, 160, 89, 0.4);
+        background: rgba(42, 42, 42, 0.9);
+    }
+
+    /* Featured Card - Gold Border */
+    .lux-card-featured {
+        position: relative;
+        background: linear-gradient(135deg, var(--lux-charcoal) 0%, var(--lux-dark-gray) 100%);
+        border: 1px solid var(--lux-gold);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .lux-card-featured::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg, transparent 0%, var(--lux-gold) 50%, transparent 100%);
+    }
+
+    /* Minimal Card */
+    .lux-card-minimal {
+        background: transparent;
+        border-bottom: 1px solid rgba(197, 160, 89, 0.1);
+        padding: 2rem 0;
+        transition: all 0.3s ease;
+    }
+
+    .lux-card-minimal:hover {
+        border-color: var(--lux-gold);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LUXURY BUTTONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+
+    /* Primary Luxury Button - Gold */
+    .lux-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 1rem 2.5rem;
+        background: transparent;
+        border: 1px solid var(--lux-gold);
+        color: var(--lux-gold);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .lux-btn-primary::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--lux-gold);
+        transform: translateX(-100%);
+        transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+        z-index: -1;
+    }
+
+    .lux-btn-primary:hover {
+        color: var(--lux-black);
+    }
+
+    .lux-btn-primary:hover::before {
+        transform: translateX(0);
+    }
+
+    /* Filled Button */
+    .lux-btn-filled {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 1rem 2.5rem;
+        background: var(--lux-gold);
+        border: 1px solid var(--lux-gold);
+        color: var(--lux-black);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .lux-btn-filled:hover {
+        background: var(--lux-champagne);
+        border-color: var(--lux-champagne);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px -10px rgba(197, 160, 89, 0.4);
+    }
+
+    /* Ghost Button - Minimal */
+    .lux-btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        border: none;
+        color: var(--lux-light-gray);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.75rem;
+        font-weight: 500;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .lux-btn-ghost:hover {
+        color: var(--lux-gold);
+    }
+
+    /* Icon Button */
+    .lux-btn-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 3rem;
+        height: 3rem;
+        background: var(--lux-charcoal);
+        border: 1px solid rgba(197, 160, 89, 0.2);
+        color: var(--lux-gold);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .lux-btn-icon:hover {
+        background: var(--lux-gold);
+        color: var(--lux-black);
+        border-color: var(--lux-gold);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LUXURY INPUTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+    .lux-input {
+        width: 100%;
+        padding: 1rem 1.25rem;
+        background: var(--lux-charcoal);
+        border: 1px solid rgba(197, 160, 89, 0.15);
+        color: var(--lux-off-white);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.875rem;
+        letter-spacing: 0.02em;
+        transition: all 0.3s ease;
+    }
+
+    .lux-input::placeholder {
+        color: var(--lux-medium-gray);
+    }
+
+    .lux-input:focus {
+        outline: none;
+        border-color: var(--lux-gold);
+        box-shadow: 0 0 0 1px var(--lux-gold);
+    }
+
+    .lux-input-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.7rem;
+        font-weight: 500;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--lux-gold);
+    }
+
+    /* Select */
+    .lux-select {
+        width: 100%;
+        padding: 1rem 2.5rem 1rem 1.25rem;
+        background: var(--lux-charcoal);
+        border: 1px solid rgba(197, 160, 89, 0.15);
+        color: var(--lux-off-white);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.875rem;
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23C5A059' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        transition: all 0.3s ease;
+    }
+
+    .lux-select:focus {
+        outline: none;
+        border-color: var(--lux-gold);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LUXURY DIVIDERS & ORNAMENTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+
+    /* Thin Gold Line */
+    .lux-divider {
+        width: 100%;
+        height: 1px;
+        background: linear-gradient(90deg, transparent 0%, rgba(197, 160, 89, 0.3) 50%, transparent 100%);
+        margin: 3rem 0;
+    }
+
+    /* Short Accent Line */
+    .lux-divider-short {
+        width: 60px;
+        height: 1px;
+        background: var(--lux-gold);
+        margin: 1.5rem 0;
+    }
+
+    /* Ornamental Divider */
+    .lux-ornament {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        margin: 3rem 0;
+    }
+
+    .lux-ornament::before,
+    .lux-ornament::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: linear-gradient(90deg, transparent 0%, rgba(197, 160, 89, 0.3) 100%);
+    }
+
+    .lux-ornament::after {
+        background: linear-gradient(90deg, rgba(197, 160, 89, 0.3) 0%, transparent 100%);
+    }
+
+    .lux-ornament-icon {
+        color: var(--lux-gold);
+        font-size: 1.25rem;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LUXURY BADGES & TAGS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+    .lux-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: rgba(197, 160, 89, 0.1);
+        border: 1px solid rgba(197, 160, 89, 0.3);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.65rem;
+        font-weight: 600;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        color: var(--lux-gold);
+    }
+
+    .lux-badge-filled {
+        background: var(--lux-gold);
+        border-color: var(--lux-gold);
+        color: var(--lux-black);
+    }
+
+    .lux-tag {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.6rem;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--lux-light-gray);
+        border-bottom: 1px solid var(--lux-gold);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LUXURY ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes lux-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes lux-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes lux-reveal-line {
+    from {
+        width: 0;
+    }
+
+    to {
+        width: 60px;
+    }
+}
+
+@keyframes lux-gold-shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@layer utilities {
+    .animate-lux-fade {
+        animation: lux-fade-in 0.8s ease-out forwards;
+    }
+
+    .animate-lux-slide-up {
+        animation: lux-slide-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .animate-lux-shimmer {
+        background: linear-gradient(90deg,
+                var(--lux-gold-dark) 0%,
+                var(--lux-gold) 25%,
+                var(--lux-champagne) 50%,
+                var(--lux-gold) 75%,
+                var(--lux-gold-dark) 100%);
+        background-size: 200% 100%;
+        animation: lux-gold-shimmer 3s ease-in-out infinite;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LUXURY UTILITIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer utilities {
+
+    /* Background utilities */
+    .bg-lux-black {
+        background-color: var(--lux-black);
+    }
+
+    .bg-lux-charcoal {
+        background-color: var(--lux-charcoal);
+    }
+
+    .bg-lux-dark {
+        background-color: var(--lux-dark-gray);
+    }
+
+    .bg-lux-gold {
+        background-color: var(--lux-gold);
+    }
+
+    /* Text utilities */
+    .text-lux-white {
+        color: var(--lux-off-white);
+    }
+
+    .text-lux-gray {
+        color: var(--lux-light-gray);
+    }
+
+    .text-lux-gold {
+        color: var(--lux-gold);
+    }
+
+    .text-lux-champagne {
+        color: var(--lux-champagne);
+    }
+
+    /* Border utilities */
+    .border-lux-gold {
+        border-color: var(--lux-gold);
+    }
+
+    .border-lux-subtle {
+        border-color: rgba(197, 160, 89, 0.15);
+    }
+
+    /* Gradient backgrounds */
+    .bg-lux-gradient {
+        background: linear-gradient(180deg, var(--lux-black) 0%, var(--lux-charcoal) 100%);
+    }
+
+    .bg-lux-gradient-radial {
+        background: radial-gradient(circle at 50% 0%, var(--lux-dark-gray) 0%, var(--lux-black) 70%);
+    }
+
+    /* Gold overlay */
+    .lux-overlay-gold::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, transparent 0%, rgba(197, 160, 89, 0.05) 100%);
+        pointer-events: none;
+    }
+
+    /* Noise texture overlay */
+    .lux-noise::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        opacity: 0.02;
+        pointer-events: none;
+        mix-blend-mode: overlay;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLLBAR - Luxury Style
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.lux-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.lux-scrollbar::-webkit-scrollbar-track {
+    background: var(--lux-charcoal);
+}
+
+.lux-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--lux-gold);
+    border-radius: 0;
+}
+
+.lux-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--lux-champagne);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   IMAGE TREATMENTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer components {
+
+    /* Luxury Image Frame */
+    .lux-img-frame {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .lux-img-frame::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border: 1px solid rgba(197, 160, 89, 0.2);
+        pointer-events: none;
+    }
+
+    .lux-img-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .lux-img-frame:hover img {
+        transform: scale(1.05);
+    }
+
+    /* Vignette effect */
+    .lux-vignette::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at center, transparent 40%, rgba(10, 10, 10, 0.6) 100%);
+        pointer-events: none;
+    }
+}

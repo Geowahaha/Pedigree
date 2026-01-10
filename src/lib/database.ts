@@ -17,6 +17,8 @@ export interface Pet {
   owner_name?: string | null; // Added for legacy Airtable sync
   description: string | null;
   is_public: boolean;
+  for_sale?: boolean;
+  price?: number;
   created_at: string;
   updated_at: string;
   mother_id: string | null;
@@ -31,6 +33,31 @@ export interface Pet {
     sire_id: string | null;
     dam_id: string | null;
   };
+  father_verified_status?: 'pending' | 'verified' | 'rejected';
+  mother_verified_status?: 'pending' | 'verified' | 'rejected';
+  boosted_until?: string | null; // VIP Promotion
+  // Media & External Card Support
+  media_type?: 'image' | 'video';
+  video_url?: string;
+  source?: 'internal' | 'instagram' | 'pinterest' | 'youtube';
+  external_link?: string;
+  is_sponsored?: boolean;
+}
+
+export interface RelatedBreeder {
+  id: string; // owner_id
+  name: string;
+  relation: 'Connected Bloodline' | 'Recommended House';
+  avatar_url?: string;
+}
+
+export interface PetPhoto {
+  id: string;
+  pet_id: string;
+  image_url: string;
+  caption: string | null;
+  order_index: number;
+  created_at: string;
 }
 
 export interface CartItem {
@@ -86,7 +113,7 @@ function generateRegistrationNumber(breed: string): string {
 // Helper to map DB pet to Interface (keeping backward compat)
 // Helper to map DB pet to Interface (keeping backward compat)
 // Helper to map DB pet to Interface (keeping backward compat)
-function mapPet(pet: any): Pet {
+export function mapPet(pet: any): Pet {
   // Sanitize type based on breed (Consistency with petsService)
   const breedLower = (pet.breed || '').toLowerCase();
   let finalType: 'dog' | 'cat' = pet.type;
@@ -100,17 +127,31 @@ function mapPet(pet: any): Pet {
   // Helper to safely get owner name
   const ownerName = pet.owner?.full_name || pet.owner_name || (pet.owner_id ? 'Unknown Owner' : null);
 
+  // Handle expired Airtable URLs (410 Gone)
+  let finalImageUrl = pet.image_url || '';
+  if (finalImageUrl.includes('airtableusercontent.com')) {
+    finalImageUrl = ''; // Falls back to placeholder
+  }
+
   return {
     ...pet,
     type: finalType,
     birth_date: pet.birthday, // Map DB 'birthday' to Interface 'birth_date'
     health_certified: pet.verified, // Map DB 'verified' to Interface 'health_certified'
-    image_url: pet.image_url || '',
+    image_url: finalImageUrl,
+    price: pet.price,
+    for_sale: pet.for_sale,
+    description: pet.description,
+    age: pet.birthday ? (new Date().getFullYear() - new Date(pet.birthday).getFullYear()) : undefined,
+    owner: ownerName || undefined,
     owner_name: ownerName,
     pedigree: {
       sire_id: pet.father_id,
       dam_id: pet.mother_id
-    }
+    },
+    father_verified_status: pet.father_verified_status || (pet.father_id ? 'pending' : 'verified'),
+    mother_verified_status: pet.mother_verified_status || (pet.mother_id ? 'pending' : 'verified'),
+    boosted_until: pet.boosted_until
   };
 }
 
@@ -132,6 +173,11 @@ export async function createPet(petData: {
   mother_id?: string;
   father_id?: string;
   owner_id?: string;
+  media_type?: 'image' | 'video';
+  video_url?: string;
+  source?: 'internal' | 'instagram' | 'pinterest' | 'youtube';
+  external_link?: string;
+  is_sponsored?: boolean;
 }) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
@@ -155,8 +201,15 @@ export async function createPet(petData: {
       description: petData.description || null,
       mother_id: petData.mother_id || null,
       father_id: petData.father_id || null,
+      father_verified_status: petData.father_id ? 'pending' : null,
+      mother_verified_status: petData.mother_id ? 'pending' : null,
       is_public: true,
-      verified: petData.health_certified
+      verified: petData.health_certified,
+      media_type: petData.media_type || 'image',
+      video_url: petData.video_url || null,
+      source: petData.source || 'internal',
+      external_link: petData.external_link || null,
+      is_sponsored: petData.is_sponsored || false
     })
     .select()
     .single();
@@ -395,7 +448,7 @@ export async function loadCart(): Promise<CartItem[]> {
     .from('saved_carts')
     .select('items')
     .eq('user_id', user.id)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return [];
   return data.items as CartItem[];
@@ -492,11 +545,15 @@ export async function getOrderById(orderId: string) {
 
 // Create a reservation for a puppy from a pair
 export async function createReservation(sireId: string, damId: string, userContact: string, note?: string) {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
   const { error } = await supabase
     .from('breeding_reservations')
     .insert({
       sire_id: sireId,
       dam_id: damId,
+      user_id: user.id,
       user_contact: userContact,
       user_note: note,
       status: 'pending'
@@ -580,6 +637,8 @@ export async function createNotification(notification: {
   if (error) console.error('Error creating notification:', error);
 }
 
+
+
 export async function markNotificationAsRead(id: string) {
   const { error } = await supabase
     .from('admin_notifications')
@@ -620,7 +679,7 @@ export async function deleteUser(userId: string) {
 export interface UserNotification {
   id: string;
   user_id: string;
-  type: 'system' | 'breeding' | 'puppy' | 'promo' | 'verification';
+  type: 'system' | 'breeding' | 'puppy' | 'promo' | 'verification' | 'chat_message';
   title: string;
   message: string;
   payload?: any;
@@ -697,6 +756,136 @@ export async function getPetDocuments(petId: string) {
   return data as PetDocument[];
 }
 
+export type SpayNeuterStatus = 'unknown' | 'intact' | 'spayed' | 'neutered';
+
+export interface PetHealthProfile {
+  id: string;
+  pet_id: string;
+  clinic_name?: string | null;
+  clinic_phone?: string | null;
+  vet_name?: string | null;
+  weight_kg?: number | null;
+  diet_summary?: string | null;
+  feeding_schedule?: string | null;
+  exercise_notes?: string | null;
+  allergies?: string | null;
+  conditions?: string | null;
+  medications?: string | null;
+  vaccines?: string | null;
+  deworming_schedule?: string | null;
+  last_checkup_date?: string | null;
+  spay_neuter_status?: SpayNeuterStatus | null;
+  reproductive_history?: string | null;
+  family_history_notes?: string | null;
+  incident_history?: string | null;
+  risk_flags?: string[] | null;
+  emergency_plan?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export async function getPetHealthProfile(petId: string): Promise<PetHealthProfile | null> {
+  const { data, error } = await supabase
+    .from('pet_health_profiles')
+    .select('*')
+    .eq('pet_id', petId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as PetHealthProfile | null;
+}
+
+export async function upsertPetHealthProfile(
+  profile: Omit<PetHealthProfile, 'id' | 'created_at' | 'updated_at'>
+): Promise<PetHealthProfile> {
+  const { data, error } = await supabase
+    .from('pet_health_profiles')
+    .upsert(profile, { onConflict: 'pet_id' })
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return data as PetHealthProfile;
+}
+
+// ============ PET GALLERY ============
+export async function getPetPhotos(petId: string) {
+  const { data, error } = await supabase
+    .from('pet_photos')
+    .select('*')
+    .eq('pet_id', petId)
+    .order('created_at', { ascending: false });
+
+  if (error) return [];
+  return data as PetPhoto[];
+}
+
+export async function getRelatedBreeders(petId: string): Promise<RelatedBreeder[]> {
+  // 1. Get current pet info for breed and parents
+  const { data: pet } = await supabase.from('pets').select('father_id, mother_id, breed').eq('id', petId).single();
+  if (!pet) return [];
+
+  const breeders: RelatedBreeder[] = [];
+
+  // 2. Connected Bloodlines (Owners of Parents)
+  if (pet.father_id || pet.mother_id) {
+    const parentIds = [pet.father_id, pet.mother_id].filter(Boolean);
+    const { data: parents } = await supabase.from('pets').select('owner_id, owner:owner_id(full_name, avatar_url)').in('id', parentIds);
+
+    if (parents) {
+      parents.forEach((p: any) => {
+        if (p.owner) {
+          breeders.push({
+            id: p.owner_id,
+            name: p.owner.full_name || 'Unknown Breeder',
+            relation: 'Connected Bloodline',
+            avatar_url: p.owner.avatar_url
+          });
+        }
+      });
+    }
+  }
+
+  // 3. Recommended Houses (Top owners of same breed)
+  // This is a simplified "Recommendation" - fetching other owners of the same breed
+  const { data: sameBreed } = await supabase
+    .from('pets')
+    .select('owner_id, owner:owner_id(full_name, avatar_url)')
+    .eq('breed', pet.breed)
+    .neq('id', petId)
+    .limit(5);
+
+  if (sameBreed) {
+    const uniqueOwners = new Set(breeders.map(b => b.id));
+    sameBreed.forEach((p: any) => {
+      if (p.owner && !uniqueOwners.has(p.owner_id)) {
+        breeders.push({
+          id: p.owner_id,
+          name: p.owner.full_name || 'Breeder',
+          relation: 'Recommended House',
+          avatar_url: p.owner.avatar_url
+        });
+        uniqueOwners.add(p.owner_id);
+      }
+    });
+  }
+
+  return breeders;
+}
+
+export async function addPetPhoto(photo: Omit<PetPhoto, 'id' | 'created_at' | 'order_index'>) {
+  const { error } = await supabase.from('pet_photos').insert(photo);
+  if (error) throw error;
+}
+
+export async function deletePetPhoto(photoId: string) {
+  const { error } = await supabase.from('pet_photos').delete().eq('id', photoId);
+  if (error) throw error;
+}
+
 // ============ CHAT SYSTEM ============
 export interface ChatMessage {
   id: string;
@@ -713,8 +902,29 @@ export interface ChatMessage {
 export async function initChat(targetUserId: string): Promise<string> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Must be logged in");
+  if (user.id === targetUserId) throw new Error("Cannot chat with yourself");
 
-  // For MVP: Create a new room. In production, we'd query for existing common room.
+  // Reuse an existing room if both users already share one
+  const { data: myRooms, error: myRoomsError } = await supabase
+    .from('chat_participants')
+    .select('room_id')
+    .eq('user_id', user.id);
+
+  if (!myRoomsError && myRooms && myRooms.length > 0) {
+    const roomIds = myRooms.map(room => room.room_id);
+    const { data: sharedRooms, error: sharedError } = await supabase
+      .from('chat_participants')
+      .select('room_id')
+      .eq('user_id', targetUserId)
+      .in('room_id', roomIds)
+      .limit(1);
+
+    if (!sharedError && sharedRooms && sharedRooms.length > 0) {
+      return sharedRooms[0].room_id;
+    }
+  }
+
+  // Create a new room if none exists
   const { data: room, error } = await supabase.from('chat_rooms').insert({}).select().single();
   if (error) throw error;
 
@@ -764,7 +974,7 @@ export async function sendMessage(
         message: type === 'pet_card'
           ? `Sent a pet inquiry: ${metadata?.petName || 'Pet'}`
           : `You have a new message: ${content.substring(0, 30)}${content.length > 30 ? '...' : ''}`,
-        payload: { room_id: roomId },
+        payload: { room_id: roomId, sender_id: user.id },
         is_read: false
       }));
 

@@ -12,6 +12,7 @@ import NotFound from "./pages/NotFound";
 import AirtableTest from "./pages/AirtableTest";
 import MigrationPage from "./pages/MigrationPage";
 import PedigreePage from "./pages/PedigreePage";
+import VetAIProfilePage from "./pages/VetAIProfilePage";
 
 const queryClient = new QueryClient();
 
@@ -23,12 +24,13 @@ const App = () => (
           <TooltipProvider>
             <Toaster />
             <Sonner />
-            <BrowserRouter>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/test-airtable" element={<AirtableTest />} />
                 <Route path="/migrate" element={<MigrationPage />} />
                 <Route path="/pedigree/:petId" element={<PedigreePage />} />
+                <Route path="/vet-profile/:petId" element={<VetAIProfilePage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

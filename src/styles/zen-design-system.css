@@ -1,0 +1,820 @@
+/* ==========================================================================
+   ZEN DESIGN SYSTEM - Petdegree
+   "Simplicity is the ultimate sophistication" - Steve Jobs
+   
+   Philosophy:
+   - 間 (Ma): Embrace negative space
+   - 侘寂 (Wabi-sabi): Beauty in simplicity
+   - 一期一会 (Ichi-go ichi-e): Every interaction matters
+   ========================================================================== */
+
+@layer base {
+    :root {
+        /* ═══════════════════════════════════════════════════════════════════════
+       TYPOGRAPHY SCALE - Perfect Fifth (1.5 ratio) for harmony
+       ═══════════════════════════════════════════════════════════════════════ */
+        --text-xs: 0.694rem;
+        /* 11.1px */
+        --text-sm: 0.833rem;
+        /* 13.3px */
+        --text-base: 1rem;
+        /* 16px - base */
+        --text-lg: 1.2rem;
+        /* 19.2px */
+        --text-xl: 1.44rem;
+        /* 23px */
+        --text-2xl: 1.728rem;
+        /* 27.6px */
+        --text-3xl: 2.074rem;
+        /* 33.2px */
+        --text-4xl: 2.488rem;
+        /* 39.8px */
+        --text-5xl: 2.986rem;
+        /* 47.8px */
+        --text-6xl: 3.583rem;
+        /* 57.3px */
+        --text-display: 4.3rem;
+        /* 68.8px - Hero only */
+
+        /* Line Heights - Breathing room */
+        --leading-tight: 1.15;
+        --leading-snug: 1.3;
+        --leading-normal: 1.5;
+        --leading-relaxed: 1.625;
+        --leading-loose: 2;
+
+        /* Letter Spacing - Subtle refinement */
+        --tracking-tighter: -0.05em;
+        --tracking-tight: -0.025em;
+        --tracking-normal: 0;
+        --tracking-wide: 0.025em;
+        --tracking-wider: 0.05em;
+        --tracking-widest: 0.1em;
+
+        /* ═══════════════════════════════════════════════════════════════════════
+       SPACING SCALE - 8px grid system (Zen: structured harmony)
+       ═══════════════════════════════════════════════════════════════════════ */
+        --space-px: 1px;
+        --space-0: 0;
+        --space-0-5: 0.125rem;
+        /* 2px */
+        --space-1: 0.25rem;
+        /* 4px */
+        --space-1-5: 0.375rem;
+        /* 6px */
+        --space-2: 0.5rem;
+        /* 8px - base unit */
+        --space-2-5: 0.625rem;
+        /* 10px */
+        --space-3: 0.75rem;
+        /* 12px */
+        --space-3-5: 0.875rem;
+        /* 14px */
+        --space-4: 1rem;
+        /* 16px */
+        --space-5: 1.25rem;
+        /* 20px */
+        --space-6: 1.5rem;
+        /* 24px */
+        --space-7: 1.75rem;
+        /* 28px */
+        --space-8: 2rem;
+        /* 32px */
+        --space-9: 2.25rem;
+        /* 36px */
+        --space-10: 2.5rem;
+        /* 40px */
+        --space-11: 2.75rem;
+        /* 44px */
+        --space-12: 3rem;
+        /* 48px */
+        --space-14: 3.5rem;
+        /* 56px */
+        --space-16: 4rem;
+        /* 64px */
+        --space-20: 5rem;
+        /* 80px */
+        --space-24: 6rem;
+        /* 96px */
+        --space-28: 7rem;
+        /* 112px */
+        --space-32: 8rem;
+        /* 128px */
+        --space-36: 9rem;
+        /* 144px */
+        --space-40: 10rem;
+        /* 160px */
+        --space-section: 6rem;
+        /* Section padding */
+        --space-section-lg: 8rem;
+        /* Large section padding */
+
+        /* ═══════════════════════════════════════════════════════════════════════
+       ELEVATION - Subtle depth (not flashy shadows)
+       ═══════════════════════════════════════════════════════════════════════ */
+        --shadow-zen-xs: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+        --shadow-zen-sm: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+        --shadow-zen-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
+        --shadow-zen-lg: 0 10px 15px -3px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+        --shadow-zen-xl: 0 20px 25px -5px rgb(0 0 0 / 0.07), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+        --shadow-zen-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.15);
+        --shadow-zen-glow: 0 0 40px hsl(var(--primary) / 0.12);
+        --shadow-zen-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.04);
+
+        /* Colored Glow - For emphasis (use sparingly) */
+        --shadow-glow-primary: 0 8px 32px hsl(var(--primary) / 0.2);
+        --shadow-glow-accent: 0 8px 32px hsl(var(--accent) / 0.2);
+
+        /* ═══════════════════════════════════════════════════════════════════════
+       TIMING FUNCTIONS - Natural, organic motion
+       ═══════════════════════════════════════════════════════════════════════ */
+        --ease-zen: cubic-bezier(0.4, 0, 0.2, 1);
+        /* Standard smooth */
+        --ease-zen-in: cubic-bezier(0.4, 0, 1, 1);
+        /* Accelerate */
+        --ease-zen-out: cubic-bezier(0, 0, 0.2, 1);
+        /* Decelerate */
+        --ease-zen-snap: cubic-bezier(0.22, 1, 0.36, 1);
+        /* Snappy, premium feel */
+        --ease-zen-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+        /* Playful */
+        --ease-zen-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        /* Spring */
+
+        /* Duration - Consistent timing */
+        --duration-instant: 75ms;
+        --duration-fast: 150ms;
+        --duration-normal: 300ms;
+        --duration-slow: 500ms;
+        --duration-slower: 700ms;
+        --duration-slowest: 1000ms;
+
+        /* ═══════════════════════════════════════════════════════════════════════
+       BORDER RADIUS - Soft, approachable
+       ═══════════════════════════════════════════════════════════════════════ */
+        --radius-none: 0;
+        --radius-sm: 0.375rem;
+        /* 6px */
+        --radius-md: 0.5rem;
+        /* 8px */
+        --radius-lg: 0.75rem;
+        /* 12px */
+        --radius-xl: 1rem;
+        /* 16px */
+        --radius-2xl: 1.25rem;
+        /* 20px */
+        --radius-3xl: 1.5rem;
+        /* 24px */
+        --radius-4xl: 2rem;
+        /* 32px */
+        --radius-full: 9999px;
+
+        /* ═══════════════════════════════════════════════════════════════════════
+       Z-INDEX - Layering system
+       ═══════════════════════════════════════════════════════════════════════ */
+        --z-base: 0;
+        --z-docked: 10;
+        --z-dropdown: 1000;
+        --z-sticky: 1100;
+        --z-fixed: 1200;
+        --z-overlay: 1300;
+        --z-modal: 1400;
+        --z-popover: 1500;
+        --z-toast: 1600;
+        --z-tooltip: 1700;
+    }
+}
+
+/* ==========================================================================
+   TYPOGRAPHY CLASSES - Consistent heading hierarchy
+   ========================================================================== */
+@layer components {
+
+    /* Display - Hero headlines only */
+    .zen-display {
+        font-size: var(--text-display);
+        font-weight: 800;
+        line-height: var(--leading-tight);
+        letter-spacing: var(--tracking-tighter);
+        font-family: 'Outfit', system-ui, sans-serif;
+    }
+
+    /* Headings - Clear hierarchy */
+    .zen-h1 {
+        font-size: var(--text-5xl);
+        font-weight: 700;
+        line-height: var(--leading-tight);
+        letter-spacing: var(--tracking-tight);
+    }
+
+    .zen-h2 {
+        font-size: var(--text-4xl);
+        font-weight: 700;
+        line-height: var(--leading-snug);
+        letter-spacing: var(--tracking-tight);
+    }
+
+    .zen-h3 {
+        font-size: var(--text-3xl);
+        font-weight: 600;
+        line-height: var(--leading-snug);
+        letter-spacing: var(--tracking-normal);
+    }
+
+    .zen-h4 {
+        font-size: var(--text-2xl);
+        font-weight: 600;
+        line-height: var(--leading-snug);
+        letter-spacing: var(--tracking-normal);
+    }
+
+    .zen-h5 {
+        font-size: var(--text-xl);
+        font-weight: 600;
+        line-height: var(--leading-normal);
+        letter-spacing: var(--tracking-normal);
+    }
+
+    .zen-h6 {
+        font-size: var(--text-lg);
+        font-weight: 600;
+        line-height: var(--leading-normal);
+        letter-spacing: var(--tracking-wide);
+    }
+
+    /* Body text */
+    .zen-body-lg {
+        font-size: var(--text-lg);
+        line-height: var(--leading-relaxed);
+        letter-spacing: var(--tracking-normal);
+    }
+
+    .zen-body {
+        font-size: var(--text-base);
+        line-height: var(--leading-relaxed);
+        letter-spacing: var(--tracking-normal);
+    }
+
+    .zen-body-sm {
+        font-size: var(--text-sm);
+        line-height: var(--leading-normal);
+        letter-spacing: var(--tracking-normal);
+    }
+
+    /* Caption & Labels */
+    .zen-caption {
+        font-size: var(--text-xs);
+        line-height: var(--leading-normal);
+        letter-spacing: var(--tracking-wide);
+        text-transform: uppercase;
+        font-weight: 600;
+    }
+
+    .zen-label {
+        font-size: var(--text-sm);
+        font-weight: 500;
+        line-height: var(--leading-normal);
+        letter-spacing: var(--tracking-wide);
+    }
+
+    /* Responsive Typography */
+    @media (max-width: 768px) {
+        .zen-display {
+            font-size: var(--text-4xl);
+        }
+
+        .zen-h1 {
+            font-size: var(--text-3xl);
+        }
+
+        .zen-h2 {
+            font-size: var(--text-2xl);
+        }
+
+        .zen-h3 {
+            font-size: var(--text-xl);
+        }
+
+        .zen-h4 {
+            font-size: var(--text-lg);
+        }
+    }
+}
+
+/* ==========================================================================
+   ZEN CARD SYSTEM - Minimal elevation, maximum focus
+   ========================================================================== */
+@layer components {
+    .zen-card {
+        @apply relative overflow-hidden;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: var(--radius-2xl);
+        box-shadow: var(--shadow-zen-sm);
+        transition: all var(--duration-normal) var(--ease-zen-snap);
+    }
+
+    .zen-card:hover {
+        box-shadow: var(--shadow-zen-lg);
+        transform: translateY(-2px);
+        border-color: hsl(var(--primary) / 0.15);
+    }
+
+    .zen-card-flat {
+        @apply relative overflow-hidden;
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(0, 0, 0, 0.04);
+        border-radius: var(--radius-xl);
+        transition: all var(--duration-normal) var(--ease-zen);
+    }
+
+    .zen-card-elevated {
+        @apply relative overflow-hidden;
+        background: white;
+        border-radius: var(--radius-2xl);
+        box-shadow: var(--shadow-zen-lg);
+        transition: all var(--duration-normal) var(--ease-zen-snap);
+    }
+
+    .zen-card-elevated:hover {
+        box-shadow: var(--shadow-zen-xl);
+        transform: translateY(-4px);
+    }
+}
+
+/* ==========================================================================
+   ZEN BUTTONS - Purposeful, not distracting
+   ========================================================================== */
+@layer components {
+    .zen-btn {
+        @apply relative inline-flex items-center justify-center gap-2;
+        @apply font-semibold;
+        padding: var(--space-3) var(--space-6);
+        border-radius: var(--radius-full);
+        transition: all var(--duration-normal) var(--ease-zen-snap);
+        cursor: pointer;
+        outline: none;
+        border: none;
+    }
+
+    .zen-btn:active {
+        transform: scale(0.98);
+    }
+
+    .zen-btn:focus-visible {
+        @apply ring-2 ring-offset-2 ring-primary/50;
+    }
+
+    /* Primary - Main action */
+    .zen-btn-primary {
+        @apply zen-btn;
+        background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+        color: white;
+        box-shadow: 0 2px 8px hsl(var(--primary) / 0.3);
+    }
+
+    .zen-btn-primary:hover {
+        box-shadow: 0 4px 16px hsl(var(--primary) / 0.4);
+        transform: translateY(-1px);
+    }
+
+    /* Secondary - Important but not primary */
+    .zen-btn-secondary {
+        @apply zen-btn;
+        background: hsl(var(--foreground) / 0.05);
+        color: hsl(var(--foreground));
+        border: 1px solid hsl(var(--foreground) / 0.1);
+    }
+
+    .zen-btn-secondary:hover {
+        background: hsl(var(--foreground) / 0.08);
+        border-color: hsl(var(--foreground) / 0.15);
+    }
+
+    /* Ghost - Minimal presence */
+    .zen-btn-ghost {
+        @apply zen-btn;
+        background: transparent;
+        color: hsl(var(--foreground) / 0.7);
+    }
+
+    .zen-btn-ghost:hover {
+        background: hsl(var(--foreground) / 0.05);
+        color: hsl(var(--foreground));
+    }
+
+    /* Icon button */
+    .zen-btn-icon {
+        @apply zen-btn;
+        padding: var(--space-3);
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid hsl(var(--primary) / 0.1);
+    }
+
+    .zen-btn-icon:hover {
+        background: white;
+        box-shadow: var(--shadow-zen-md);
+    }
+}
+
+/* ==========================================================================
+   PARALLAX & SCROLL EFFECTS
+   ========================================================================== */
+@layer utilities {
+
+    /* Parallax containers */
+    .parallax-slow {
+        will-change: transform;
+        transition: transform 0.1s linear;
+    }
+
+    .parallax-medium {
+        will-change: transform;
+        transition: transform 0.08s linear;
+    }
+
+    .parallax-fast {
+        will-change: transform;
+        transition: transform 0.05s linear;
+    }
+
+    /* Scroll reveal animations */
+    .scroll-reveal {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all var(--duration-slow) var(--ease-zen-out);
+    }
+
+    .scroll-reveal.revealed {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .scroll-reveal-left {
+        opacity: 0;
+        transform: translateX(-30px);
+        transition: all var(--duration-slow) var(--ease-zen-out);
+    }
+
+    .scroll-reveal-left.revealed {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .scroll-reveal-right {
+        opacity: 0;
+        transform: translateX(30px);
+        transition: all var(--duration-slow) var(--ease-zen-out);
+    }
+
+    .scroll-reveal-right.revealed {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    .scroll-reveal-scale {
+        opacity: 0;
+        transform: scale(0.95);
+        transition: all var(--duration-slow) var(--ease-zen-out);
+    }
+
+    .scroll-reveal-scale.revealed {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ==========================================================================
+   HOVER EFFECTS - Sophisticated, not distracting
+   ========================================================================== */
+@layer utilities {
+
+    /* Magnetic hover - subtle pull effect */
+    .hover-magnetic {
+        transition: transform var(--duration-fast) var(--ease-zen);
+    }
+
+    /* Lift on hover */
+    .hover-lift {
+        transition: all var(--duration-normal) var(--ease-zen-snap);
+    }
+
+    .hover-lift:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-zen-lg);
+    }
+
+    /* Subtle grow */
+    .hover-grow {
+        transition: transform var(--duration-normal) var(--ease-zen-snap);
+    }
+
+    .hover-grow:hover {
+        transform: scale(1.02);
+    }
+
+    /* Glow on hover */
+    .hover-glow:hover {
+        box-shadow: var(--shadow-glow-primary);
+    }
+
+    /* Border highlight */
+    .hover-border {
+        border: 1px solid transparent;
+        transition: border-color var(--duration-normal) var(--ease-zen);
+    }
+
+    .hover-border:hover {
+        border-color: hsl(var(--primary) / 0.3);
+    }
+
+    /* Image zoom (for cards with images) */
+    .hover-img-zoom img,
+    .hover-img-zoom .img-container {
+        transition: transform var(--duration-slow) var(--ease-zen);
+    }
+
+    .hover-img-zoom:hover img,
+    .hover-img-zoom:hover .img-container {
+        transform: scale(1.05);
+    }
+
+    /* Shine sweep effect */
+    .hover-shine {
+        @apply relative overflow-hidden;
+    }
+
+    .hover-shine::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent);
+        transition: left var(--duration-slow) var(--ease-zen);
+    }
+
+    .hover-shine:hover::before {
+        left: 100%;
+    }
+
+    /* Focus state - for accessibility */
+    .zen-focus:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary) / 0.5);
+    }
+}
+
+/* ==========================================================================
+   ANIMATIONS - Natural, organic motion
+   ========================================================================== */
+@keyframes zen-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes zen-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes zen-slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes zen-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes zen-float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+@keyframes zen-pulse-subtle {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes zen-breathe {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+/* Animation utilities */
+@layer utilities {
+    .animate-zen-fade-in {
+        animation: zen-fade-in var(--duration-normal) var(--ease-zen-out) forwards;
+    }
+
+    .animate-zen-slide-up {
+        animation: zen-slide-up var(--duration-normal) var(--ease-zen-out) forwards;
+    }
+
+    .animate-zen-slide-down {
+        animation: zen-slide-down var(--duration-normal) var(--ease-zen-out) forwards;
+    }
+
+    .animate-zen-scale-in {
+        animation: zen-scale-in var(--duration-normal) var(--ease-zen-out) forwards;
+    }
+
+    .animate-zen-float {
+        animation: zen-float 4s ease-in-out infinite;
+    }
+
+    .animate-zen-pulse {
+        animation: zen-pulse-subtle 2s ease-in-out infinite;
+    }
+
+    .animate-zen-breathe {
+        animation: zen-breathe 4s ease-in-out infinite;
+    }
+
+    /* Stagger children animations */
+    .stagger-children>* {
+        --stagger-delay: 0.1s;
+        animation-delay: calc(var(--stagger-index, 0) * var(--stagger-delay));
+    }
+
+    .stagger-children>*:nth-child(1) {
+        --stagger-index: 0;
+    }
+
+    .stagger-children>*:nth-child(2) {
+        --stagger-index: 1;
+    }
+
+    .stagger-children>*:nth-child(3) {
+        --stagger-index: 2;
+    }
+
+    .stagger-children>*:nth-child(4) {
+        --stagger-index: 3;
+    }
+
+    .stagger-children>*:nth-child(5) {
+        --stagger-index: 4;
+    }
+
+    .stagger-children>*:nth-child(6) {
+        --stagger-index: 5;
+    }
+
+    .stagger-children>*:nth-child(7) {
+        --stagger-index: 6;
+    }
+
+    .stagger-children>*:nth-child(8) {
+        --stagger-index: 7;
+    }
+}
+
+/* ==========================================================================
+   SECTION LAYOUTS - Consistent spacing
+   ========================================================================== */
+@layer components {
+    .zen-section {
+        @apply relative;
+        padding-top: var(--space-section);
+        padding-bottom: var(--space-section);
+    }
+
+    .zen-section-lg {
+        @apply relative;
+        padding-top: var(--space-section-lg);
+        padding-bottom: var(--space-section-lg);
+    }
+
+    .zen-container {
+        @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+    }
+
+    .zen-section-header {
+        @apply text-center mb-12 md:mb-16;
+    }
+
+    .zen-section-header .zen-badge {
+        @apply inline-block px-4 py-1.5 rounded-full mb-4;
+        background: hsl(var(--primary) / 0.1);
+        color: hsl(var(--primary));
+        font-size: var(--text-sm);
+        font-weight: 600;
+        letter-spacing: var(--tracking-wide);
+    }
+}
+
+/* ==========================================================================
+   INPUT FIELDS - Clean, focused
+   ========================================================================== */
+@layer components {
+    .zen-input {
+        @apply w-full;
+        padding: var(--space-3) var(--space-4);
+        background: rgba(255, 255, 255, 0.8);
+        border: 1px solid hsl(var(--primary) / 0.15);
+        border-radius: var(--radius-xl);
+        font-size: var(--text-base);
+        transition: all var(--duration-normal) var(--ease-zen);
+        outline: none;
+    }
+
+    .zen-input::placeholder {
+        color: hsl(var(--foreground) / 0.4);
+    }
+
+    .zen-input:hover {
+        border-color: hsl(var(--primary) / 0.25);
+    }
+
+    .zen-input:focus {
+        border-color: hsl(var(--primary) / 0.5);
+        box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+        background: white;
+    }
+
+    .zen-input-lg {
+        @apply zen-input;
+        padding: var(--space-4) var(--space-6);
+        font-size: var(--text-lg);
+        border-radius: var(--radius-2xl);
+    }
+}
+
+/* ==========================================================================
+   DARK MODE ADJUSTMENTS
+   ========================================================================== */
+@layer base {
+    .dark {
+        --shadow-zen-xs: 0 1px 2px 0 rgb(0 0 0 / 0.15);
+        --shadow-zen-sm: 0 1px 3px 0 rgb(0 0 0 / 0.2), 0 1px 2px -1px rgb(0 0 0 / 0.15);
+        --shadow-zen-md: 0 4px 6px -1px rgb(0 0 0 / 0.2), 0 2px 4px -2px rgb(0 0 0 / 0.15);
+        --shadow-zen-lg: 0 10px 15px -3px rgb(0 0 0 / 0.25), 0 4px 6px -4px rgb(0 0 0 / 0.15);
+        --shadow-zen-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.15);
+    }
+
+    .dark .zen-card {
+        background: rgba(30, 30, 30, 0.85);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .dark .zen-input {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+}

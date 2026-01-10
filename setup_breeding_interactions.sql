@@ -8,12 +8,17 @@ CREATE TABLE IF NOT EXISTS breeding_reservations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     sire_id UUID REFERENCES pets(id) NOT NULL,
     dam_id UUID REFERENCES pets(id) NOT NULL,
+    user_id UUID REFERENCES profiles(id),
     user_contact TEXT, -- Email or Phone number provided by user
     user_note TEXT,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'contacted', 'rejected')),
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+ALTER TABLE breeding_reservations ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES profiles(id);
+
+CREATE INDEX IF NOT EXISTS breeding_reservations_user_id_idx ON breeding_reservations(user_id);
 
 -- 2. CHAT REQUESTS
 -- Since we don't have a full real-time chat system yet, this logs a "Connection Request"
@@ -53,3 +58,64 @@ CREATE POLICY "Allow public insert reports" ON breeding_reports FOR INSERT WITH 
 
 -- Allow public read just for demo purposes (in production, restrict to own data)
 CREATE POLICY "Allow public read reservations" ON breeding_reservations FOR SELECT USING (true);
+
+-- Admin override: manage all pending/records
+DO $$
+BEGIN
+    DROP POLICY IF EXISTS "Admin manage reservations" ON breeding_reservations;
+    CREATE POLICY "Admin manage reservations" ON breeding_reservations FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    );
+END $$;
+
+DO $$
+BEGIN
+    DROP POLICY IF EXISTS "Admin manage chat requests" ON breeding_chat_requests;
+    CREATE POLICY "Admin manage chat requests" ON breeding_chat_requests FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    );
+END $$;
+
+DO $$
+BEGIN
+    DROP POLICY IF EXISTS "Admin manage reports" ON breeding_reports;
+    CREATE POLICY "Admin manage reports" ON breeding_reports FOR ALL
+    USING (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    )
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM profiles
+            WHERE profiles.id = auth.uid()
+            AND profiles.role = 'admin'
+        )
+    );
+END $$;

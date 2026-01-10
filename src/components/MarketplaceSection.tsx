@@ -86,36 +86,36 @@ const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ onAddToCart, on
   ];
 
   return (
-    <section id="marketplace" className="py-20 lg:py-28 bg-background relative">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="marketplace" className="py-20 lg:py-28 bg-gradient-to-b from-background to-muted/30 relative">
+      <div className="zen-container px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-12">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-accent/10 text-accent text-sm font-bold mb-4 animate-in fade-in zoom-in duration-500">
+        <div className="text-center mb-14">
+          <span className="inline-block px-5 py-2 rounded-2xl bg-primary/10 text-primary text-sm font-semibold mb-5 animate-in fade-in zoom-in duration-500">
             Curated Marketplace
           </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mb-4">
+          <h2 className="zen-h1 text-3xl sm:text-4xl lg:text-5xl text-foreground mb-5">
             Premium Pet Products
           </h2>
-          <p className="text-lg text-foreground/60 max-w-2xl mx-auto">
+          <p className="zen-body-lg text-foreground/50 max-w-2xl mx-auto">
             Discover handpicked products from verified sellers. Quality nutrition, toys, and accessories for your beloved companions.
           </p>
         </div>
 
         {/* Category Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setCategory(cat.id as typeof category)}
-              className={`p-4 lg:p-6 rounded-3xl border transition-all duration-300 flex flex-col items-center gap-3 ${category === cat.id
-                ? 'bg-foreground border-foreground text-background shadow-xl scale-105'
-                : 'bg-white/50 backdrop-blur-sm border-primary/10 text-foreground hover:border-primary/30 hover:shadow-lg hover:-translate-y-1'
+              className={`p-5 lg:p-6 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-3 ${category === cat.id
+                ? 'bg-foreground border-foreground text-background shadow-2xl scale-[1.02]'
+                : 'bg-white/70 backdrop-blur-sm border-foreground/5 text-foreground hover:border-primary/20 hover:shadow-lg hover:-translate-y-1'
                 }`}
             >
-              <div className={`p-3 rounded-2xl transition-colors ${category === cat.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
+              <div className={`p-3.5 rounded-2xl transition-all duration-300 ${category === cat.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
                 {cat.icon}
               </div>
-              <span className="font-bold text-sm lg:text-base">{cat.label}</span>
+              <span className="font-semibold text-sm lg:text-base">{cat.label}</span>
             </button>
           ))}
         </div>
