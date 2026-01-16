@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 // https://vitejs.dev/config/
-const aiProxyTarget = process.env.VITE_AI_PROXY_TARGET || "https://petdegree.vercel.app";
+const aiProxyTarget = process.env.VITE_AI_PROXY_TARGET || "https://www.eibpo.com";
 
 export default defineConfig(({ mode }) => ({
   server: {
@@ -31,7 +31,13 @@ export default defineConfig(({ mode }) => ({
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
           const normalizedId = id.replace(/\\/g, "/");
-          if (normalizedId.includes("/node_modules/react/") || normalizedId.includes("/node_modules/react-dom/")) return "react-vendor";
+          if (
+            normalizedId.includes("/node_modules/react/") ||
+            normalizedId.includes("/node_modules/react-dom/") ||
+            normalizedId.includes("/node_modules/scheduler/") ||
+            normalizedId.includes("/node_modules/use-sync-external-store/") ||
+            normalizedId.includes("/node_modules/react-is/")
+          ) return "react-vendor";
           if (normalizedId.includes("/node_modules/react-router/") || normalizedId.includes("/node_modules/react-router-dom/")) return "router-vendor";
           if (normalizedId.includes("/node_modules/@tanstack/")) return "tanstack-vendor";
           if (normalizedId.includes("/node_modules/@supabase/")) return "supabase-vendor";

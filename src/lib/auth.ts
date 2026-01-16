@@ -242,7 +242,7 @@ export async function signInWithOAuth(provider: 'google' | 'github' | 'facebook'
     options: {
       redirectTo: (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         ? window.location.origin
-        : 'https://petdegree.vercel.app'
+        : 'https://www.eibpo.com'
     }
   });
   if (error) throw error;

@@ -19,7 +19,7 @@ To enable real social login functionality, you need to configure OAuth providers
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers).
 2. Click **New OAuth App**.
 3. Fill in the details:
-   - Homepage URL: Your Vercel URL (e.g., `https://petdegree.vercel.app`)
+   - Homepage URL: Your Vercel URL (e.g., `https://www.eibpo.com`)
    - Authorization callback URL: Your Supabase callback URL (same as above).
 4. Click **Register application**.
 5. Copy the **Client ID** and generate a new **Client Secret**.
@@ -53,7 +53,7 @@ LINE is not a default provider in Supabase's free tier UI in some regions, but c
 
 ## IMPORTANT: Redirect URLs
 In Supabase > Authentication > URL Configuration:
-- Add your Vercel production URL (e.g., `https://petdegree.vercel.app`) to "Redirect URLs".
+- Add your Vercel production URL (e.g., `https://www.eibpo.com`) to "Redirect URLs".
 - Also add `http://localhost:5173` for local testing.
 
 Once these steps are done, the buttons in `AuthModal` will automatically work!

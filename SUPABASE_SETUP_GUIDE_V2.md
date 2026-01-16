@@ -31,7 +31,7 @@ This guide will walk you through setting up Google, GitHub, Apple, and LINE logi
    - **Application Type:** Web application.
    - **Name:** Supabase Login.
    - **Authorized JavaScript origins:**
-     - `https://petdegree.vercel.app` (Your Production URL)
+     - `https://www.eibpo.com` (Your Production URL)
      - `http://localhost:5173` (For local testing)
    - **Authorized redirect URIs:**
      - **PASTE YOUR SUPABASE CALLBACK URL HERE** (from Prerequisite step).
@@ -50,7 +50,7 @@ This guide will walk you through setting up Google, GitHub, Apple, and LINE logi
 1. Go to **[GitHub Developer Settings](https://github.com/settings/developers)**.
 2. Click **New OAuth App**.
 3. **Application Name:** Petdegree
-4. **Homepage URL:** `https://petdegree.vercel.app`
+4. **Homepage URL:** `https://www.eibpo.com`
 5. **Authorization callback URL:**
    - **PASTE YOUR SUPABASE CALLBACK URL HERE**.
 6. Click **Register application**.
@@ -76,7 +76,7 @@ This guide will walk you through setting up Google, GitHub, Apple, and LINE logi
 4. **Step 3.1: Config**
    - On the Dashboard, find **Facebook Login** product > Click **Set up**.
    - Choose **Web**.
-   - **Site URL:** `https://petdegree.vercel.app` (Save).
+   - **Site URL:** `https://www.eibpo.com` (Save).
    - Go to **Facebook Login > Settings** (left menu).
    - **Valid OAuth Redirect URIs:**
      - **PASTE YOUR SUPABASE CALLBACK URL HERE**.
@@ -105,7 +105,7 @@ This guide will walk you through setting up Google, GitHub, Apple, and LINE logi
    - Identifier: `com.yourname.petdegree.web`.
    - Click Register. Then Click on it to Edit.
    - Check **Sign In with Apple** > Configure.
-   - **Domains:** `petdegree.vercel.app`
+   - **Domains:** `www.eibpo.com`
    - **Return URLs:** **PASTE YOUR SUPABASE CALLBACK URL**.
    - Save.
 4. **Create Key (.p8 file):**
@@ -128,12 +128,12 @@ This guide will walk you through setting up Google, GitHub, Apple, and LINE logi
 **Critical Step to prevent redirect errors.**
 
 1. Go to **Supabase** > **Authentication** > **URL Configuration**.
-2. **Site URL:** Set to your Production URL: `https://petdegree.vercel.app`
+2. **Site URL:** Set to your Production URL: `https://www.eibpo.com`
 3. **Redirect URLs:** Add the following:
    - `http://localhost:5173`
    - `http://localhost:3000`
-   - `https://petdegree.vercel.app`
-   - `https://petdegree.vercel.app/auth/callback` (Optional but good practice)
+   - `https://www.eibpo.com`
+   - `https://www.eibpo.com/auth/callback` (Optional but good practice)
 
 ---
 
