@@ -251,7 +251,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({
   };
 
   return (
-    <section id="home" className="relative min-h-screen flex flex-col items-center justify-center pt-28 pb-20 px-6 overflow-hidden">
+    <section id="home" className="relative min-h-screen min-h-[100dvh] flex flex-col items-center justify-center pt-20 sm:pt-28 pb-16 sm:pb-20 px-4 sm:px-6 overflow-hidden">
       {/* Luxury Dark Background with subtle gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0A] via-[#0D0D0D] to-[#0A0A0A] -z-10" />
 
@@ -268,47 +268,48 @@ const HeroSection: React.FC<HeroSectionProps> = ({
 
         {/* Caption - Above headline */}
         <div className={`transition-all duration-1000 ${showAiChat ? '-translate-y-[400px] opacity-0' : ''}`}>
-          <span className="inline-block mb-8 text-[10px] tracking-[0.3em] uppercase text-[#C5A059] font-medium">
+          {/* Caption - Above headline */}
+          <span className="inline-block mb-4 sm:mb-8 text-[9px] sm:text-[10px] tracking-[0.2em] sm:tracking-[0.3em] uppercase text-[#C5A059] font-medium">
             Premium Pedigree Registry
           </span>
 
-          {/* Main Headline - Playfair Display */}
-          <h1 className="font-['Playfair_Display',_Georgia,_serif] text-4xl sm:text-5xl lg:text-6xl xl:text-7xl text-[#F5F5F0] mb-8 leading-[1.05] tracking-[-0.02em]">
+          {/* Main Headline - Playfair Display - Fluid Typography */}
+          <h1 className="font-['Playfair_Display',_Georgia,_serif] text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl text-[#F5F5F0] mb-4 sm:mb-8 leading-[1.1] tracking-[-0.02em]">
             <span className="block">Preserve Your Pet's</span>
-            <span className="block mt-2">
+            <span className="block mt-1 sm:mt-2">
               <span className="text-[#C5A059]">Legacy</span> Forever
             </span>
           </h1>
 
-          {/* Subtitle */}
-          <p className="font-['Cormorant_Garamond',_Georgia,_serif] text-lg sm:text-xl text-[#B8B8B8]/80 mb-12 max-w-2xl mx-auto leading-relaxed tracking-wide">
+          {/* Subtitle - Responsive */}
+          <p className="font-['Cormorant_Garamond',_Georgia,_serif] text-base sm:text-lg md:text-xl text-[#B8B8B8]/80 mb-8 sm:mb-12 max-w-sm sm:max-w-2xl mx-auto leading-relaxed tracking-wide px-2">
             {t('hero.subtext') || 'The definitive platform for verified bloodlines, trusted breeding, and comprehensive pet records.'}
           </p>
         </div>
 
-        {/* Luxury Search Bar */}
-        <div ref={searchRef} className="relative max-w-2xl mx-auto mb-12">
+        {/* Luxury Search Bar - Mobile Optimized */}
+        <div ref={searchRef} className="relative max-w-2xl w-full mx-auto mb-8 sm:mb-12 px-2 sm:px-0">
           <form onSubmit={handleSearchSubmit}>
             <div className="relative group">
               {/* Search container - Luxury dark style */}
               <div className="relative flex items-center bg-[#1A1A1A] border border-[#C5A059]/20 group-hover:border-[#C5A059]/40 group-focus-within:border-[#C5A059]/60 transition-all duration-500">
 
                 {/* Search Icon */}
-                <div className="pl-6 text-[#C5A059]/60 group-focus-within:text-[#C5A059] transition-colors">
+                <div className="pl-4 sm:pl-6 text-[#C5A059]/60 group-focus-within:text-[#C5A059] transition-colors">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
                 </div>
 
-                {/* Input */}
+                {/* Input - Touch Friendly */}
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
-                  placeholder={t('hero.searchPlaceholder') || 'Search pets, breeds, breeders...'}
-                  className="flex-1 px-5 py-5 bg-transparent outline-none text-[#F5F5F0] placeholder:text-[#B8B8B8]/40 text-base font-light tracking-wide"
-                  style={{ boxShadow: 'none' }}
+                  placeholder={t('hero.searchPlaceholder') || 'Search pets, breeds...'}
+                  className="flex-1 px-3 sm:px-5 py-4 sm:py-5 bg-transparent outline-none text-[#F5F5F0] placeholder:text-[#B8B8B8]/40 text-base sm:text-base font-light tracking-wide min-h-[48px]"
+                  style={{ boxShadow: 'none', fontSize: '16px' }}
                 />
 
                 {/* AI Mode Button */}
@@ -387,33 +388,34 @@ const HeroSection: React.FC<HeroSectionProps> = ({
           )}
         </div>
 
-        {/* CTA Buttons - Luxury Style */}
-        <div className={`flex justify-center gap-6 transition-all duration-700 ${showAiChat ? 'opacity-0' : ''}`}>
+        {/* CTA Buttons - Mobile Responsive */}
+        <div className={`flex flex-col sm:flex-row justify-center gap-3 sm:gap-6 w-full sm:w-auto px-4 sm:px-0 transition-all duration-700 ${showAiChat ? 'opacity-0' : ''}`}>
           <button
             onClick={onSearchClick}
-            className="px-8 py-4 bg-transparent border border-[#B8B8B8]/30 text-[#B8B8B8] text-[11px] tracking-[0.2em] uppercase font-medium hover:border-[#C5A059] hover:text-[#C5A059] transition-all duration-300"
+            className="w-full sm:w-auto px-6 sm:px-8 py-4 min-h-[48px] bg-transparent border border-[#B8B8B8]/30 text-[#B8B8B8] text-xs sm:text-[11px] tracking-[0.15em] sm:tracking-[0.2em] uppercase font-medium hover:border-[#C5A059] hover:text-[#C5A059] active:bg-[#C5A059]/10 transition-all duration-300 touch-target"
           >
             {t('hero.searchBtn') || 'Explore'}
           </button>
           <button
             onClick={onRegisterClick}
-            className="px-8 py-4 bg-[#C5A059] border border-[#C5A059] text-[#0A0A0A] text-[11px] tracking-[0.2em] uppercase font-semibold hover:bg-[#D4C4B5] hover:border-[#D4C4B5] transition-all duration-300"
+            className="w-full sm:w-auto px-6 sm:px-8 py-4 min-h-[48px] bg-[#C5A059] border border-[#C5A059] text-[#0A0A0A] text-xs sm:text-[11px] tracking-[0.15em] sm:tracking-[0.2em] uppercase font-semibold hover:bg-[#D4C4B5] hover:border-[#D4C4B5] active:bg-[#B89A4A] transition-all duration-300 touch-target"
           >
             {t('hero.registerBtn') || 'Register Pet'}
           </button>
         </div>
       </div>
 
-      {/* Featured Cards - Luxury Grid */}
-      <div className={`relative z-10 max-w-6xl w-full mx-auto px-4 transition-all duration-1000 ${showAiChat ? 'translate-y-[400px] opacity-0' : showDropdown && searchResults.length > 0 ? 'mt-60' : 'mt-0'
+      {/* Featured Cards - Mobile Optimized Grid */}
+      <div className={`relative z-10 max-w-6xl w-full mx-auto px-2 sm:px-4 transition-all duration-1000 ${showAiChat ? 'translate-y-[400px] opacity-0' : showDropdown && searchResults.length > 0 ? 'mt-60' : 'mt-0'
         }`}>
 
         {/* Section Label */}
-        <div className="text-center mb-8">
-          <span className="text-[10px] tracking-[0.3em] uppercase text-[#C5A059]/60">Featured Collection</span>
+        <div className="text-center mb-4 sm:mb-8">
+          <span className="text-[9px] sm:text-[10px] tracking-[0.2em] sm:tracking-[0.3em] uppercase text-[#C5A059]/60">Featured Collection</span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        {/* Responsive Grid: 2 cols mobile, 3 cols tablet, 6 cols desktop */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 lg:gap-4">
           {suggestions.map((card, index) => (
             <LuxuryCard
               key={card.id}
@@ -425,8 +427,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({
         </div>
       </div>
 
-      {/* Scroll Indicator - Luxury */}
-      <div className={`absolute bottom-12 left-1/2 -translate-x-1/2 z-10 transition-opacity duration-500 ${showAiChat ? 'opacity-0' : 'opacity-100'}`}>
+      {/* Scroll Indicator - Hide on mobile for cleaner look */}
+      <div className={`absolute bottom-8 sm:bottom-12 left-1/2 -translate-x-1/2 z-10 transition-opacity duration-500 hidden sm:block ${showAiChat ? 'opacity-0' : 'opacity-100'}`}>
         <div className="flex flex-col items-center gap-3 text-[#C5A059]/40 animate-bounce">
           <span className="text-[9px] tracking-[0.2em] uppercase">Explore</span>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>

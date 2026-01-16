@@ -98,18 +98,18 @@ const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onVi
   });
 
   return (
-    <section id="pedigree" className="py-20 lg:py-28 bg-muted/30 relative">
+    <section id="pedigree" className="py-12 sm:py-16 md:py-20 lg:py-28 bg-muted/30 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8 sm:mb-10 md:mb-12">
           <div className="cursor-pointer group" onClick={onRegisterClick}>
-            <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-bold mb-4 animate-in fade-in zoom-in duration-500">
+            <span className="inline-block px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-bold mb-3 sm:mb-4 animate-in fade-in zoom-in duration-500">
               Pedigree Registry
             </span>
-            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black text-foreground mb-4 group-hover:text-primary transition-colors duration-300">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-black text-foreground mb-3 sm:mb-4 group-hover:text-primary transition-colors duration-300 leading-tight px-2 sm:px-0">
               Register your pet now!
             </h2>
-            <p className="text-lg text-foreground/60 max-w-2xl mx-auto group-hover:underline decoration-primary underline-offset-4">
+            <p className="text-sm sm:text-base lg:text-lg text-foreground/60 max-w-2xl mx-auto group-hover:underline decoration-primary underline-offset-4 px-4 sm:px-0">
               Click here to verify pedigree and archive lineage
             </p>
           </div>
@@ -118,7 +118,7 @@ const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onVi
 
 
         {/* Filter Tabs */}
-        <div className="flex items-center justify-center gap-2 mb-10">
+        <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-6 sm:mb-8 md:mb-10 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
           {[
             { id: 'all', label: 'All Pets' },
             { id: 'dog', label: 'Dogs' },
@@ -127,9 +127,9 @@ const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onVi
             <button
               key={tab.id}
               onClick={() => setFilter(tab.id as 'all' | 'dog' | 'cat')}
-              className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all duration-300 ${filter === tab.id
+              className={`flex-shrink-0 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all duration-300 min-h-[40px] sm:min-h-[44px] touch-manipulation ${filter === tab.id
                 ? 'bg-foreground text-background shadow-lg scale-105'
-                : 'bg-background text-foreground/70 hover:bg-primary/10 hover:text-primary'
+                : 'bg-background text-foreground/70 hover:bg-primary/10 hover:text-primary active:scale-95'
                 }`}
             >
               {tab.label}
@@ -138,7 +138,7 @@ const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onVi
         </div>
 
         {/* Pet Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-8 sm:mb-10 md:mb-12">
           {loading ? (
             <>
               {[...Array(8)].map((_, idx) => (

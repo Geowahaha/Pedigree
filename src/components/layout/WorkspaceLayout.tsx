@@ -1060,7 +1060,7 @@ const WorkspaceLayout: React.FC = () => {
     return (
         <div className="min-h-screen bg-[#0A0A0A] text-[#F5F5F0] flex">
             {/* ===== SIDEBAR (Icon-Only) - Luxury Black ===== */}
-            <aside className="w-14 bg-gradient-to-b from-[#1A1A1A] to-[#0D0D0D] border-r border-[#C5A059]/10 flex flex-col items-center py-4 gap-2 fixed left-0 top-0 bottom-0 z-40 shadow-lg">
+            <aside className="hidden md:flex w-14 bg-gradient-to-b from-[#1A1A1A] to-[#0D0D0D] border-r border-[#C5A059]/10 flex-col items-center py-4 gap-2 fixed left-0 top-0 bottom-0 z-40 shadow-lg">
                 {/* Logo - Gold Accent */}
                 <div className="w-10 h-10 border border-[#C5A059]/40 flex items-center justify-center mb-4 relative">
                     <div className="absolute inset-0 border border-[#C5A059]/20 rotate-45" />
@@ -1103,18 +1103,42 @@ const WorkspaceLayout: React.FC = () => {
             </aside>
 
             {/* ===== MAIN WORKSPACE ===== */}
-            <main className="flex-1 ml-14 flex flex-col min-h-screen">
+            <main className="flex-1 md:ml-14 flex flex-col min-h-screen">
                 {/* Top Bar - Luxury Dark */}
-                <header className="flex items-center justify-center py-4 relative border-b border-[#C5A059]/10">
-                    <div className="px-4 py-1.5 border border-[#C5A059]/20 text-[10px] tracking-[0.15em] uppercase text-[#B8B8B8]">
-                        <span>{language === 'th' ? 'ฟรี' : 'Free'}</span>
-                        <span className="mx-2 text-[#C5A059]/40">·</span>
-                        <span className="text-[#C5A059] hover:text-[#D4C4B5] cursor-pointer transition-colors font-medium">
-                            {language === 'th' ? 'อัพเกรด' : 'Upgrade'}
-                        </span>
-                    </div>
+                <header className="relative border-b border-[#C5A059]/10">
+                    <div className="hidden md:flex items-center justify-center py-4">
+                        <div className="px-4 py-1.5 border border-[#C5A059]/20 text-[10px] tracking-[0.15em] uppercase text-[#B8B8B8]">
+                            <span>{language === 'th' ? '???' : 'Free'}</span>
+                            <span className="mx-2 text-[#C5A059]/40">ú</span>
+                            <span className="text-[#C5A059] hover:text-[#D4C4B5] cursor-pointer transition-colors font-medium">
+                                {language === 'th' ? '???????' : 'Upgrade'}
+                            </span>
+                        </div>
 
-                    <div className="absolute right-6 flex items-center gap-3">
+                        <div className="absolute right-6 flex items-center gap-3">
+                            <LanguageToggle compact />
+                        </div>
+                    </div>
+                    <div className="md:hidden px-4 py-3 flex items-center gap-3 safe-area-top">
+                        <button
+                            type="button"
+                            onClick={() => transitionToView('idle')}
+                            className="w-10 h-10 rounded-full bg-[#1A1A1A] border border-[#C5A059]/20 flex items-center justify-center"
+                        >
+                            <EibpoMark className="w-5 h-5 text-[#C5A059]" />
+                        </button>
+                        <form onSubmit={handleSearch} className="flex-1">
+                            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#1A1A1A] border border-[#C5A059]/20">
+                                <SearchIcon />
+                                <input
+                                    type="text"
+                                    value={searchValue}
+                                    onChange={(e) => setSearchValue(e.target.value)}
+                                    placeholder={language === 'th' ? 'ค้นหา...' : 'Search...'}
+                                    className="flex-1 bg-transparent text-sm text-[#F5F5F0] placeholder:text-[#B8B8B8]/40 outline-none"
+                                />
+                            </div>
+                        </form>
                         <LanguageToggle compact />
                     </div>
                 </header>

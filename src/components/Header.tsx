@@ -100,25 +100,25 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
         }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 lg:h-24">
+        <div className="flex items-center justify-between h-16 sm:h-20 lg:h-24">
 
           {/* Logo - Luxury Style */}
           <div
-            className="flex items-center gap-4 cursor-pointer group"
+            className="flex items-center gap-2 sm:gap-4 cursor-pointer group min-h-[48px]"
             onClick={() => scrollToSection('home')}
           >
             {/* Minimal Gold Icon */}
-            <div className="relative w-10 h-10 flex items-center justify-center">
+            <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center">
               <div className="absolute inset-0 border border-[#C5A059]/40 rotate-45 group-hover:rotate-[50deg] transition-transform duration-500" />
-              <EibpoMark className="w-5 h-5 text-[#C5A059]" />
+              <EibpoMark className="w-4 h-4 sm:w-5 sm:h-5 text-[#C5A059]" />
             </div>
 
             {/* Logo Text - Serif Typography */}
             <div className="flex flex-col">
-              <span className="font-['Playfair_Display',_Georgia,_serif] text-xl lg:text-2xl tracking-wide text-[#F5F5F0] group-hover:text-[#C5A059] transition-colors duration-300">
-                Eibpo<span className="text-[#C5A059]"> Pedigree</span>
+              <span className="font-['Playfair_Display',_Georgia,_serif] text-lg sm:text-xl lg:text-2xl tracking-wide text-[#F5F5F0] group-hover:text-[#C5A059] transition-colors duration-300">
+                Eibpo<span className="text-[#C5A059] hidden xs:inline"> Pedigree</span>
               </span>
-              <span className="text-[8px] lg:text-[9px] tracking-[0.3em] text-[#C5A059]/60 uppercase font-light">
+              <span className="text-[7px] sm:text-[8px] lg:text-[9px] tracking-[0.2em] sm:tracking-[0.3em] text-[#C5A059]/60 uppercase font-light hidden sm:block">
                 Premium Bloodlines
               </span>
             </div>
@@ -151,20 +151,20 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 sm:gap-2 md:gap-4">
 
             {/* Notifications - Luxury Style */}
             {user && (
               <div className="relative">
                 <button
                   onClick={() => setShowNotif(!showNotif)}
-                  className="relative p-2 text-[#B8B8B8] hover:text-[#C5A059] transition-colors duration-300"
+                  className="relative p-2 sm:p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#B8B8B8] hover:text-[#C5A059] transition-colors duration-300 touch-target"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                  <svg className="w-5 h-5 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                   </svg>
                   {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-[#C5A059] rounded-full" />
+                    <span className="absolute top-1.5 right-1.5 sm:top-1 sm:right-1 w-2.5 h-2.5 sm:w-2 sm:h-2 bg-[#C5A059] rounded-full" />
                   )}
                 </button>
 
@@ -217,13 +217,13 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
             {/* Cart - Minimal Icon */}
             <button
               onClick={onCartClick}
-              className="relative p-2 text-[#B8B8B8] hover:text-[#C5A059] transition-colors duration-300"
+              className="relative p-2 sm:p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#B8B8B8] hover:text-[#C5A059] transition-colors duration-300 touch-target"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#C5A059] text-[#0A0A0A] text-[10px] font-bold flex items-center justify-center">
+                <span className="absolute top-0 right-0 sm:-top-1 sm:-right-1 w-5 h-5 bg-[#C5A059] text-[#0A0A0A] text-[10px] font-bold flex items-center justify-center rounded-sm">
                   {cartCount}
                 </span>
               )}
@@ -314,7 +314,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
             ) : (
               <button
                 onClick={onAuthClick}
-                className="hidden sm:flex items-center gap-2 px-6 py-2.5 border border-[#C5A059] text-[#C5A059] text-[10px] tracking-[0.15em] uppercase font-medium hover:bg-[#C5A059] hover:text-[#0A0A0A] transition-all duration-300"
+                className="hidden sm:flex items-center gap-2 px-4 md:px-6 py-2 md:py-2.5 min-h-[44px] border border-[#C5A059] text-[#C5A059] text-[10px] tracking-[0.15em] uppercase font-medium hover:bg-[#C5A059] hover:text-[#0A0A0A] transition-all duration-300"
               >
                 {t('nav.signIn')}
               </button>
@@ -323,9 +323,11 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-[#B8B8B8] hover:text-[#C5A059] transition-colors"
+              className="md:hidden p-2 min-w-[44px] min-h-[44px] flex items-center justify-center text-[#B8B8B8] hover:text-[#C5A059] transition-colors touch-target"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                 {mobileMenuOpen ? (
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 ) : (
@@ -389,7 +391,7 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
               ) : (
                 <button
                   onClick={() => { onAuthClick(); setMobileMenuOpen(false); }}
-                  className="mt-4 mx-4 py-3 border border-[#C5A059] text-[#C5A059] text-xs tracking-[0.1em] uppercase text-center hover:bg-[#C5A059] hover:text-[#0A0A0A] transition-all"
+                  className="mt-4 mx-4 py-4 min-h-[48px] border border-[#C5A059] text-[#C5A059] text-sm sm:text-xs tracking-[0.1em] uppercase text-center hover:bg-[#C5A059] hover:text-[#0A0A0A] active:bg-[#C5A059] active:text-[#0A0A0A] transition-all touch-target"
                 >
                   {t('nav.signIn')}
                 </button>

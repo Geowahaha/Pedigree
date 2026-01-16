@@ -29,7 +29,7 @@ const TestimonialsSection: React.FC = () => {
     ];
 
     return (
-        <section className="py-20 lg:py-28 bg-gradient-to-b from-background to-muted/30 relative overflow-hidden">
+        <section className="py-12 sm:py-16 md:py-20 lg:py-28 bg-gradient-to-b from-background to-muted/30 relative overflow-hidden">
             {/* Decorative Background */}
             <div className="absolute inset-0 overflow-hidden opacity-30">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl" />
@@ -38,32 +38,32 @@ const TestimonialsSection: React.FC = () => {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 {/* Section Header */}
-                <div className="text-center mb-16">
-                    <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 animate-in fade-in zoom-in duration-500">
+                <div className="text-center mb-8 sm:mb-12 md:mb-16">
+                    <span className="inline-block px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-semibold mb-3 sm:mb-4 animate-in fade-in zoom-in duration-500">
                         Testimonials
                     </span>
-                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-foreground mb-3 sm:mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 leading-tight">
                         Loved by Breeders Worldwide
                     </h2>
-                    <p className="text-lg text-foreground/60 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+                    <p className="text-sm sm:text-base lg:text-lg text-foreground/60 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200 px-2 sm:px-0">
                         Join thousands of professional breeders who trust Eibpo to manage their breeding programs.
                     </p>
                 </div>
 
                 {/* Testimonials Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
                     {testimonials.map((testimonial, index) => (
                         <div
                             key={index}
-                            className="group bg-white/70 backdrop-blur-sm rounded-3xl p-8 border border-primary/10 hover:border-primary/30 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 animate-in fade-in slide-in-from-bottom-8 fill-mode-both"
+                            className="group bg-white/70 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 border border-primary/10 hover:border-primary/30 active:border-primary/40 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2 active:scale-[0.98] animate-in fade-in slide-in-from-bottom-8 fill-mode-both touch-manipulation"
                             style={{ animationDelay: `${300 + index * 100}ms` }}
                         >
                             {/* Stars */}
-                            <div className="flex gap-1 mb-4">
+                            <div className="flex gap-0.5 sm:gap-1 mb-3 sm:mb-4">
                                 {[...Array(testimonial.rating)].map((_, idx) => (
                                     <svg
                                         key={idx}
-                                        className="w-5 h-5 text-yellow-400 fill-current"
+                                        className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 fill-current"
                                         viewBox="0 0 20 20"
                                     >
                                         <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
@@ -72,26 +72,26 @@ const TestimonialsSection: React.FC = () => {
                             </div>
 
                             {/* Content */}
-                            <p className="text-foreground/70 leading-relaxed mb-6 italic">
+                            <p className="text-sm sm:text-base text-foreground/70 leading-relaxed mb-4 sm:mb-6 italic">
                                 "{testimonial.content}"
                             </p>
 
                             {/* Author */}
-                            <div className="flex items-center gap-4 pt-6 border-t border-primary/10">
+                            <div className="flex items-center gap-3 sm:gap-4 pt-4 sm:pt-6 border-t border-primary/10">
                                 <img
                                     src={testimonial.image}
                                     alt={testimonial.name}
-                                    className="w-14 h-14 rounded-full border-2 border-primary/20 group-hover:border-primary transition-colors"
+                                    className="w-11 h-11 sm:w-14 sm:h-14 rounded-full border-2 border-primary/20 group-hover:border-primary transition-colors"
                                 />
-                                <div>
-                                    <h4 className="font-bold text-foreground">{testimonial.name}</h4>
-                                    <p className="text-sm text-foreground/60">{testimonial.role}</p>
-                                    <p className="text-xs text-primary mt-1 flex items-center gap-1">
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="font-bold text-sm sm:text-base text-foreground truncate">{testimonial.name}</h4>
+                                    <p className="text-xs sm:text-sm text-foreground/60 truncate">{testimonial.role}</p>
+                                    <p className="text-[10px] sm:text-xs text-primary mt-0.5 sm:mt-1 flex items-center gap-1">
+                                        <svg className="w-2.5 sm:w-3 h-2.5 sm:h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
-                                        {testimonial.location}
+                                        <span className="truncate">{testimonial.location}</span>
                                     </p>
                                 </div>
                             </div>
@@ -100,20 +100,22 @@ const TestimonialsSection: React.FC = () => {
                 </div>
 
                 {/* Trust Badges */}
-                <div className="mt-16 flex flex-wrap justify-center items-center gap-12 opacity-50">
+                <div className="mt-10 sm:mt-12 md:mt-16 flex flex-col sm:flex-row flex-wrap justify-center items-center gap-4 sm:gap-6 md:gap-12 opacity-50">
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-foreground">4.9/5.0</div>
-                        <div className="text-sm text-foreground/60">Average Rating</div>
+                        <div className="text-xl sm:text-2xl font-bold text-foreground">4.9/5.0</div>
+                        <div className="text-xs sm:text-sm text-foreground/60">Average Rating</div>
                     </div>
-                    <div className="w-px h-12 bg-foreground/20" />
+                    <div className="hidden sm:block w-px h-12 bg-foreground/20" />
+                    <div className="sm:hidden w-16 h-px bg-foreground/20" />
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-foreground">10,000+</div>
-                        <div className="text-sm text-foreground/60">Happy Users</div>
+                        <div className="text-xl sm:text-2xl font-bold text-foreground">10,000+</div>
+                        <div className="text-xs sm:text-sm text-foreground/60">Happy Users</div>
                     </div>
-                    <div className="w-px h-12 bg-foreground/20" />
+                    <div className="hidden sm:block w-px h-12 bg-foreground/20" />
+                    <div className="sm:hidden w-16 h-px bg-foreground/20" />
                     <div className="text-center">
-                        <div className="text-2xl font-bold text-foreground">98%</div>
-                        <div className="text-sm text-foreground/60">Satisfaction Rate</div>
+                        <div className="text-xl sm:text-2xl font-bold text-foreground">98%</div>
+                        <div className="text-xs sm:text-sm text-foreground/60">Satisfaction Rate</div>
                     </div>
                 </div>
             </div>

@@ -52,8 +52,8 @@ const Footer: React.FC = () => {
 
       {/* Newsletter Section */}
       <div className="border-b border-[#C5A059]/10 relative">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20 lg:py-24">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-24">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
             <div className="text-center lg:text-left">
               {/* Ornamental line */}
               <div className="w-12 h-px bg-[#C5A059] mb-6 mx-auto lg:mx-0" />
@@ -64,18 +64,19 @@ const Footer: React.FC = () => {
                 Receive exclusive updates on new features, breeding insights, and special announcements.
               </p>
             </div>
-            <form onSubmit={handleSubscribe} className="flex w-full lg:w-auto gap-0">
+            <form onSubmit={handleSubscribe} className="flex flex-col sm:flex-row w-full lg:w-auto gap-2 sm:gap-0">
               <input
                 type="email"
                 placeholder="Enter your email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 lg:w-80 px-6 py-4 bg-[#1A1A1A] border border-[#C5A059]/20 border-r-0 text-[#F5F5F0] placeholder:text-[#B8B8B8]/30 focus:border-[#C5A059]/50 focus:outline-none transition-all duration-300 text-sm tracking-wide"
+                className="flex-1 lg:w-80 px-4 sm:px-6 py-4 min-h-[48px] bg-[#1A1A1A] border border-[#C5A059]/20 sm:border-r-0 text-[#F5F5F0] placeholder:text-[#B8B8B8]/30 focus:border-[#C5A059]/50 focus:outline-none transition-all duration-300 text-sm sm:text-base tracking-wide"
+                style={{ fontSize: '16px' }}
                 required
               />
               <button
                 type="submit"
-                className="px-8 py-4 bg-[#C5A059] text-[#0A0A0A] text-[11px] tracking-[0.15em] uppercase font-semibold hover:bg-[#D4C4B5] transition-all duration-300 whitespace-nowrap"
+                className="w-full sm:w-auto px-6 sm:px-8 py-4 min-h-[48px] bg-[#C5A059] text-[#0A0A0A] text-sm sm:text-[11px] tracking-[0.1em] sm:tracking-[0.15em] uppercase font-semibold hover:bg-[#D4C4B5] active:bg-[#B89A4A] transition-all duration-300 touch-target"
               >
                 {subscribed ? '✓ Done' : 'Subscribe'}
               </button>
@@ -85,12 +86,13 @@ const Footer: React.FC = () => {
       </div>
 
       {/* Main Footer */}
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-20 lg:py-24 relative">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-10 lg:gap-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-24 relative">
+        {/* Mobile: 2 cols, Tablet: 3 cols, Desktop: 6 cols */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-12">
 
-          {/* Brand */}
+          {/* Brand - Full width on mobile */}
           <div className="col-span-2 md:col-span-3 lg:col-span-2">
-            <div className="flex items-center gap-4 mb-8 group cursor-pointer">
+            <div className="flex items-center gap-4 mb-6 sm:mb-8 group cursor-pointer">
               {/* Minimal Gold Icon */}
               <div className="relative w-10 h-10 flex items-center justify-center">
                 <div className="absolute inset-0 border border-[#C5A059]/40 rotate-45 group-hover:rotate-[50deg] transition-transform duration-500" />
@@ -106,12 +108,12 @@ const Footer: React.FC = () => {
                 </span>
               </div>
             </div>
-            <p className="text-[#B8B8B8]/50 text-sm mb-10 max-w-sm leading-relaxed">
+            <p className="text-[#B8B8B8]/50 text-sm mb-6 sm:mb-10 max-w-sm leading-relaxed">
               The definitive platform for breeders to preserve and celebrate their beloved companions' heritage with uncompromised elegance.
             </p>
 
-            {/* Social Links - Minimal */}
-            <div className="flex gap-4">
+            {/* Social Links - Touch Friendly */}
+            <div className="flex gap-2 sm:gap-4">
               {[
                 {
                   name: 'Twitter', icon: (
@@ -145,7 +147,7 @@ const Footer: React.FC = () => {
                 <a
                   key={social.name}
                   href="#"
-                  className="w-10 h-10 border border-[#C5A059]/20 flex items-center justify-center text-[#B8B8B8]/50 hover:border-[#C5A059] hover:text-[#C5A059] hover:bg-[#C5A059]/10 transition-all duration-300"
+                  className="w-11 h-11 sm:w-10 sm:h-10 min-w-[44px] min-h-[44px] border border-[#C5A059]/20 flex items-center justify-center text-[#B8B8B8]/50 hover:border-[#C5A059] hover:text-[#C5A059] hover:bg-[#C5A059]/10 active:bg-[#C5A059]/20 transition-all duration-300 touch-target"
                   aria-label={social.name}
                 >
                   {social.icon}
@@ -154,16 +156,16 @@ const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* Links */}
+          {/* Links - Touch Friendly */}
           {Object.entries(footerLinks).map(([title, links]) => (
-            <div key={title}>
-              <h4 className="text-[10px] tracking-[0.2em] uppercase text-[#C5A059] mb-6">{title}</h4>
-              <ul className="space-y-3">
+            <div key={title} className="min-w-0">
+              <h4 className="text-[10px] tracking-[0.15em] sm:tracking-[0.2em] uppercase text-[#C5A059] mb-4 sm:mb-6">{title}</h4>
+              <ul className="space-y-2 sm:space-y-3">
                 {links.map((link) => (
                   <li key={link.label}>
                     <a
                       href={link.href}
-                      className="text-[#B8B8B8]/50 hover:text-[#C5A059] transition-all duration-300 text-sm tracking-wide inline-block"
+                      className="text-[#B8B8B8]/50 hover:text-[#C5A059] active:text-[#C5A059] transition-all duration-300 text-sm tracking-wide inline-block py-1 min-h-[32px] flex items-center"
                     >
                       {link.label}
                     </a>
@@ -175,17 +177,17 @@ const Footer: React.FC = () => {
         </div>
       </div>
 
-      {/* Bottom Bar */}
-      <div className="border-t border-[#C5A059]/10">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-[#B8B8B8]/30 text-xs tracking-wide">
+      {/* Bottom Bar - Safe Area */}
+      <div className="border-t border-[#C5A059]/10 safe-area-bottom">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-[#B8B8B8]/30 text-xs tracking-wide text-center sm:text-left">
               © 2026 Eibpo. All rights reserved.
             </p>
-            <div className="flex items-center gap-8">
-              <a href="#" className="text-[#B8B8B8]/30 hover:text-[#C5A059] text-xs tracking-wide transition-colors">Privacy</a>
-              <a href="#" className="text-[#B8B8B8]/30 hover:text-[#C5A059] text-xs tracking-wide transition-colors">Terms</a>
-              <a href="#" className="text-[#B8B8B8]/30 hover:text-[#C5A059] text-xs tracking-wide transition-colors">Cookies</a>
+            <div className="flex items-center gap-6 sm:gap-8">
+              <a href="#" className="text-[#B8B8B8]/30 hover:text-[#C5A059] active:text-[#C5A059] text-xs tracking-wide transition-colors py-1 min-h-[32px] flex items-center">Privacy</a>
+              <a href="#" className="text-[#B8B8B8]/30 hover:text-[#C5A059] active:text-[#C5A059] text-xs tracking-wide transition-colors py-1 min-h-[32px] flex items-center">Terms</a>
+              <a href="#" className="text-[#B8B8B8]/30 hover:text-[#C5A059] active:text-[#C5A059] text-xs tracking-wide transition-colors py-1 min-h-[32px] flex items-center">Cookies</a>
             </div>
           </div>
         </div>

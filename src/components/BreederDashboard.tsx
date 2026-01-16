@@ -146,22 +146,23 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm overflow-y-auto">
-            <div className="min-h-screen p-4 md:p-8">
-                {/* Header */}
-                <div className="max-w-7xl mx-auto flex items-center justify-between mb-8">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-white text-xl font-bold">
+        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm overflow-y-auto safe-area-top safe-area-bottom">
+            <div className="min-h-screen p-3 sm:p-4 md:p-8">
+                {/* Header - Mobile Responsive */}
+                <div className="max-w-7xl mx-auto flex items-center justify-between mb-6 sm:mb-8">
+                    <div className="flex items-center gap-3 sm:gap-4">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary flex items-center justify-center text-white text-lg sm:text-xl font-bold">
                             {user?.profile?.full_name?.charAt(0) || 'B'}
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-foreground">{t('dashboard.title')}</h1>
-                            <p className="text-foreground/60">{user?.profile?.full_name || 'Verified Breeder'}</p>
+                            <h1 className="text-xl sm:text-2xl font-bold text-foreground">{t('dashboard.title')}</h1>
+                            <p className="text-sm sm:text-base text-foreground/60 hidden sm:block">{user?.profile?.full_name || 'Verified Breeder'}</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-full hover:bg-muted transition-colors"
+                        className="p-2.5 min-w-[44px] min-h-[44px] rounded-full hover:bg-muted transition-colors flex items-center justify-center touch-target"
+                        aria-label="Close dashboard"
                     >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -169,9 +170,9 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                     </button>
                 </div>
 
-                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-8">
-                    {/* Sidebar */}
-                    <div className="space-y-2">
+                <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+                    {/* Sidebar - Horizontal on Mobile, Vertical on Desktop */}
+                    <div className="md:space-y-2 flex md:flex-col gap-1 sm:gap-2 overflow-x-auto pb-2 md:pb-0 -mx-3 px-3 sm:mx-0 sm:px-0">
                         {[
                             { id: 'overview', label: t('dashboard.overview'), icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
                             { id: 'pets', label: t('dashboard.my_pets'), icon: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z' },
@@ -200,23 +201,23 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                     </div>
 
                     {/* Main Content */}
-                    <div className="md:col-span-3 bg-white/50 backdrop-blur-md rounded-3xl p-6 border border-white/50 min-h-[500px]">
+                    <div className="md:col-span-3 bg-white/50 backdrop-blur-md rounded-2xl sm:rounded-3xl p-4 sm:p-6 border border-white/50 min-h-[400px] sm:min-h-[500px]">
 
                         {activeTab === 'overview' && (
-                            <div className="space-y-6">
-                                <h2 className="text-xl font-bold text-foreground">{t('dashboard.overview')}</h2>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-primary/10">
-                                        <div className="text-4xl font-extrabold text-primary mb-1">{myPets.length}</div>
-                                        <div className="text-sm text-foreground/60">Active Pets</div>
+                            <div className="space-y-4 sm:space-y-6">
+                                <h2 className="text-lg sm:text-xl font-bold text-foreground">{t('dashboard.overview')}</h2>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-6">
+                                    <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-primary/10">
+                                        <div className="text-2xl sm:text-4xl font-extrabold text-primary mb-1">{myPets.length}</div>
+                                        <div className="text-xs sm:text-sm text-foreground/60">Active Pets</div>
                                     </div>
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-primary/10">
-                                        <div className="text-4xl font-extrabold text-accent mb-1">{pendingRequests.length}</div>
-                                        <div className="text-sm text-foreground/60">Pending Verifications</div>
+                                    <div className="bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-primary/10">
+                                        <div className="text-2xl sm:text-4xl font-extrabold text-accent mb-1">{pendingRequests.length}</div>
+                                        <div className="text-xs sm:text-sm text-foreground/60">Pending</div>
                                     </div>
-                                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-primary/10">
-                                        <div className="text-4xl font-extrabold text-secondary mb-1">0</div>
-                                        <div className="text-sm text-foreground/60">New Messages</div>
+                                    <div className="col-span-2 sm:col-span-1 bg-white p-4 sm:p-6 rounded-xl sm:rounded-2xl shadow-sm border border-primary/10">
+                                        <div className="text-2xl sm:text-4xl font-extrabold text-secondary mb-1">0</div>
+                                        <div className="text-xs sm:text-sm text-foreground/60">New Messages</div>
                                     </div>
                                 </div>
 
@@ -346,56 +347,55 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                         )}
 
                         {activeTab === 'pets' && (
-                            <div className="space-y-6">
-                                <div className="flex justify-between items-center mb-6">
-                                    <h2 className="text-xl font-bold text-foreground">{t('dashboard.my_pets')}</h2>
+                            <div className="space-y-4 sm:space-y-6">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4 sm:mb-6">
+                                    <h2 className="text-lg sm:text-xl font-bold text-foreground">{t('dashboard.my_pets')}</h2>
                                     <button
                                         onClick={() => setShowRegistrationModal(true)}
-                                        className="bg-primary text-white px-4 py-2 rounded-lg font-bold text-sm shadow hover:shadow-lg transition-all flex items-center gap-2"
+                                        className="w-full sm:w-auto bg-primary text-white px-4 py-3 sm:py-2 min-h-[48px] rounded-lg font-bold text-sm shadow hover:shadow-lg active:shadow transition-all flex items-center justify-center gap-2 touch-target"
                                     >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                                        Register New Pet (OCR)
+                                        Register New Pet
                                     </button>
                                 </div>
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                                     {myPets.map(pet => (
-                                        <div key={pet.id} className="group relative overflow-hidden rounded-2xl bg-white border border-primary/10 hover:shadow-lg transition-all p-4 flex gap-4">
-                                            <img src={pet.image} alt={pet.name} className="w-20 h-20 rounded-xl object-cover" />
-                                            <div className="flex-1">
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <h3 className="font-bold text-foreground">{pet.name}</h3>
-                                                        <p className="text-sm text-foreground/60">{pet.breed}</p>
+                                        <div key={pet.id} className="group relative overflow-hidden rounded-xl sm:rounded-2xl bg-white border border-primary/10 hover:shadow-lg transition-all p-3 sm:p-4 flex gap-3 sm:gap-4">
+                                            <img src={pet.image} alt={pet.name} className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg sm:rounded-xl object-cover" />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                                                    <div className="min-w-0">
+                                                        <h3 className="font-bold text-foreground text-sm sm:text-base truncate">{pet.name}</h3>
+                                                        <p className="text-xs sm:text-sm text-foreground/60 truncate">{pet.breed}</p>
                                                     </div>
                                                     <button
                                                         onClick={() => handleSmartMatch(pet)}
-                                                        className="text-xs bg-gradient-to-r from-pink-500 to-rose-500 text-white px-3 py-1.5 rounded-full font-bold shadow-md hover:shadow-lg transition-all hover:scale-105 flex items-center gap-1"
+                                                        className="text-xs bg-gradient-to-r from-pink-500 to-rose-500 text-white px-3 py-1.5 min-h-[32px] rounded-full font-bold shadow-md hover:shadow-lg active:shadow transition-all flex items-center gap-1 flex-shrink-0 touch-target"
                                                     >
                                                         <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" /></svg>
-                                                        {t('dashboard.smart_match')}
+                                                        <span className="hidden xs:inline">{t('dashboard.smart_match')}</span>
+                                                        <span className="xs:hidden">Match</span>
                                                     </button>
                                                 </div>
-                                                <p className="text-xs text-primary/80 mt-1 uppercase tracking-wider font-semibold">{pet.registrationNumber}</p>
-                                                <div className="mt-2 flex gap-2 justify-between items-center">
-                                                    <div className="flex gap-2">
-                                                        <button className="text-xs bg-muted px-2 py-1 rounded-md hover:bg-muted/80">Stats</button>
-                                                        <button className="text-xs bg-muted px-2 py-1 rounded-md hover:bg-muted/80">Edit Details</button>
-                                                    </div>
+                                                <p className="text-[10px] sm:text-xs text-primary/80 mt-1 uppercase tracking-wider font-semibold truncate">{pet.registrationNumber}</p>
+                                                <div className="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
+                                                    <button className="text-xs bg-muted px-2 py-1 min-h-[28px] rounded-md hover:bg-muted/80 active:bg-muted/70">Stats</button>
+                                                    <button className="text-xs bg-muted px-2 py-1 min-h-[28px] rounded-md hover:bg-muted/80 active:bg-muted/70">Edit</button>
                                                     <button
                                                         onClick={async () => {
-                                                            if (confirm('Are you sure you want to delete this pet/card? This cannot be undone.')) {
+                                                            if (confirm('Delete this pet?')) {
                                                                 try {
                                                                     const { deletePet } = await import('@/lib/database');
                                                                     await deletePet(pet.id);
                                                                     refreshPets();
                                                                 } catch (err) {
                                                                     console.error(err);
-                                                                    alert('Failed to delete pet. Please try again.');
+                                                                    alert('Failed to delete.');
                                                                 }
                                                             }
                                                         }}
-                                                        className="text-xs border border-red-200 text-red-500 px-2 py-1 rounded-md hover:bg-red-50 transition-colors"
+                                                        className="text-xs border border-red-200 text-red-500 px-2 py-1 min-h-[28px] rounded-md hover:bg-red-50 active:bg-red-100 transition-colors"
                                                     >
                                                         Delete
                                                     </button>

@@ -215,29 +215,29 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
   };
 
   return (
-    <section id="search" className="py-24 lg:py-32 bg-white relative overflow-hidden">
+    <section id="search" className="py-16 sm:py-20 lg:py-32 bg-white relative overflow-hidden">
       {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40 hidden sm:block">
         <div className="absolute top-40 right-1/4 w-[500px] h-[500px] bg-pink-100/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
         <div className="absolute bottom-40 left-1/4 w-[400px] h-[400px] bg-purple-100/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Section Header - Zen Typography */}
-        <div className="text-center mb-16 space-y-6">
-          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-pink-50 text-[#ea4c89] text-sm font-semibold tracking-wide border border-pink-100 shadow-sm">
+        {/* Section Header - Responsive Typography */}
+        <div className="text-center mb-10 sm:mb-16 space-y-4 sm:space-y-6">
+          <span className="inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full bg-pink-50 text-[#ea4c89] text-xs sm:text-sm font-semibold tracking-wide border border-pink-100 shadow-sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             {language === 'th' ? 'ค้นหาขั้นสูง' : 'Advanced Search'}
           </span>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[#0d0c22]">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-[#0d0c22]">
             <span className="text-[#0d0c22]">{language === 'th' ? 'ค้นหา' : 'Find Your'} </span>
             <span className="text-[#ea4c89]">
               {language === 'th' ? 'คู่ที่สมบูรณ์แบบ' : 'Perfect Match'}
             </span>
           </h2>
-          <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed font-medium">
+          <p className="text-base sm:text-lg md:text-xl text-gray-500 max-w-xs sm:max-w-2xl mx-auto leading-relaxed font-medium px-2">
             {language === 'th'
               ? 'ค้นหาจากฐานข้อมูลสัตว์เลี้ยงที่ลงทะเบียน ตามสายพันธุ์ สถานที่ หรือสายเลือด'
               : 'Search through our comprehensive database of registered pets by breed, location, or bloodline.'
@@ -250,21 +250,22 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
           <PuppyComingSoonSection onViewDetails={onViewDetails} onRequireAuth={onRequireAuth} />
         </div>
 
-        {/* Search Box - Premium Glass Effect */}
-        <div className="bg-white rounded-[32px] p-8 lg:p-10 shadow-xl shadow-gray-100 border border-gray-100 mb-12">
-          {/* Main Search */}
-          <div className="relative mb-8 group">
-            <div className="absolute left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center group-focus-within:bg-[#ea4c89] group-focus-within:text-white transition-all">
-              <svg className="w-5 h-5 text-[#ea4c89] group-focus-within:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Search Box - Mobile Optimized */}
+        <div className="bg-white rounded-2xl sm:rounded-[32px] p-4 sm:p-6 lg:p-10 shadow-xl shadow-gray-100 border border-gray-100 mb-8 sm:mb-12">
+          {/* Main Search - Touch Friendly */}
+          <div className="relative mb-6 sm:mb-8 group">
+            <div className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-pink-50 flex items-center justify-center group-focus-within:bg-[#ea4c89] group-focus-within:text-white transition-all">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-[#ea4c89] group-focus-within:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
             <input
               type="text"
-              placeholder={language === 'th' ? 'ค้นหาตามชื่อ สายพันธุ์ หรือเลขทะเบียน...' : 'Search by name, breed, or registration number...'}
+              placeholder={language === 'th' ? 'ค้นหาตามชื่อ สายพันธุ์...' : 'Search by name, breed...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-20 pr-6 py-5 rounded-2xl border-2 border-gray-100 bg-gray-50/50 focus:border-[#ea4c89] focus:ring-4 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] text-lg placeholder:text-gray-400 font-medium"
+              className="w-full pl-14 sm:pl-20 pr-4 sm:pr-6 py-4 sm:py-5 min-h-[52px] rounded-xl sm:rounded-2xl border-2 border-gray-100 bg-gray-50/50 focus:border-[#ea4c89] focus:ring-4 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] text-base sm:text-lg placeholder:text-gray-400 font-medium"
+              style={{ fontSize: '16px' }}
             />
             {searching && (
               <div className="absolute right-5 top-1/2 -translate-y-1/2">
@@ -276,11 +277,11 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
             )}
           </div>
 
-          {/* Filters Grid - Refined */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Filters Grid - Mobile 2 cols, Desktop 4 cols */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
             {/* Pet Type */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-[#0d0c22]">
+            <div className="space-y-1.5 sm:space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-[#0d0c22]">
                 {language === 'th' ? 'ประเภท' : 'Pet Type'}
               </label>
               <select
@@ -289,7 +290,8 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                   setPetType(e.target.value as 'all' | 'dog' | 'cat');
                   setSelectedBreed('');
                 }}
-                className="w-full px-4 py-3.5 rounded-xl border-2 border-gray-100 bg-white focus:border-[#ea4c89] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] cursor-pointer hover:border-gray-300 font-medium"
+                className="w-full px-3 sm:px-4 py-3 sm:py-3.5 min-h-[48px] rounded-xl border-2 border-gray-100 bg-white focus:border-[#ea4c89] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] cursor-pointer hover:border-gray-300 font-medium text-sm sm:text-base"
+                style={{ fontSize: '16px' }}
               >
                 <option value="all">{language === 'th' ? 'ทั้งหมด' : 'All Types'}</option>
                 <option value="dog">{language === 'th' ? 'สุนัข' : 'Dogs'}</option>
@@ -298,14 +300,15 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
             </div>
 
             {/* Breed */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-[#0d0c22]">
+            <div className="space-y-1.5 sm:space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-[#0d0c22]">
                 {language === 'th' ? 'สายพันธุ์' : 'Breed'}
               </label>
               <select
                 value={selectedBreed}
                 onChange={(e) => setSelectedBreed(e.target.value)}
-                className="w-full px-4 py-3.5 rounded-xl border-2 border-gray-100 bg-white focus:border-[#ea4c89] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] cursor-pointer hover:border-gray-300 font-medium"
+                className="w-full px-3 sm:px-4 py-3 sm:py-3.5 min-h-[48px] rounded-xl border-2 border-gray-100 bg-white focus:border-[#ea4c89] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] cursor-pointer hover:border-gray-300 font-medium text-sm sm:text-base"
+                style={{ fontSize: '16px' }}
               >
                 <option value="">{language === 'th' ? 'ทุกสายพันธุ์' : 'All Breeds'}</option>
                 {availableBreeds.map(breed => (
@@ -315,14 +318,15 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
             </div>
 
             {/* Location */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-[#0d0c22]">
+            <div className="space-y-1.5 sm:space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-[#0d0c22]">
                 {language === 'th' ? 'พื้นที่' : 'Location'}
               </label>
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
-                className="w-full px-4 py-3.5 rounded-xl border-2 border-gray-100 bg-white focus:border-[#ea4c89] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] cursor-pointer hover:border-gray-300 font-medium"
+                className="w-full px-3 sm:px-4 py-3 sm:py-3.5 min-h-[48px] rounded-xl border-2 border-gray-100 bg-white focus:border-[#ea4c89] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] cursor-pointer hover:border-gray-300 font-medium text-sm sm:text-base"
+                style={{ fontSize: '16px' }}
               >
                 <option value="">{language === 'th' ? 'ทุกพื้นที่' : 'All Locations'}</option>
                 {locations.map(loc => (
@@ -332,15 +336,15 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
             </div>
 
             {/* Health Certified */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-[#0d0c22]">
+            <div className="space-y-1.5 sm:space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-[#0d0c22]">
                 {language === 'th' ? 'การรับรอง' : 'Certification'}
               </label>
               <button
                 onClick={() => setHealthCertified(!healthCertified)}
-                className={`w-full px-4 py-3.5 rounded-xl border-2 transition-all flex items-center justify-center gap-2 font-bold ${healthCertified
+                className={`w-full px-3 sm:px-4 py-3 sm:py-3.5 min-h-[48px] rounded-xl border-2 transition-all flex items-center justify-center gap-2 font-bold text-sm sm:text-base touch-target ${healthCertified
                   ? 'border-[#ea4c89] bg-pink-50 text-[#ea4c89] shadow-sm'
-                  : 'border-gray-100 text-gray-400 hover:border-gray-300 hover:bg-gray-50'
+                  : 'border-gray-100 text-gray-400 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
                   }`}
               >
                 <svg className={`w-5 h-5 transition-colors ${healthCertified ? 'text-[#ea4c89]' : ''}`} fill="currentColor" viewBox="0 0 20 20">
@@ -351,14 +355,14 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
             </div>
           </div>
 
-          {/* Clear Filters */}
-          <div className="flex items-center justify-between mt-8 pt-8 border-t border-gray-100">
-            <p className="text-sm text-gray-500 font-medium">
-              {language === 'th' ? 'พบ' : 'Found'} <span className="font-bold text-[#ea4c89] text-base">{filteredPairs.length}</span> {language === 'th' ? 'คู่ผสมพันธุ์' : 'proven breeding pairs'}
+          {/* Clear Filters - Mobile Responsive */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-gray-100 gap-3">
+            <p className="text-xs sm:text-sm text-gray-500 font-medium">
+              {language === 'th' ? 'พบ' : 'Found'} <span className="font-bold text-[#ea4c89] text-sm sm:text-base">{filteredPairs.length}</span> {language === 'th' ? 'คู่ผสมพันธุ์' : 'proven breeding pairs'}
             </p>
             <button
               onClick={() => { setSearchQuery(''); setPetType('all'); setSelectedBreed(''); }}
-              className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-[#0d0c22] font-semibold transition-colors"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-400 hover:text-[#0d0c22] active:text-[#ea4c89] font-semibold transition-colors py-2 min-h-[44px] touch-target"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -415,68 +419,68 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                   </div>
                 </div>
 
-                {/* Sire & Dam Row */}
-                <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10 mb-10">
+                {/* Sire & Dam Row - Stack on Mobile */}
+                <div className="flex flex-col lg:flex-row items-center gap-4 sm:gap-6 lg:gap-10 mb-6 sm:mb-10">
                   {/* Sire */}
                   <div
-                    className="flex-1 w-full bg-slate-50 rounded-3xl p-6 flex gap-5 items-center cursor-pointer hover:bg-slate-100 transition-all duration-200 border border-gray-100 group/sire"
+                    className="flex-1 w-full bg-slate-50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex gap-3 sm:gap-5 items-center cursor-pointer hover:bg-slate-100 active:bg-slate-100 transition-all duration-200 border border-gray-100 group/sire"
                     onClick={() => onViewDetails(pair.sire)}
                   >
                     <div className="relative">
                       <img
                         src={pair.sire.image || ''}
-                        className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-lg group-hover/sire:scale-105 transition-transform"
+                        className="w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl object-cover border-2 sm:border-4 border-white shadow-lg group-hover/sire:scale-105 transition-transform"
                         alt="Sire"
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
-                      <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">♂</div>
+                      <div className="absolute -bottom-1 sm:-bottom-2 -right-1 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">♂</div>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-blue-500 text-white font-bold uppercase tracking-wider shadow-sm shadow-blue-200">Sire</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                        <span className="px-2 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] bg-blue-500 text-white font-bold uppercase tracking-wider shadow-sm shadow-blue-200">Sire</span>
                       </div>
-                      <h4 className="font-bold text-lg text-[#0d0c22] truncate">{pair.sire.name}</h4>
-                      <p className="text-sm text-gray-500">{pair.sire.color || 'Unknown Color'}</p>
-                      <p className="text-xs text-[#ea4c89] mt-2 font-bold group-hover/sire:underline">View Profile →</p>
+                      <h4 className="font-bold text-base sm:text-lg text-[#0d0c22] truncate">{pair.sire.name}</h4>
+                      <p className="text-xs sm:text-sm text-gray-500">{pair.sire.color || 'Unknown Color'}</p>
+                      <p className="text-xs text-[#ea4c89] mt-1 sm:mt-2 font-bold group-hover/sire:underline">View Profile →</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#ea4c89] to-[#ff8fab] text-white font-bold text-xl shadow-lg shadow-[#ea4c89]/30">
+                  <div className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-r from-[#ea4c89] to-[#ff8fab] text-white font-bold text-lg sm:text-xl shadow-lg shadow-[#ea4c89]/30 flex-shrink-0">
                     +
                   </div>
 
                   {/* Dam */}
                   <div
-                    className="flex-1 w-full bg-pink-50/50 rounded-3xl p-6 flex gap-5 items-center flex-row-reverse text-right cursor-pointer hover:bg-pink-50 transition-all duration-200 border border-pink-100 group/dam"
+                    className="flex-1 w-full bg-pink-50/50 rounded-2xl sm:rounded-3xl p-4 sm:p-6 flex gap-3 sm:gap-5 items-center flex-row-reverse text-right cursor-pointer hover:bg-pink-50 active:bg-pink-50 transition-all duration-200 border border-pink-100 group/dam"
                     onClick={() => onViewDetails(pair.dam)}
                   >
                     <div className="relative">
                       <img
                         src={pair.dam.image || ''}
-                        className="w-24 h-24 rounded-2xl object-cover border-4 border-white shadow-lg group-hover/dam:scale-105 transition-transform"
+                        className="w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl object-cover border-2 sm:border-4 border-white shadow-lg group-hover/dam:scale-105 transition-transform"
                         alt="Dam"
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
-                      <div className="absolute -bottom-2 -left-2 w-8 h-8 rounded-full bg-[#ea4c89] flex items-center justify-center text-white text-xs font-bold shadow-lg">♀</div>
+                      <div className="absolute -bottom-1 sm:-bottom-2 -left-1 sm:-left-2 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-[#ea4c89] flex items-center justify-center text-white text-xs font-bold shadow-lg">♀</div>
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2 justify-end">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-[#ea4c89] text-white font-bold uppercase tracking-wider shadow-sm shadow-pink-200">Dam</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 sm:mb-2 justify-end">
+                        <span className="px-2 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] bg-[#ea4c89] text-white font-bold uppercase tracking-wider shadow-sm shadow-pink-200">Dam</span>
                       </div>
-                      <h4 className="font-bold text-lg text-[#0d0c22] truncate">{pair.dam.name}</h4>
-                      <p className="text-sm text-gray-500">{pair.dam.color || 'Unknown Color'}</p>
-                      <p className="text-xs text-[#ea4c89] mt-2 font-bold group-hover/dam:underline">← View Profile</p>
+                      <h4 className="font-bold text-base sm:text-lg text-[#0d0c22] truncate">{pair.dam.name}</h4>
+                      <p className="text-xs sm:text-sm text-gray-500">{pair.dam.color || 'Unknown Color'}</p>
+                      <p className="text-xs text-[#ea4c89] mt-1 sm:mt-2 font-bold group-hover/dam:underline">← View Profile</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Offspring List */}
-                <div className="border-t border-gray-100 pt-6">
-                  <h4 className="text-sm font-bold text-[#0d0c22] mb-4 flex items-center gap-2">
+                {/* Offspring List - Responsive Grid */}
+                <div className="border-t border-gray-100 pt-4 sm:pt-6">
+                  <h4 className="text-xs sm:text-sm font-bold text-[#0d0c22] mb-3 sm:mb-4 flex items-center gap-2">
                     🏆 Registered Offspring
                     <span className="text-xs font-normal text-gray-400">({pair.offspring.length})</span>
                   </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3">
                     {pair.offspring.slice(0, 5).map(child => (
                       <div key={child.id}
                         onClick={() => onViewPedigree(child)}
@@ -503,23 +507,23 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-center gap-4 mt-8 pt-6 border-t border-gray-100">
+                {/* Action Buttons - Full Width Stack on Mobile */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-100">
                   <button
                     onClick={() => openInteraction('report', pair.sire, pair.dam)}
-                    className="text-sm text-gray-400 hover:text-red-500 transition-colors mr-auto hidden sm:block font-medium">
+                    className="text-xs sm:text-sm text-gray-400 hover:text-red-500 active:text-red-600 transition-colors sm:mr-auto hidden sm:block font-medium py-2 min-h-[44px]">
                     {language === 'th' ? 'รายงานปัญหา' : 'Report Issue'}
                   </button>
-                  <div className="flex gap-3 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
                     <button
                       onClick={() => openInteraction('chat', pair.sire, pair.dam, pair.sire.owner)}
-                      className="flex-1 sm:flex-none px-6 py-3 rounded-xl border border-gray-200 text-[#0d0c22] font-bold text-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
+                      className="flex-1 sm:flex-none px-4 sm:px-6 py-3.5 sm:py-3 min-h-[48px] rounded-xl border border-gray-200 text-[#0d0c22] font-bold text-sm hover:bg-gray-50 active:bg-gray-100 transition-all flex items-center justify-center gap-2 touch-target">
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                       {language === 'th' ? 'แชทกับเจ้าของ' : 'Chat with Owner'}
                     </button>
                     <button
                       onClick={() => openInteraction('reserve', pair.sire, pair.dam)}
-                      className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-[#0d0c22] text-white font-bold text-sm hover:bg-[#ea4c89] transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2 hover:-translate-y-0.5">
+                      className="flex-1 sm:flex-none px-4 sm:px-6 py-3.5 sm:py-3 min-h-[48px] rounded-xl bg-[#0d0c22] text-white font-bold text-sm hover:bg-[#ea4c89] active:bg-[#d63f7a] transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2 hover:-translate-y-0.5 touch-target">
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                       {language === 'th' ? 'จองลูกสุนัข' : 'Reserve Puppy'}
                     </button>

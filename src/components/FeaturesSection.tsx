@@ -59,56 +59,56 @@ const FeaturesSection: React.FC = () => {
   ];
 
   return (
-    <section className="py-20 lg:py-28 bg-background relative z-10">
+    <section className="py-12 sm:py-16 md:py-20 lg:py-28 bg-background relative z-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 animate-in fade-in zoom-in duration-500">
+        <div className="text-center mb-8 sm:mb-12 md:mb-16">
+          <span className="inline-block px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-semibold mb-3 sm:mb-4 animate-in fade-in zoom-in duration-500">
             Why Choose Eibpo
           </span>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-extrabold text-foreground mb-3 sm:mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100 leading-tight">
             Everything You Need
           </h2>
-          <p className="text-lg text-foreground/60 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+          <p className="text-sm sm:text-base lg:text-lg text-foreground/60 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200 px-2 sm:px-0">
             A complete platform designed with breeders and pet lovers in mind. Simple, elegant, and powerful.
           </p>
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
           {features.map((feature, index) => (
             <div
               key={index}
-              className="group p-6 lg:p-8 rounded-3xl bg-white/50 backdrop-blur-sm border border-primary/10 hover:border-primary/30 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-2 animate-in fade-in slide-in-from-bottom-8 fill-mode-both"
+              className="group p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl bg-white/50 backdrop-blur-sm border border-primary/10 hover:border-primary/30 active:border-primary/40 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-2 active:scale-[0.98] animate-in fade-in slide-in-from-bottom-8 fill-mode-both touch-manipulation"
               style={{ animationDelay: `${300 + index * 100}ms` }}
             >
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-5 group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm group-hover:shadow-md group-hover:shadow-primary/30">
+              <div className="w-11 h-11 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-3 sm:mb-4 lg:mb-5 group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm group-hover:shadow-md group-hover:shadow-primary/30">
                 {feature.icon}
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-3">{feature.title}</h3>
-              <p className="text-foreground/60 leading-relaxed font-medium">{feature.description}</p>
+              <h3 className="text-base sm:text-lg lg:text-xl font-bold text-foreground mb-2 sm:mb-3">{feature.title}</h3>
+              <p className="text-sm sm:text-base text-foreground/60 leading-relaxed font-medium">{feature.description}</p>
             </div>
           ))}
         </div>
 
         {/* Stats Bar */}
-        <div className="mt-16 p-8 lg:p-12 rounded-3xl bg-foreground text-background shadow-2xl animate-in fade-in slide-in-from-bottom-8 delay-700 duration-700">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+        <div className="mt-10 sm:mt-12 md:mt-16 p-5 sm:p-6 md:p-8 lg:p-12 rounded-2xl sm:rounded-3xl bg-foreground text-background shadow-2xl animate-in fade-in slide-in-from-bottom-8 delay-700 duration-700">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8 lg:gap-12">
             <div className="text-center">
-              <div className="text-4xl lg:text-5xl font-bold mb-2">50K+</div>
-              <div className="text-white/60">Registered Pets</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-1 sm:mb-2">50K+</div>
+              <div className="text-xs sm:text-sm text-white/60">Registered Pets</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl lg:text-5xl font-bold mb-2">12K+</div>
-              <div className="text-white/60">Family Trees</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-1 sm:mb-2">12K+</div>
+              <div className="text-xs sm:text-sm text-white/60">Family Trees</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl lg:text-5xl font-bold mb-2">200+</div>
-              <div className="text-white/60">Verified Breeders</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-1 sm:mb-2">200+</div>
+              <div className="text-xs sm:text-sm text-white/60">Verified Breeders</div>
             </div>
             <div className="text-center">
-              <div className="text-4xl lg:text-5xl font-bold mb-2">98%</div>
-              <div className="text-white/60">Satisfaction Rate</div>
+              <div className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-1 sm:mb-2">98%</div>
+              <div className="text-xs sm:text-sm text-white/60">Satisfaction Rate</div>
             </div>
           </div>
         </div>
