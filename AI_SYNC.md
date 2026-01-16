@@ -185,9 +185,9 @@ I verified the code - PM has already wired this in `messageSuggestions` array (l
 - ✅ focusSection wiring in PuppyComingSoonSection
 
 ### Opus 4.5 current tasks:
-- 🔄 Refine `inferFaqCategory` keywords for even higher precision (In Progress)
-- 🔄 Final verification of Search Suggested sections
-- 🔄 Monitoring for any remaining Airtable dependencies
+- 🎨 **UX Polish Phase**: Improve smoothness, transitions, and error handling.
+- 🔄 Refine `inferFaqCategory` keywords (Optimizing).
+- ⏸️ **N8N Automation**: Paused to focus on Core UX.
 
 ### Pending / To Discuss:
 - [ ] Message icon alert badge for new messages

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pet, pets } from '@/data/petData';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import PetRegistrationModal from './PetRegistrationModal';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { getPublicPets, createPet, updatePet, deletePet, getAdminNotifications, getUsers, deleteUser, markNotificationAsRead, createUserNotification, AdminNotification, Pet as DbPet } from '@/lib/database';
+import { getOwnershipClaims, approveOwnershipClaim, rejectOwnershipClaim } from '@/lib/ownership';
+import type { OwnershipClaim } from '@/lib/ownership';
 import { supabase } from '@/lib/supabase';
 import { uploadPetImage } from '@/lib/storage';
 import { UserProfile } from '@/lib/auth';
@@ -99,13 +101,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
     const fallbackPetImage = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIj48cmVjdCB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiM5Y2EzYWYiPlBldDwvdGV4dD48L3N2Zz4=';
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState<'pets' | 'verifications' | 'puppy' | 'users' | 'notifications' | 'moderation' | 'ai'>('pets');
+    const [activeTab, setActiveTab] = useState<'pets' | 'verifications' | 'ownership' | 'puppy' | 'users' | 'notifications' | 'moderation' | 'ai'>('pets');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [editingPet, setEditingPet] = useState<Pet | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [showRegistrationModal, setShowRegistrationModal] = useState(false);
     const [petList, setPetList] = useState<Pet[]>([]);
     const [notifications, setNotifications] = useState<AdminNotification[]>([]);
+    const [ownershipClaims, setOwnershipClaims] = useState<OwnershipClaim[]>([]);
+    const [ownershipLoading, setOwnershipLoading] = useState(false);
+    const [ownershipFilter, setOwnershipFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
     const [userList, setUserList] = useState<UserProfile[]>([]);
     const [selectedPets, setSelectedPets] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
@@ -116,7 +121,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const [recentChatMessages, setRecentChatMessages] = useState<ChatMessageAdmin[]>([]);
     const [moderationLoading, setModerationLoading] = useState(false);
     const [aiLoading, setAiLoading] = useState(false);
+    const [roleUpdatingId, setRoleUpdatingId] = useState<string | null>(null);
     const [aiTab, setAiTab] = useState<'faq' | 'pool'>('faq');
+    const [aiExpanded, setAiExpanded] = useState(false);
     const [faqFilter, setFaqFilter] = useState<'all' | 'draft' | 'approved' | 'archived'>('draft');
     const [faqEntries, setFaqEntries] = useState<FaqEntryAdmin[]>([]);
     const [queryPool, setQueryPool] = useState<QueryPoolItem[]>([]);
@@ -144,6 +151,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         status: 'planned',
         description: ''
     });
+
+    // Add New User State
+    const [showAddUserModal, setShowAddUserModal] = useState(false);
+    const [newUserForm, setNewUserForm] = useState({
+        email: '',
+        fullName: '',
+        role: 'buyer' as 'buyer' | 'breeder' | 'admin',
+        password: ''
+    });
+    const [userFormError, setUserFormError] = useState('');
 
     const resetMatchForm = () => {
         setMatchForm({
@@ -194,6 +211,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         }
     }, [isOpen]);
 
+    useEffect(() => {
+        if (activeTab !== 'ai' && aiExpanded) {
+            setAiExpanded(false);
+        }
+    }, [activeTab, aiExpanded]);
+
     const refreshData = async () => {
         setLoading(true);
         try {
@@ -209,6 +232,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
             // Fetch Users
             const users = await getUsers();
             setUserList(users);
+
+            // Fetch Ownership Claims
+            await loadOwnershipClaims();
 
             // Fetch Puppy Coming Soon data
             await loadBreedingAdmin();
@@ -302,6 +328,69 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
             console.error(error);
         } finally {
             setAiLoading(false);
+        }
+    };
+
+    const loadOwnershipClaims = async () => {
+        setOwnershipLoading(true);
+        try {
+            const claims = await getOwnershipClaims();
+            setOwnershipClaims(claims);
+        } catch (error) {
+            console.error('Failed to load ownership claims:', error);
+            setOwnershipClaims([]);
+        } finally {
+            setOwnershipLoading(false);
+        }
+    };
+
+    const handleApproveOwnershipClaim = async (claim: OwnershipClaim) => {
+        const notes = prompt('Admin notes (optional)') || undefined;
+        try {
+            await approveOwnershipClaim(claim.id, notes);
+            await loadOwnershipClaims();
+        } catch (error) {
+            console.error(error);
+            alert('Failed to approve claim.');
+        }
+    };
+
+    const handleRejectOwnershipClaim = async (claim: OwnershipClaim) => {
+        const notes = prompt('Admin notes (optional)') || undefined;
+        try {
+            await rejectOwnershipClaim(claim.id, notes);
+            await loadOwnershipClaims();
+        } catch (error) {
+            console.error(error);
+            alert('Failed to reject claim.');
+        }
+    };
+
+    const handleUpdateUserRole = async (userId: string, role: 'buyer' | 'breeder' | 'admin') => {
+        setRoleUpdatingId(userId);
+        const updates: Partial<UserProfile> = { role };
+        if (role === 'buyer' || role === 'breeder') {
+            updates.account_type = role;
+        }
+        if (role === 'breeder') {
+            updates.verified_breeder = true;
+        }
+        if (role === 'buyer') {
+            updates.verified_breeder = false;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update(updates)
+                .eq('id', userId);
+            if (error) throw error;
+            setUserList(prev => prev.map(user => user.id === userId ? { ...user, ...updates } : user));
+        } catch (error) {
+            console.error(error);
+            alert('Failed to update user role.');
+        } finally {
+            setRoleUpdatingId(null);
         }
     };
 
@@ -423,6 +512,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         location: dbPet.location || 'Bangkok',
         owner: dbPet.owner_name || 'System',
         owner_id: dbPet.owner_id,
+        ownership_status: dbPet.ownership_status,
+        claimed_by: dbPet.claimed_by,
+        claim_date: dbPet.claim_date,
+        verification_evidence: dbPet.verification_evidence,
         parentIds: {
             sire: dbPet.pedigree?.sire_id || '',
             dam: dbPet.pedigree?.dam_id || '',
@@ -443,6 +536,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         return found?.full_name || found?.email || formatShortId(userId);
     };
 
+    const normalizeGender = (value?: string | null) => (value || '').trim().toLowerCase();
+    const isMalePet = (pet?: Pick<Pet, 'gender'> | null) => {
+        const gender = normalizeGender(pet?.gender);
+        return gender === 'male' || gender === 'm' || gender === 'boy';
+    };
+    const isFemalePet = (pet?: Pick<Pet, 'gender'> | null) => {
+        const gender = normalizeGender(pet?.gender);
+        return gender === 'female' || gender === 'f' || gender === 'girl';
+    };
+
     const getPetById = (petId?: string | null) => petList.find(pet => pet.id === petId);
 
     const getPetLabel = (petId?: string | null) => {
@@ -451,6 +554,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     };
 
     const getMatchKey = (sireId?: string | null, damId?: string | null) => `${sireId || 'none'}:${damId || 'none'}`;
+    const getNotificationActionLabel = (notification: AdminNotification) => {
+        switch (notification.type) {
+            case 'new_pet':
+                return 'Open Pet';
+            case 'verification_request':
+                return 'Review Claim';
+            case 'breeding_report':
+                return 'Review';
+            case 'new_user':
+                return 'Open User';
+            default:
+                return null;
+        }
+    };
 
     // Filter logic for Pets tab
     const filteredPets = petList.filter(pet =>
@@ -463,6 +580,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const pendingVerifications = petList.filter(pet =>
         pet.parentIds && (pet.parentIds.sireStatus === 'pending' || pet.parentIds.damStatus === 'pending')
     );
+    const pendingOwnershipClaims = ownershipClaims.filter(claim => claim.status === 'pending');
+    const filteredOwnershipClaims = ownershipFilter === 'all'
+        ? ownershipClaims
+        : ownershipClaims.filter(claim => claim.status === ownershipFilter);
     const faqDraftCount = faqEntries.filter(entry => entry.status === 'draft').length;
     const handledQueryIds = new Set(
         faqEntries.map(entry => entry.source_query_id).filter(Boolean) as string[]
@@ -474,6 +595,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const filteredFaqEntries = faqFilter === 'all'
         ? faqEntries
         : faqEntries.filter(entry => entry.status === faqFilter);
+    const sireOptions = petList.filter(isMalePet);
+    const damOptions = petList.filter(isFemalePet);
 
     const reservationsByMatch = React.useMemo(() => {
         const grouped: Record<string, BreedingReservationAdmin[]> = {};
@@ -691,7 +814,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `petdegree_export_${new Date().toISOString().split('T')[0]}.csv`;
+        a.download = `eibpo_export_${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
         URL.revokeObjectURL(url);
         alert(`Exported ${petsToExport.length} pet(s) to CSV`);
@@ -720,6 +843,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const handleCreateMatch = async () => {
         if (!matchForm.sireId || !matchForm.damId || !matchForm.matchDate) {
             setMatchError('Please fill in all required fields.');
+            return;
+        }
+        if (matchForm.sireId === matchForm.damId) {
+            setMatchError('Sire and dam must be different pets.');
+            return;
+        }
+        const selectedSire = getPetById(matchForm.sireId);
+        const selectedDam = getPetById(matchForm.damId);
+        if (selectedSire && !isMalePet(selectedSire)) {
+            setMatchError('Selected sire must be male. Update pet gender if needed.');
+            return;
+        }
+        if (selectedDam && !isFemalePet(selectedDam)) {
+            setMatchError('Selected dam must be female. Update pet gender if needed.');
             return;
         }
         setMatchError('');
@@ -775,6 +912,49 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         }
     };
 
+    const handleNotificationAction = async (notification: AdminNotification) => {
+        if (notification.status === 'unread') {
+            await markNotificationAsRead(notification.id);
+            setNotifications(prev => prev.map(item => (
+                item.id === notification.id ? { ...item, status: 'read' } : item
+            )));
+        }
+
+        setMobileMenuOpen(false);
+
+        switch (notification.type) {
+            case 'new_pet': {
+                setActiveTab('pets');
+                if (notification.reference_id) {
+                    const pet = getPetById(notification.reference_id);
+                    if (pet) {
+                        setEditingPet(pet);
+                        setIsCreating(false);
+                    } else {
+                        setEditingPet(null);
+                        setSearchTerm(notification.reference_id);
+                    }
+                }
+                break;
+            }
+            case 'verification_request': {
+                setActiveTab('ownership');
+                setOwnershipFilter('pending');
+                break;
+            }
+            case 'breeding_report': {
+                setActiveTab('puppy');
+                break;
+            }
+            case 'new_user': {
+                setActiveTab('users');
+                break;
+            }
+            default:
+                break;
+        }
+    };
+
     const handleApproveCommentAdmin = async (commentId: string) => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -823,6 +1003,53 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
             alert('Failed to delete message.');
         }
     };
+
+
+    const handleAddNewUser = async () => {
+        // Validate form - only email required now
+        if (!newUserForm.email) {
+            setUserFormError('Email is required');
+            return;
+        }
+
+        try {
+            const inviteRedirectTo = import.meta.env.VITE_INVITE_REDIRECT_URL || `${window.location.origin}/`;
+            const accountType = newUserForm.role === 'buyer' ? 'buyer' : 'breeder';
+            const autoVerified = newUserForm.role !== 'buyer';
+
+            // Send magic link invitation instead of creating user directly
+            const { data, error } = await supabase.auth.signInWithOtp({
+                email: newUserForm.email,
+                options: {
+                    data: {
+                        full_name: newUserForm.fullName,
+                        role: newUserForm.role,
+                        account_type: accountType,
+                        verified_breeder: autoVerified,
+                        invited_by: 'admin'
+                    },
+                    emailRedirectTo: inviteRedirectTo
+                }
+            });
+
+            if (error) throw error;
+
+            // Show success message
+            alert(`✅ Invitation sent to ${newUserForm.email}!\n\n` +
+                `The user will receive an email with a magic link to sign in.\n\n` +
+                `Role: ${newUserForm.role}\n` +
+                `Name: ${newUserForm.fullName || 'Not specified'}`);
+
+            setShowAddUserModal(false);
+            setNewUserForm({ email: '', fullName: '', role: 'buyer', password: '' });
+            setUserFormError('');
+
+        } catch (error: any) {
+            console.error('Error sending invitation:', error);
+            setUserFormError(error.message || 'Failed to send invitation');
+        }
+    };
+
 
     const handleToggleBreederVerification = async (userId: string, nextValue: boolean) => {
         try {
@@ -882,7 +1109,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-6xl max-h-[95vh] h-[90vh] flex flex-col p-0 gap-0 bg-[#0A0A0A] border-[#C5A059]/20">
+            <DialogContent
+                className={`${aiExpanded ? 'max-w-[95vw] w-[95vw] h-[95vh]' : 'max-w-6xl h-[90vh]'} max-h-[95vh] flex flex-col p-0 gap-0 bg-[#0A0A0A] border-[#C5A059]/20`}
+            >
                 <div className="p-4 md:p-6 border-b border-[#C5A059]/20 bg-[#0D0D0D] flex justify-between items-center sticky top-0 z-20">
                     <div className="flex items-center gap-3">
                         {/* Mobile Menu Trigger */}
@@ -915,6 +1144,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                             Verifications
                                             {pendingVerifications.length > 0 && (
                                                 <span className="ml-auto bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs">{pendingVerifications.length}</span>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            onClick={() => { setActiveTab('ownership'); setEditingPet(null); setMobileMenuOpen(false); }}
+                                            className={`w-full justify-start gap-3 ${activeTab === 'ownership' ? 'bg-primary/10 text-primary' : 'text-gray-600'}`}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m2 7H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" /></svg>
+                                            Ownership Claims
+                                            {pendingOwnershipClaims.length > 0 && (
+                                                <span className="ml-auto bg-amber-100 text-amber-700 py-0.5 px-2 rounded-full text-xs">{pendingOwnershipClaims.length}</span>
                                             )}
                                         </Button>
                                         <Button
@@ -1030,6 +1270,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                 Verifications
                                 {pendingVerifications.length > 0 && (
                                     <span className="ml-auto bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs">{pendingVerifications.length}</span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => { setActiveTab('ownership'); setEditingPet(null); }}
+                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'ownership' ? 'bg-[#C5A059]/10 text-[#C5A059]' : 'text-[#B8B8B8] hover:bg-[#1A1A1A]'}`}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m2 7H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" /></svg>
+                                Ownership Claims
+                                {pendingOwnershipClaims.length > 0 && (
+                                    <span className="ml-auto bg-amber-100 text-amber-700 py-0.5 px-2 rounded-full text-xs">{pendingOwnershipClaims.length}</span>
                                 )}
                             </button>
                             <button
@@ -1309,7 +1559,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                                 <SelectContent>
                                                                     <SelectItem value="unknown">Unknown / None</SelectItem>
                                                                     {petList
-                                                                        .filter(p => p.gender?.toLowerCase() === 'male' && p.id !== editingPet.id)
+                                                                        .filter(p => isMalePet(p) && p.id !== editingPet.id)
                                                                         .map(p => (
                                                                             <SelectItem key={p.id} value={p.id}>
                                                                                 {p.name} {p.registrationNumber ? `(${p.registrationNumber})` : ''}
@@ -1353,7 +1603,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                                 <SelectContent>
                                                                     <SelectItem value="unknown">Unknown / None</SelectItem>
                                                                     {petList
-                                                                        .filter(p => p.gender?.toLowerCase() === 'female' && p.id !== editingPet.id)
+                                                                        .filter(p => isFemalePet(p) && p.id !== editingPet.id)
                                                                         .map(p => (
                                                                             <SelectItem key={p.id} value={p.id}>
                                                                                 {p.name} {p.registrationNumber ? `(${p.registrationNumber})` : ''}
@@ -1678,6 +1928,112 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                     </div>
                                 )}
                             </div>
+                        ) : activeTab === 'ownership' ? (
+                            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                                    <div>
+                                        <h2 className="text-xl font-bold">Ownership Claims</h2>
+                                        <p className="text-xs text-gray-500">Review and approve ownership claims.</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            value={ownershipFilter}
+                                            onChange={(e) => setOwnershipFilter(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+                                        >
+                                            <option value="pending">Pending</option>
+                                            <option value="approved">Approved</option>
+                                            <option value="rejected">Rejected</option>
+                                            <option value="all">All</option>
+                                        </select>
+                                        <Button variant="outline" onClick={loadOwnershipClaims} disabled={ownershipLoading}>
+                                            {ownershipLoading ? 'Refreshing...' : 'Refresh'}
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {ownershipLoading ? (
+                                        <p className="text-sm text-gray-500">Loading claims...</p>
+                                    ) : filteredOwnershipClaims.length === 0 ? (
+                                        <p className="text-sm text-gray-500">No ownership claims found.</p>
+                                    ) : (
+                                        filteredOwnershipClaims.map(claim => (
+                                            <div key={claim.id} className="bg-white rounded-xl border shadow-sm p-4">
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden">
+                                                            <img
+                                                                src={claim.pet?.image_url || fallbackPetImage}
+                                                                alt={claim.pet?.name || 'Pet'}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <div className="font-semibold text-gray-900">{claim.pet?.name || 'Unknown Pet'}</div>
+                                                            <div className="text-xs text-gray-500">{claim.pet?.breed || 'Unknown breed'}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-xs text-gray-500">
+                                                        <div className="font-semibold text-gray-700">{claim.claimant?.full_name || 'Unknown user'}</div>
+                                                        <div>{claim.claimant?.email || '-'}</div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-600">
+                                                    <span className="px-2 py-1 rounded-full bg-gray-100 font-semibold uppercase">{claim.status}</span>
+                                                    <span className="px-2 py-1 rounded-full bg-gray-100">{claim.claim_type}</span>
+                                                    <span className="px-2 py-1 rounded-full bg-gray-100">
+                                                        {claim.created_at ? new Date(claim.created_at).toLocaleDateString() : '-'}
+                                                    </span>
+                                                </div>
+
+                                                {claim.evidence && (
+                                                    <p className="mt-3 text-sm text-gray-700">{claim.evidence}</p>
+                                                )}
+
+                                                <div className="mt-3 flex flex-wrap gap-2">
+                                                    {claim.evidence_files && claim.evidence_files.length > 0 ? (
+                                                        claim.evidence_files.map((fileUrl, index) => (
+                                                            <a
+                                                                key={`${claim.id}-file-${index}`}
+                                                                href={fileUrl}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="text-xs text-blue-600 hover:underline"
+                                                            >
+                                                                File {index + 1}
+                                                            </a>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400">No files</span>
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-4 flex flex-wrap gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-8 bg-green-600 hover:bg-green-700"
+                                                        disabled={claim.status !== 'pending'}
+                                                        onClick={() => handleApproveOwnershipClaim(claim)}
+                                                    >
+                                                        Approve
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        className="h-8"
+                                                        disabled={claim.status !== 'pending'}
+                                                        onClick={() => handleRejectOwnershipClaim(claim)}
+                                                    >
+                                                        Reject
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
                         ) : activeTab === 'users' ? (
                             /* 4. USER MANAGEMENT TAB */
                             <div className="flex-1 flex flex-col min-h-0">
@@ -1689,7 +2045,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                             className="pl-9 bg-white"
                                         />
                                     </div>
-                                    <Button className="ml-auto bg-primary text-white shadow-sm hover:bg-primary/90">
+                                    <Button
+                                        className="ml-auto bg-[#C5A059] text-[#0A0A0A] shadow-sm hover:bg-[#D4C4B5]"
+                                        onClick={() => setShowAddUserModal(true)}
+                                    >
                                         <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                                         Add New User
                                     </Button>
@@ -1730,12 +2089,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                                 </div>
                                                             </td>
                                                             <td className="px-4 py-3">
-                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                                                                    user.account_type === 'breeder' ? 'bg-blue-100 text-blue-800' :
-                                                                        'bg-gray-100 text-gray-800'
-                                                                    }`}>
-                                                                    {user.role || user.account_type || 'User'}
-                                                                </span>
+                                                                <select
+                                                                    value={user.role || user.account_type || 'buyer'}
+                                                                    onChange={(e) => handleUpdateUserRole(user.id, e.target.value as 'buyer' | 'breeder' | 'admin')}
+                                                                    disabled={roleUpdatingId === user.id}
+                                                                    className="border border-gray-200 rounded-md px-2 py-1 text-xs bg-white"
+                                                                >
+                                                                    <option value="buyer">buyer</option>
+                                                                    <option value="breeder">breeder</option>
+                                                                    <option value="admin">admin</option>
+                                                                </select>
                                                             </td>
                                                             <td className="px-4 py-3">
                                                                 <div className="flex items-center gap-2">
@@ -1883,6 +2246,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                         <p className="text-xs text-gray-500">Approve FAQ answers and review the query pool.</p>
                                     </div>
                                     <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setAiExpanded(prev => !prev)}
+                                        >
+                                            {aiExpanded ? 'Collapse' : 'Expand'}
+                                        </Button>
                                         <Button variant="outline" onClick={loadAiLibrary} disabled={aiLoading}>
                                             {aiLoading ? 'Refreshing...' : 'Refresh'}
                                         </Button>
@@ -1892,13 +2261,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                     </div>
                                 </div>
 
-                                <Tabs value={aiTab} onValueChange={(value) => setAiTab(value as 'faq' | 'pool')} className="flex-1 min-h-0">
+                                <Tabs value={aiTab} onValueChange={(value) => setAiTab(value as 'faq' | 'pool')} className="flex flex-col flex-1 min-h-0">
                                     <TabsList className="mb-4">
                                         <TabsTrigger value="faq">FAQ Entries</TabsTrigger>
                                         <TabsTrigger value="pool">Query Pool</TabsTrigger>
                                     </TabsList>
 
-                                    <TabsContent value="faq" className="flex-1 min-h-0">
+                                    <TabsContent value="faq" className="flex-1 min-h-0 overflow-hidden">
                                         <div className="grid gap-4 lg:grid-cols-[360px,1fr] h-full">
                                             <div className="bg-white rounded-xl border shadow-sm flex flex-col min-h-0">
                                                 <div className="p-3 border-b flex items-center gap-2">
@@ -1915,7 +2284,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                     </Select>
                                                     <span className="text-xs text-gray-500 ml-auto">{filteredFaqEntries.length} items</span>
                                                 </div>
-                                                <ScrollArea className="flex-1">
+                                                <ScrollArea className="flex-1 min-h-0">
                                                     <div className="p-3 space-y-2">
                                                         {filteredFaqEntries.length === 0 ? (
                                                             <p className="text-sm text-gray-500">No FAQ entries.</p>
@@ -1959,7 +2328,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <ScrollArea className="flex-1">
+                                                <ScrollArea className="flex-1 min-h-0">
                                                     <div className="p-4 space-y-4">
                                                         {faqError && (
                                                             <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
@@ -2081,7 +2450,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                         </div>
                                     </TabsContent>
 
-                                    <TabsContent value="pool" className="flex-1 min-h-0">
+                                    <TabsContent value="pool" className="flex-1 min-h-0 overflow-hidden">
                                         <div className="grid gap-4 lg:grid-cols-[360px,1fr] h-full">
                                             <div className="bg-white rounded-xl border shadow-sm flex flex-col min-h-0">
                                                 <div className="p-3 border-b flex items-center gap-2">
@@ -2092,7 +2461,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                     />
                                                     <span className="text-xs text-gray-500 ml-auto">{visibleQueries.length} queries</span>
                                                 </div>
-                                                <ScrollArea className="flex-1">
+                                                <ScrollArea className="flex-1 min-h-0">
                                                     <div className="p-3 space-y-2">
                                                         {visibleQueries.length === 0 ? (
                                                             <p className="text-sm text-gray-500">No queries to review.</p>
@@ -2132,7 +2501,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                     <h3 className="font-semibold text-gray-900">FAQ Editor</h3>
                                                     <p className="text-xs text-gray-500">Select a query to create a draft answer.</p>
                                                 </div>
-                                                <ScrollArea className="flex-1">
+                                                <ScrollArea className="flex-1 min-h-0">
                                                     <div className="p-4">
                                                         <div className="flex flex-col gap-3">
                                                             <Button onClick={() => setAiTab('faq')} className="bg-primary text-white hover:bg-primary/90">
@@ -2157,46 +2526,62 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                     {notifications.length === 0 ? (
                                         <p className="text-gray-500 text-center py-8">No notifications.</p>
                                     ) : (
-                                        notifications.map(n => (
-                                            <div key={n.id} className={`p-4 rounded-xl border flex gap-4 ${n.status === 'unread' ? 'bg-white border-primary/30 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-70'}`}>
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 
+                                        notifications.map(n => {
+                                            const actionLabel = getNotificationActionLabel(n);
+                                            return (
+                                                <div key={n.id} className={`p-4 rounded-xl border flex gap-4 ${n.status === 'unread' ? 'bg-white border-primary/30 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-70'}`}>
+                                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 
                                                     ${n.type === 'new_pet' ? 'bg-green-100 text-green-600' :
-                                                        n.type === 'breeding_report' ? 'bg-red-100 text-red-600' :
-                                                            'bg-blue-100 text-blue-600'}`}>
-                                                    {n.type === 'new_pet' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>}
-                                                    {n.type === 'breeding_report' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
-                                                    {n.type === 'verification_request' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="flex justify-between items-start">
-                                                        <h4 className="font-bold text-gray-900">{n.title}</h4>
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs text-gray-500 whitespace-nowrap">{new Date(n.created_at).toLocaleDateString()}</span>
-                                                            {n.status === 'unread' && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="h-6 text-[10px] text-primary hover:text-primary/80 hover:bg-primary/5"
-                                                                    onClick={async (e) => {
-                                                                        e.stopPropagation();
-                                                                        await markNotificationAsRead(n.id);
-                                                                        refreshData();
-                                                                    }}
-                                                                >
-                                                                    Mark Read
-                                                                </Button>
-                                                            )}
-                                                        </div>
+                                                            n.type === 'breeding_report' ? 'bg-red-100 text-red-600' :
+                                                                'bg-blue-100 text-blue-600'}`}>
+                                                        {n.type === 'new_pet' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>}
+                                                        {n.type === 'breeding_report' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
+                                                        {n.type === 'verification_request' && <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
                                                     </div>
-                                                    <p className="text-sm text-gray-600 mt-1">{n.message}</p>
-                                                    {n.reference_id && (
-                                                        <div className="mt-2 text-xs font-mono bg-gray-100 inline-block px-2 py-1 rounded text-gray-500">
-                                                            Ref: {n.reference_id}
+                                                    <div className="flex-1">
+                                                        <div className="flex justify-between items-start">
+                                                            <h4 className="font-bold text-gray-900">{n.title}</h4>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-xs text-gray-500 whitespace-nowrap">{new Date(n.created_at).toLocaleDateString()}</span>
+                                                                {actionLabel && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="h-6 text-[10px] text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleNotificationAction(n);
+                                                                        }}
+                                                                    >
+                                                                        {actionLabel}
+                                                                    </Button>
+                                                                )}
+                                                                {n.status === 'unread' && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="h-6 text-[10px] text-primary hover:text-primary/80 hover:bg-primary/5"
+                                                                        onClick={async (e) => {
+                                                                            e.stopPropagation();
+                                                                            await markNotificationAsRead(n.id);
+                                                                            refreshData();
+                                                                        }}
+                                                                    >
+                                                                        Mark Read
+                                                                    </Button>
+                                                                )}
+                                                            </div>
                                                         </div>
-                                                    )}
+                                                        <p className="text-sm text-gray-600 mt-1">{n.message}</p>
+                                                        {n.reference_id && (
+                                                            <div className="mt-2 text-xs font-mono bg-gray-100 inline-block px-2 py-1 rounded text-gray-500">
+                                                                Ref: {n.reference_id}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </div>
                             </div>
@@ -2234,10 +2619,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                 <SelectValue placeholder="Select sire" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {petList.length === 0 ? (
-                                                    <SelectItem value="none" disabled>No pets available</SelectItem>
+                                                {sireOptions.length === 0 ? (
+                                                    <SelectItem value="none" disabled>No male pets available</SelectItem>
                                                 ) : (
-                                                    petList.map(pet => (
+                                                    sireOptions.map(pet => (
                                                         <SelectItem key={pet.id} value={pet.id}>
                                                             {pet.name} ({pet.breed})
                                                         </SelectItem>
@@ -2256,10 +2641,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                 <SelectValue placeholder="Select dam" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {petList.length === 0 ? (
-                                                    <SelectItem value="none" disabled>No pets available</SelectItem>
+                                                {damOptions.length === 0 ? (
+                                                    <SelectItem value="none" disabled>No female pets available</SelectItem>
                                                 ) : (
-                                                    petList.map(pet => (
+                                                    damOptions.map(pet => (
                                                         <SelectItem key={pet.id} value={pet.id}>
                                                             {pet.name} ({pet.breed})
                                                         </SelectItem>
@@ -2318,6 +2703,87 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                     Save Match
                                 </Button>
                             </div>
+                        </DialogContent>
+                    </Dialog>
+
+                    {/* Add New User Modal */}
+                    <Dialog open={showAddUserModal} onOpenChange={setShowAddUserModal}>
+                        <DialogContent className="max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>Add New User</DialogTitle>
+                                <DialogDescription>
+                                    Create a new user account manually
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                                {userFormError && (
+                                    <div className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
+                                        {userFormError}
+                                    </div>
+                                )}
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email *</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        value={newUserForm.email}
+                                        onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                                        placeholder="user@example.com"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="fullName">Full Name</Label>
+                                    <Input
+                                        id="fullName"
+                                        type="text"
+                                        value={newUserForm.fullName}
+                                        onChange={(e) => setNewUserForm({ ...newUserForm, fullName: e.target.value })}
+                                        placeholder="John Doe"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="role">Role *</Label>
+                                    <Select value={newUserForm.role} onValueChange={(val: any) => setNewUserForm({ ...newUserForm, role: val })}>
+                                        <SelectTrigger className="bg-white">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="buyer">Buyer</SelectItem>
+                                            <SelectItem value="breeder">Breeder</SelectItem>
+                                            <SelectItem value="admin">Admin</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {/* Info message */}
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <p className="text-sm text-blue-800">
+                                        ℹ️ The user will receive a magic link via email to sign in. No password needed!
+                                    </p>
+                                </div>
+                            </div>
+
+                            <DialogFooter>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        setShowAddUserModal(false);
+                                        setNewUserForm({ email: '', fullName: '', role: 'buyer', password: '' });
+                                        setUserFormError('');
+                                    }}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    className="bg-[#C5A059] text-[#0A0A0A] hover:bg-[#D4C4B5]"
+                                    onClick={handleAddNewUser}
+                                >
+                                    📧 Send Invitation
+                                </Button>
+                            </DialogFooter>
                         </DialogContent>
                     </Dialog>
                 </div>

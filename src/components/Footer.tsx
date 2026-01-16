@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { EibpoMark } from '@/components/branding/EibpoLogo';
 
 const Footer: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -93,14 +94,12 @@ const Footer: React.FC = () => {
               {/* Minimal Gold Icon */}
               <div className="relative w-10 h-10 flex items-center justify-center">
                 <div className="absolute inset-0 border border-[#C5A059]/40 rotate-45 group-hover:rotate-[50deg] transition-transform duration-500" />
-                <svg className="w-5 h-5 text-[#C5A059]" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                </svg>
+                <EibpoMark className="w-5 h-5 text-[#C5A059]" />
               </div>
 
               <div className="flex flex-col">
                 <span className="font-['Playfair_Display',_Georgia,_serif] text-xl tracking-wide text-[#F5F5F0] group-hover:text-[#C5A059] transition-colors">
-                  Pet<span className="text-[#C5A059]">degree</span>
+                  Eibpo<span className="text-[#C5A059]"> Pedigree</span>
                 </span>
                 <span className="text-[8px] tracking-[0.3em] text-[#C5A059]/50 uppercase">
                   Premium Bloodlines
@@ -181,7 +180,7 @@ const Footer: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-[#B8B8B8]/30 text-xs tracking-wide">
-              © 2026 Petdegree. All rights reserved.
+              © 2026 Eibpo. All rights reserved.
             </p>
             <div className="flex items-center gap-8">
               <a href="#" className="text-[#B8B8B8]/30 hover:text-[#C5A059] text-xs tracking-wide transition-colors">Privacy</a>

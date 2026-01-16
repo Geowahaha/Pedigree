@@ -216,7 +216,7 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
                 </div>
                 <h3 className="text-2xl font-bold text-[#F5F5F0] mb-2">Registration Complete!</h3>
                 <p className="text-[#B8B8B8] mb-4">
-                  Your pet has been successfully registered in the Petdegree database.
+                  Your pet has been successfully registered in the Eibpo database.
                 </p>
                 {registrationNumber && (
                   <div className="inline-block px-6 py-3 rounded-lg bg-[#0A0A0A] border border-[#C5A059]/20 mb-6">

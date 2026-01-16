@@ -1,6 +1,6 @@
 /**
  * NotificationPanel - Display user notifications
- * Dark Luxury Theme (Black & Gold)
+ * Dribbble Light Theme
  */
 
 import React, { useState, useEffect } from 'react';
@@ -101,44 +101,44 @@ const NotificationPanel: React.FC = () => {
         switch (type) {
             case 'chat_message':
                 return (
-                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                         </svg>
                     </div>
                 );
             case 'like':
                 return (
-                    <div className="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                    <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                         </svg>
                     </div>
                 );
             case 'new_user':
                 return (
-                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
                         </svg>
                     </div>
                 );
             case 'breeding_match':
                 return (
-                    <div className="w-10 h-10 rounded-full bg-[#C5A059]/20 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-pink-50 flex items-center justify-center text-[#ea4c89]">
                         <span className="text-lg">❤️</span>
                     </div>
                 );
             case 'puppy_born':
                 return (
-                    <div className="w-10 h-10 rounded-full bg-[#C5A059]/20 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-amber-500">
                         <span className="text-lg">🐾</span>
                     </div>
                 );
             default:
                 return (
-                    <div className="w-10 h-10 rounded-full bg-[#C5A059]/20 flex items-center justify-center">
-                        <svg className="w-5 h-5 text-[#C5A059]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
                     </div>
@@ -164,15 +164,15 @@ const NotificationPanel: React.FC = () => {
     if (!user) {
         return (
             <div className="text-center py-12">
-                <div className="w-16 h-16 rounded-full bg-[#C5A059]/10 flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-[#C5A059]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
                 </div>
-                <h3 className="text-lg font-medium text-[#F5F5F0] mb-2">
+                <h3 className="text-lg font-bold text-[#0d0c22] mb-2">
                     {language === 'th' ? 'กรุณาเข้าสู่ระบบ' : 'Sign in required'}
                 </h3>
-                <p className="text-[#B8B8B8] text-sm">
+                <p className="text-gray-500 text-sm">
                     {language === 'th' ? 'เข้าสู่ระบบเพื่อดูการแจ้งเตือนของคุณ' : 'Sign in to view your notifications'}
                 </p>
             </div>
@@ -180,16 +180,16 @@ const NotificationPanel: React.FC = () => {
     }
 
     return (
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto py-6">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
-                <h2 className="font-['Playfair_Display'] text-2xl text-[#F5F5F0]">
+                <h2 className="text-2xl font-bold text-[#0d0c22]">
                     {language === 'th' ? 'การแจ้งเตือน' : 'Notifications'}
                 </h2>
                 {notifications.some(n => !n.is_read) && (
                     <button
                         onClick={markAllAsRead}
-                        className="text-sm text-[#C5A059] hover:text-[#D4C4B5] transition-colors"
+                        className="text-sm font-bold text-[#ea4c89] hover:underline transition-colors"
                     >
                         {language === 'th' ? 'อ่านทั้งหมด' : 'Mark all as read'}
                     </button>
@@ -199,19 +199,19 @@ const NotificationPanel: React.FC = () => {
             {/* Notifications List */}
             {loading ? (
                 <div className="text-center py-12">
-                    <div className="w-8 h-8 border-2 border-[#C5A059] border-t-transparent rounded-full animate-spin mx-auto"></div>
+                    <div className="w-8 h-8 border-2 border-[#ea4c89] border-t-transparent rounded-full animate-spin mx-auto"></div>
                 </div>
             ) : notifications.length === 0 ? (
                 <div className="text-center py-12">
-                    <div className="w-16 h-16 rounded-full bg-[#C5A059]/10 flex items-center justify-center mx-auto mb-4">
-                        <svg className="w-8 h-8 text-[#C5A059]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                         </svg>
                     </div>
-                    <h3 className="text-lg font-medium text-[#F5F5F0] mb-2">
+                    <h3 className="text-lg font-bold text-[#0d0c22] mb-2">
                         {language === 'th' ? 'ไม่มีการแจ้งเตือน' : 'No notifications yet'}
                     </h3>
-                    <p className="text-[#B8B8B8] text-sm">
+                    <p className="text-gray-500 text-sm">
                         {language === 'th' ? 'การแจ้งเตือนใหม่จะปรากฏที่นี่' : 'New notifications will appear here'}
                     </p>
                 </div>
@@ -222,10 +222,10 @@ const NotificationPanel: React.FC = () => {
                             key={notification.id}
                             onClick={() => handleNotificationClick(notification)}
                             className={`
-                flex items-start gap-4 p-4 rounded-xl border transition-all cursor-pointer
+                flex items-start gap-4 p-4 rounded-2xl border transition-all cursor-pointer
                 ${notification.is_read
-                                    ? 'bg-[#0D0D0D] border-[#C5A059]/10'
-                                    : 'bg-[#1A1A1A] border-[#C5A059]/30 hover:bg-[#1A1A1A]/80'
+                                    ? 'bg-white border-gray-100 hover:border-gray-200'
+                                    : 'bg-white border-blue-100 shadow-sm shadow-blue-50 hover:shadow-md'
                                 }
               `}
                         >
@@ -233,14 +233,14 @@ const NotificationPanel: React.FC = () => {
 
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-2">
-                                    <h4 className={`font-medium text-sm truncate ${notification.is_read ? 'text-[#B8B8B8]' : 'text-[#F5F5F0]'}`}>
+                                    <h4 className={`font-bold text-sm truncate ${notification.is_read ? 'text-gray-600' : 'text-[#0d0c22]'}`}>
                                         {notification.title}
                                     </h4>
-                                    <span className="text-[10px] text-[#B8B8B8]/50 whitespace-nowrap">
+                                    <span className="text-[10px] text-gray-400 whitespace-nowrap font-medium">
                                         {formatTime(notification.created_at)}
                                     </span>
                                 </div>
-                                <p className={`text-sm mt-1 ${notification.is_read ? 'text-[#B8B8B8]/50' : 'text-[#B8B8B8]'}`}>
+                                <p className={`text-sm mt-1 leading-relaxed ${notification.is_read ? 'text-gray-400' : 'text-gray-600'}`}>
                                     {notification.message}
                                 </p>
 
@@ -251,7 +251,7 @@ const NotificationPanel: React.FC = () => {
                                             e.stopPropagation();
                                             handleNotificationClick(notification);
                                         }}
-                                        className="mt-2 px-4 py-1.5 bg-blue-500/20 text-blue-400 text-xs font-medium rounded-full hover:bg-blue-500/30 transition-colors"
+                                        className="mt-3 px-4 py-1.5 bg-blue-50 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-100 transition-colors"
                                     >
                                         {language === 'th' ? 'ตอบกลับ' : 'Reply'}
                                     </button>
@@ -259,7 +259,7 @@ const NotificationPanel: React.FC = () => {
                             </div>
 
                             {!notification.is_read && (
-                                <div className="w-2 h-2 rounded-full bg-[#C5A059] shrink-0 mt-2"></div>
+                                <div className="w-2 h-2 rounded-full bg-[#ea4c89] shrink-0 mt-2 shadow-sm shadow-pink-200"></div>
                             )}
                         </div>
                     ))}

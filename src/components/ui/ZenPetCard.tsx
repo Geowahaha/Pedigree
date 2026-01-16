@@ -87,7 +87,7 @@ const ZenPetCard: React.FC<ZenPetCardProps> = ({
                 "hover:shadow-[0_12px_28px_rgba(139,157,131,0.12)]",
                 "hover:border-primary/20",
                 // Transitions
-                "transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                "transition-all duration-500 ease-zen"
             )}
             style={{
                 ...tiltStyle,
@@ -131,7 +131,7 @@ const ZenPetCard: React.FC<ZenPetCardProps> = ({
                         decoding="async"
                         className={cn(
                             "w-full h-full object-cover",
-                            "transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]",
+                            "transition-transform duration-700 ease-zen",
                             isHovered && "scale-105"
                         )}
                         onError={() => setImageError(true)}

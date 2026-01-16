@@ -27,6 +27,7 @@ import AdminPanel from '../AdminPanel';
 import BreederProfileModal from '../modals/BreederProfileModal';
 import ChatManager from '../ChatManager';
 import { AIChatOverlay } from '../ai/AIChatOverlay';
+import { EibpoMark } from '@/components/branding/EibpoLogo';
 
 // Sidebar icons
 const SidebarIcon: React.FC<{
@@ -273,9 +274,7 @@ const ClaudeLayout: React.FC = () => {
             <aside className="w-14 bg-[#2D2D2D] border-r border-white/5 flex flex-col items-center py-4 gap-2">
                 {/* Logo */}
                 <div className="w-10 h-10 rounded-lg bg-[#3D3D3D] flex items-center justify-center mb-4 border border-white/10">
-                    <svg className="w-5 h-5 text-[#D4A574]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
+                    <EibpoMark className="w-5 h-5 text-[#D4A574]" />
                 </div>
 
                 {/* New Chat / Home */}

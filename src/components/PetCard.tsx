@@ -5,9 +5,12 @@ interface PetCardProps {
   pet: Pet;
   onViewPedigree: (pet: Pet) => void;
   onViewDetails: (pet: Pet) => void;
+  isOwner?: boolean;
+  onCommentClick?: (pet: Pet) => void;
+  onEditClick?: (pet: Pet) => void;
 }
 
-const PetCard: React.FC<PetCardProps> = ({ pet, onViewPedigree, onViewDetails }) => {
+const PetCard: React.FC<PetCardProps> = ({ pet, onViewPedigree, onViewDetails, isOwner = false, onCommentClick, onEditClick }) => {
   const calculateAge = (birthDate: string) => {
     const birth = new Date(birthDate);
     const now = new Date();
@@ -26,6 +29,25 @@ const PetCard: React.FC<PetCardProps> = ({ pet, onViewPedigree, onViewDetails })
 
   // Check if we should show the placeholder (no image or error loading)
   const showPlaceholder = !pet.image || imageError;
+
+  const handleCommentClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (onCommentClick) {
+      onCommentClick(pet);
+      return;
+    }
+    onViewDetails(pet);
+  };
+
+  const handleEditClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (!isOwner) return;
+    if (onEditClick) {
+      onEditClick(pet);
+      return;
+    }
+    onViewDetails(pet);
+  };
 
   return (
     <div className="group bg-white rounded-2xl overflow-hidden border border-[#8B9D83]/15 hover:border-[#8B9D83]/30 transition-all duration-300 hover:shadow-xl hover:shadow-[#8B9D83]/10 hover:-translate-y-1">
@@ -94,6 +116,34 @@ const PetCard: React.FC<PetCardProps> = ({ pet, onViewPedigree, onViewDetails })
             </div>
           </div>
         )}
+
+        {/* Overlay Actions */}
+        <div
+          className={`absolute ${pet.healthCertified ? 'top-14' : 'top-3'} right-3 z-10 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300`}
+        >
+          <button
+            onClick={handleCommentClick}
+            className="h-9 px-3 rounded-full bg-white/95 backdrop-blur-sm flex items-center gap-1.5 text-[#2C2C2C] text-xs font-semibold shadow-md hover:bg-white transition-colors"
+            title="Comment"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            Comment
+          </button>
+          {isOwner && (
+            <button
+              onClick={handleEditClick}
+              className="h-9 px-3 rounded-full bg-white/95 backdrop-blur-sm flex items-center gap-1.5 text-[#2C2C2C] text-xs font-semibold shadow-md hover:bg-white transition-colors"
+              title="Edit"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              Edit
+            </button>
+          )}
+        </div>
 
         {/* Quick Actions */}
         <div className="absolute bottom-3 left-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">

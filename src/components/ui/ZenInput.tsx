@@ -99,7 +99,7 @@ export const ZenInput = forwardRef<HTMLInputElement, ZenInputProps>(
                     className={cn(
                         // Base
                         'w-full rounded-xl outline-none',
-                        'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+                        'transition-all duration-300 ease-zen',
                         'placeholder:text-foreground/30',
                         // Size
                         sizeClasses[size],
@@ -191,7 +191,7 @@ export const ZenSearchInput = forwardRef<HTMLInputElement, ZenSearchInputProps>(
                         'text-base text-foreground',
                         'placeholder:text-foreground/30',
                         'outline-none',
-                        'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+                        'transition-all duration-300 ease-zen',
                         'hover:border-primary/20 hover:bg-white/70',
                         'focus:border-primary/40 focus:bg-white/80 focus:shadow-[0_0_0_4px_hsl(var(--primary)/0.08)]',
                         props.className
@@ -266,7 +266,7 @@ export const ZenTextarea = forwardRef<HTMLTextAreaElement, ZenTextareaProps>(
                     className={cn(
                         'w-full min-h-[120px] py-3 px-4 rounded-xl',
                         'outline-none resize-y',
-                        'transition-all duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]',
+                        'transition-all duration-300 ease-zen',
                         'placeholder:text-foreground/30',
                         variant === 'default' && cn(
                             'bg-white/80 border border-foreground/10',

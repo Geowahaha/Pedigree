@@ -98,6 +98,12 @@ export default {
         'fade-in': 'fade-in 0.3s ease-out',
         'slide-in': 'slide-in 0.3s ease-out',
       },
+      transitionDuration: {
+        kenburns: '8000ms',
+      },
+      transitionTimingFunction: {
+        zen: 'cubic-bezier(0.22,1,0.36,1)',
+      },
       typography: {
         DEFAULT: {
           css: {

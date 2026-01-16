@@ -57,7 +57,7 @@ class AirtableClient {
 
     constructor() {
         if (!AIRTABLE_API_KEY || !AIRTABLE_BASE_ID) {
-            throw new Error('Airtable credentials missing');
+            console.warn('Airtable credentials missing - Service disabled');
         }
 
         this.headers = {

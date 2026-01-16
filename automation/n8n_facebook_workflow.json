@@ -1,0 +1,163 @@
+{
+    "name": "Social Auto-Post (Facebook)",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "facebook-post-trigger",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 2,
+            "position": [
+                0,
+                0
+            ],
+            "id": "webhook-trigger",
+            "name": "Webhook"
+        },
+        {
+            "parameters": {
+                "keepOnlySet": true,
+                "values": {
+                    "string": [
+                        {
+                            "name": "mediaUrl",
+                            "value": "={{ $json.body.mediaUrl }}"
+                        },
+                        {
+                            "name": "caption",
+                            "value": "={{ $json.body.description }}"
+                        },
+                        {
+                            "name": "link",
+                            "value": "={{ $json.body.linkBackUrl }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                220,
+                0
+            ],
+            "id": "prepare-data",
+            "name": "Prepare Data"
+        },
+        {
+            "parameters": {
+                "url": "={{ $json.mediaUrl }}",
+                "options": {
+                    "response": {
+                        "response": {
+                            "fullResponse": true
+                        }
+                    }
+                }
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                440,
+                0
+            ],
+            "id": "download-media",
+            "name": "Download Media"
+        },
+        {
+            "parameters": {
+                "resource": "page",
+                "operation": "create",
+                "pageId": "1524899624269342",
+                "message": "={{ $('Prepare Data').item.json.caption }}",
+                "link": "={{ $('Prepare Data').item.json.mediaUrl }}",
+                "additionalFields": {}
+            },
+            "type": "n8n-nodes-base.facebookGraphApi",
+            "typeVersion": 1,
+            "position": [
+                660,
+                0
+            ],
+            "id": "facebook-post",
+            "name": "Post to Page",
+            "credentials": {
+                "facebookGraphApiApi": {
+                    "id": "FACEBOOK_PAGE_CREDENTIAL",
+                    "name": "Facebook Page Token"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "post",
+                "operation": "create",
+                "pageId": "1524899624269342",
+                "postId": "={{ $json.id }}",
+                "comment": "={{ 'See full details here: ' + $('Prepare Data').item.json.link }}"
+            },
+            "type": "n8n-nodes-base.facebookGraphApi",
+            "typeVersion": 1,
+            "position": [
+                880,
+                0
+            ],
+            "id": "post-comment",
+            "name": "Add Link Comment",
+            "credentials": {
+                "facebookGraphApiApi": {
+                    "id": "FACEBOOK_PAGE_CREDENTIAL",
+                    "name": "Facebook Page Token"
+                }
+            }
+        }
+    ],
+    "connections": {
+        "Webhook": {
+            "main": [
+                [
+                    {
+                        "node": "Prepare Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Prepare Data": {
+            "main": [
+                [
+                    {
+                        "node": "Download Media",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Download Media": {
+            "main": [
+                [
+                    {
+                        "node": "Post to Page",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Post to Page": {
+            "main": [
+                [
+                    {
+                        "node": "Add Link Comment",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

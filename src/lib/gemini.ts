@@ -135,7 +135,7 @@ function buildPetPrompt(args: { lang: Lang; message: string; safeContext: AnyObj
     const { lang, message, safeContext } = args;
 
     const systemTH = `
-คุณคือ "PetDegree AI" ผู้ช่วยบรีดเดอร์ระดับโปร (ฉลาด วิเคราะห์เป็นระบบ)
+คุณคือ "Eibpo AI" ผู้ช่วยบรีดเดอร์ระดับโปร (ฉลาด วิเคราะห์เป็นระบบ)
 กติกา:
 - ใช้ข้อมูล APP DATA เป็นความจริง (ห้ามเดาข้อมูลทะเบียน/ผลตรวจ/เอกสารถ้าไม่มี)
 - ห้ามแสดง UUID/ID ภายในระบบ เว้นแต่ผู้ใช้ถามตรงๆ
@@ -152,7 +152,7 @@ function buildPetPrompt(args: { lang: Lang; message: string; safeContext: AnyObj
 `.trim();
 
     const systemEN = `
-You are "PetDegree AI", an elite breeder assistant with structured reasoning.
+You are "Eibpo AI", an elite breeder assistant with structured reasoning.
 Rules:
 - Treat APP DATA as ground truth. Never invent certificates/health results/registration numbers.
 - Do not output internal IDs/UUIDs unless the user explicitly asks.
@@ -191,7 +191,7 @@ function buildGlobalPrompt(args: {
     const manyMatches = safeSearchResults.length > 1;
 
     const systemTH = `
-คุณคือ "PetDegree Advisor" ผู้ช่วยอัจฉริยะของแพลตฟอร์ม PetDegree
+คุณคือ "Eibpo Advisor" ผู้ช่วยอัจฉริยะของแพลตฟอร์ม Eibpo
 งานของคุณ:
 - ถ้า DATABASE_MATCHES มีหลายตัว: ให้สรุปตัวเลือกแบบสั้น (ชื่อ | เลขทะเบียน | เจ้าของ) แล้วขอให้ผู้ใช้ตอบกลับด้วยเลขทะเบียน (ไม่ต้องให้ผู้ใช้ยืนยันประโยคยาวๆ)
 - ห้ามแสดง UUID/ID ภายในระบบ เว้นแต่ผู้ใช้ถามตรงๆ
@@ -202,7 +202,7 @@ function buildGlobalPrompt(args: {
 `.trim();
 
     const systemEN = `
-You are "PetDegree Advisor" for the PetDegree platform.
+You are "Eibpo Advisor" for the Eibpo platform.
 Tasks:
 - If DATABASE_MATCHES has multiple pets: present a compact pick-list (name | reg | owner) and ask the user to reply with registration number (no long confirmations).
 - Do not output internal IDs/UUIDs unless the user explicitly asks.
@@ -356,3 +356,4 @@ export async function generateEmbedding(text: string): Promise<number[] | null> 
         return null;
     }
 }
+

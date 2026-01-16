@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createPet, createNotification, getPublicPets, Pet } from '@/lib/database';
+import { addPetPhoto, createPet, createNotification, getPublicPets, Pet } from '@/lib/database';
 import { uploadPetImage } from '@/lib/storage';
 
 interface PetRegistrationModalProps {
@@ -37,6 +37,10 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const profileInputRef = useRef<HTMLInputElement>(null);
+    const galleryInputRef = useRef<HTMLInputElement>(null);
+
+    const [galleryItems, setGalleryItems] = useState<{ file: File; preview: string }[]>([]);
+    const [videoUrl, setVideoUrl] = useState('');
 
     const [formData, setFormData] = useState({
         name: '',
@@ -73,6 +77,28 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
             setProfileImage(file);
             setProfileImagePreview(URL.createObjectURL(file));
         }
+    };
+
+    const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (!files.length) return;
+        const nextItems = files.map((file) => ({
+            file,
+            preview: URL.createObjectURL(file),
+        }));
+        setGalleryItems(prev => [...prev, ...nextItems]);
+        e.target.value = '';
+    };
+
+    const handleRemoveGalleryItem = (index: number) => {
+        setGalleryItems(prev => {
+            const next = [...prev];
+            const [removed] = next.splice(index, 1);
+            if (removed) {
+                URL.revokeObjectURL(removed.preview);
+            }
+            return next;
+        });
     };
 
     const preprocessImage = (imageFile: File): Promise<string> => {
@@ -162,10 +188,15 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
         setStatus('uploading');
         try {
             let finalImageUrl = null;
+            let coverFromGalleryIndex = -1;
+            const trimmedVideoUrl = videoUrl.trim();
             if (profileImage) {
                 finalImageUrl = await uploadPetImage(profileImage);
             } else if (imageFile) {
                 finalImageUrl = await uploadPetImage(imageFile);
+            } else if (galleryItems[0]) {
+                finalImageUrl = await uploadPetImage(galleryItems[0].file);
+                coverFromGalleryIndex = 0;
             }
             let desc = `Registered via OCR.`;
             if (ownerName) desc += `\nOwner: ${ownerName}`;
@@ -183,7 +214,23 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
                 description: desc,
                 father_id: (formData.sireId && formData.sireId !== 'unknown') ? formData.sireId : undefined,
                 mother_id: (formData.damId && formData.damId !== 'unknown') ? formData.damId : undefined,
+                media_type: trimmedVideoUrl ? 'video' : 'image',
+                video_url: trimmedVideoUrl || undefined,
             });
+
+            if (galleryItems.length > 0) {
+                for (let index = 0; index < galleryItems.length; index += 1) {
+                    const item = galleryItems[index];
+                    const url = (index === coverFromGalleryIndex && finalImageUrl)
+                        ? finalImageUrl
+                        : await uploadPetImage(item.file);
+                    await addPetPhoto({
+                        pet_id: newPet.id,
+                        image_url: url,
+                        caption: item.file.name,
+                    });
+                }
+            }
 
             await createNotification({
                 type: 'new_pet',
@@ -192,6 +239,9 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
                 reference_id: newPet.id
             });
 
+            galleryItems.forEach(item => URL.revokeObjectURL(item.preview));
+            setGalleryItems([]);
+            setVideoUrl('');
             onSuccess();
             onClose();
         } catch (error) {
@@ -293,6 +343,72 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
                                         Choose Photo
                                     </Button>
                                     <input type="file" ref={profileInputRef} className="hidden" accept="image/*" onChange={handleProfileImageChange} />
+                                </div>
+                            </div>
+
+                            {/* Media Manager */}
+                            <div className="space-y-4 p-4 bg-[#0D0D0D] rounded-xl border border-[#C5A059]/10">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <p className="text-sm font-medium text-[#F5F5F0]">Media Manager</p>
+                                        <p className="text-xs text-[#B8B8B8]/50">Gallery + video link</p>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => galleryInputRef.current?.click()}
+                                        className="text-xs h-8 border-[#C5A059]/30 text-[#C5A059] hover:bg-[#C5A059]/10"
+                                    >
+                                        Add photos
+                                    </Button>
+                                </div>
+
+                                {galleryItems.length === 0 ? (
+                                    <p className="text-xs text-[#B8B8B8]/50">No gallery photos yet.</p>
+                                ) : (
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {galleryItems.map((item, index) => (
+                                            <div key={item.preview} className="relative">
+                                                <img src={item.preview} className="w-full h-16 object-cover rounded-lg border border-[#C5A059]/20" />
+                                                <button
+                                                    onClick={() => handleRemoveGalleryItem(index)}
+                                                    className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-[#C5A059] text-[#0A0A0A] text-[10px] font-bold"
+                                                >
+                                                    x
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <input
+                                    type="file"
+                                    ref={galleryInputRef}
+                                    className="hidden"
+                                    accept="image/*"
+                                    multiple
+                                    onChange={handleGalleryChange}
+                                />
+
+                                <div className="space-y-2">
+                                    <Label className="text-[#F5F5F0]">Primary Video URL (Optional)</Label>
+                                    <Input
+                                        value={videoUrl}
+                                        onChange={e => setVideoUrl(e.target.value)}
+                                        placeholder="Direct MP4 link or hosted video URL"
+                                        className="bg-[#0D0D0D] border-[#C5A059]/20 text-[#F5F5F0] placeholder:text-[#B8B8B8]/30"
+                                    />
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs text-[#B8B8B8]/50">Direct MP4 links work best for playback.</p>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            disabled
+                                            className="text-[11px] h-7 border-[#C5A059]/20 text-[#B8B8B8]/50 cursor-not-allowed"
+                                        >
+                                            AI video (coming soon)
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
 

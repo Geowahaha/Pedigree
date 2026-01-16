@@ -11,36 +11,46 @@
  * RENAMED: Petdegree → Eibpo
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { Pet, Product, products } from '@/data/petData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { getPublicPets, Pet as DbPet, searchPets, initChat, createPet } from '@/lib/database';
+import { getPublicPets, Pet as DbPet, searchPets, initChat, createPet, createUserNotification } from '@/lib/database';
 import { think as aiThink } from '@/lib/ai/petdegreeBrain';
 import { supabase } from '@/lib/supabase';
+import { triggerSocialAutomation } from '@/lib/socialAutomation';
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+// import { useRealtimePets } from '@/hooks/useRealtimePets'; // DISABLED - circular dependency
 
 // Import modals
-import PetRegistrationModal from '../PetRegistrationModal';
-import PedigreeModal from '../modals/PedigreeModal';
-import CartModal from '../modals/CartModal';
-import AuthModal from '../modals/AuthModal';
-import ProductModal from '../modals/ProductModal';
-import PetDetailsModal from '../modals/PetDetailsModal';
-import PetCard from '../ui/PetCard';
-import BreedingMatchModal from '../modals/BreedingMatchModal';
-import BreederDashboard from '../BreederDashboard';
-import AdminPanel from '../AdminPanel';
-import BreederProfileModal from '../modals/BreederProfileModal';
-import ChatWindow from '../chat/ChatWindow';
+import { ExpandablePetCard } from '../ui/ExpandablePetCard';
 import SearchSection from '../SearchSection';
 import MarketplaceSection from '../MarketplaceSection';
 import PuppyComingSoonSection from '../PuppyComingSoonSection';
 import NotificationPanel from '../NotificationPanel';
-
-import WalletModal from '../modals/WalletModal';
-import { AddExternalCardModal } from '../modals/AddExternalCardModal';
 import { boostPet, BOOST_COST } from '@/lib/wallet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+// import { SmartFilterBar } from '../ui/SmartFilterBar'; // DISABLED - circular dependency
+import { ThemeSwitcher } from '../ui/ThemeSwitcher';
+import { EibpoMark } from '@/components/branding/EibpoLogo';
+
+const PetRegistrationModal = lazy(() => import('../PetRegistrationModal'));
+const PedigreeModal = lazy(() => import('../modals/PedigreeModal'));
+const CartModal = lazy(() => import('../modals/CartModal'));
+const AuthModal = lazy(() => import('../modals/AuthModal'));
+const ProductModal = lazy(() => import('../modals/ProductModal'));
+const EnhancedPinterestModal = lazy(() =>
+    import('../ui/EnhancedPinterestModal').then((module) => ({ default: module.EnhancedPinterestModal }))
+);
+const BreedingMatchModal = lazy(() => import('../modals/BreedingMatchModal'));
+const BreederDashboard = lazy(() => import('../BreederDashboard'));
+const AdminPanel = lazy(() => import('../AdminPanel'));
+const BreederProfileModal = lazy(() => import('../modals/BreederProfileModal'));
+const ChatWindow = lazy(() => import('../chat/ChatWindow'));
+const WalletModal = lazy(() => import('../modals/WalletModal'));
+const AddExternalCardModal = lazy(() =>
+    import('../modals/AddExternalCardModal').then((module) => ({ default: module.AddExternalCardModal }))
+);
 
 // Types
 interface CartItem {
@@ -96,8 +106,23 @@ interface ChatRoom {
     petInfo?: { id: string; name: string; breed: string; image: string };
 }
 
+interface PinterestLayoutProps {
+    initialPetId?: string; // For shared links - auto-open this pet's modal
+}
+
+const LazyModalFallback = () => (
+    <div
+        className="fixed bottom-6 right-6 z-[1100] flex items-center gap-2 rounded-full border border-[#C5A059]/20 bg-[#0A0A0A]/90 px-3 py-2 text-xs text-[#C5A059] shadow-lg"
+        role="status"
+        aria-live="polite"
+    >
+        <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#C5A059]/30 border-t-[#C5A059]" />
+        Loading panel...
+    </div>
+);
+
 // ============ EIBPO LAYOUT (Pinterest + ChatGPT) ============
-const EibpoLayout: React.FC = () => {
+const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const { user, savedCart, syncCart } = useAuth();
     const { language, setLanguage } = useLanguage();
 
@@ -126,9 +151,17 @@ const EibpoLayout: React.FC = () => {
     const mySpaceMenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [favorites, setFavorites] = useState<string[]>([]);
     const [puppyFocus, setPuppyFocus] = useState<'available' | 'coming' | null>(null);
+    const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+
 
     // Chat state
     const [activeChats, setActiveChats] = useState<ChatRoom[]>([]);
+
+    // NEW: Infinite scroll for performance
+    const { visibleItems: visiblePets, loadMore, hasMore } = useInfiniteScroll(filteredPets, 20);
+
+    // NEW: Real-time pet updates (TEMPORARILY DISABLED - fixing circular dependency)
+    // useRealtimePets();
 
     // Modal states
     const [registerModalOpen, setRegisterModalOpen] = useState(false);
@@ -137,6 +170,7 @@ const EibpoLayout: React.FC = () => {
     const [authModalOpen, setAuthModalOpen] = useState(false);
     const [productModalOpen, setProductModalOpen] = useState(false);
     const [petDetailsModalOpen, setPetDetailsModalOpen] = useState(false);
+    const [petDetailsFocus, setPetDetailsFocus] = useState<'comments' | 'edit' | null>(null);
     const [dashboardOpen, setDashboardOpen] = useState(false);
     const [adminPanelOpen, setAdminPanelOpen] = useState(false);
     const [breederProfileOpen, setBreederProfileOpen] = useState(false);
@@ -144,6 +178,21 @@ const EibpoLayout: React.FC = () => {
     const [expandedMessages, setExpandedMessages] = useState(false);
 
     // Selected items
+    const [isImmersiveSearch, setIsImmersiveSearch] = useState(false);
+    const [immersiveAnimation, setImmersiveAnimation] = useState<'hidden' | 'entering' | 'active' | 'exiting'>('hidden');
+
+    // Handle Immersive Search Transition
+    useEffect(() => {
+        if (isImmersiveSearch) {
+            setImmersiveAnimation('entering');
+            setTimeout(() => setImmersiveAnimation('active'), 100);
+        } else {
+            if (immersiveAnimation === 'active') {
+                setImmersiveAnimation('exiting');
+                setTimeout(() => setImmersiveAnimation('hidden'), 500);
+            }
+        }
+    }, [isImmersiveSearch]);
     const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
@@ -158,27 +207,71 @@ const EibpoLayout: React.FC = () => {
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     // Convert DB Pet
-    const convertDbPet = (dbPet: DbPet): Pet => ({
-        id: dbPet.id,
-        name: dbPet.name,
-        breed: dbPet.breed,
-        type: dbPet.type || 'dog',
-        birthDate: dbPet.birth_date,
-        gender: dbPet.gender,
-        image: dbPet.image_url || '',
-        color: dbPet.color || '',
-        registrationNumber: dbPet.registration_number || undefined,
-        healthCertified: dbPet.health_certified,
-        location: dbPet.location || '',
-        owner: dbPet.owner?.full_name || dbPet.owner_name || 'Unknown',
-        owner_id: dbPet.owner_id,
-        parentIds: dbPet.pedigree ? {
-            sire: dbPet.pedigree.sire_id || undefined,
-            dam: dbPet.pedigree.dam_id || undefined
-        } : undefined,
-        boosted_until: dbPet.boosted_until,
-        created_at: dbPet.created_at
-    });
+    const convertDbPet = (dbPet: DbPet): Pet => {
+        let mediaType = 'image';
+        let videoUrl = '';
+        let source = '';
+        let externalLink = '';
+        let descriptionText = dbPet.description || '';
+
+        // Safely parse description for metadata
+        if (dbPet.description && dbPet.description.startsWith('{')) {
+            try {
+                const meta = JSON.parse(dbPet.description);
+                if (typeof meta.description === 'string') descriptionText = meta.description;
+                if (meta.media_type) mediaType = meta.media_type;
+                if (meta.video_url) videoUrl = meta.video_url;
+                if (meta.source) source = meta.source;
+                if (meta.external_link) externalLink = meta.external_link;
+            } catch (e) {
+                // Not JSON, ignore
+            }
+        }
+
+        // Fallback: Check for Regex based metadata (Legacy support)
+        if (!videoUrl && dbPet.description) {
+            const videoMatch = dbPet.description.match(/Video URL: (.*)/);
+            if (videoMatch) videoUrl = videoMatch[1].trim();
+
+            const mediaTypeMatch = dbPet.description.match(/Media Type: (.*)/);
+            if (mediaTypeMatch) mediaType = mediaTypeMatch[1].trim();
+            else if (videoUrl) mediaType = 'video'; // Auto-detect if video url present
+
+            const sourceMatch = dbPet.description.match(/Source: (.*)/);
+            if (sourceMatch) source = sourceMatch[1].trim();
+        }
+
+        return {
+            id: dbPet.id,
+            name: dbPet.name,
+            breed: dbPet.breed,
+            type: dbPet.type || 'dog',
+            birthDate: dbPet.birth_date,
+            gender: dbPet.gender,
+            image: dbPet.image_url || '',
+            color: dbPet.color || '',
+            registrationNumber: dbPet.registration_number || undefined,
+            healthCertified: dbPet.health_certified,
+            location: dbPet.location || '',
+            owner: dbPet.owner?.full_name || dbPet.owner_name || 'Unknown',
+            owner_id: dbPet.owner_id,
+            ownership_status: dbPet.ownership_status,
+            claimed_by: dbPet.claimed_by,
+            claim_date: dbPet.claim_date,
+            verification_evidence: dbPet.verification_evidence,
+            parentIds: dbPet.pedigree ? {
+                sire: dbPet.pedigree.sire_id || undefined,
+                dam: dbPet.pedigree.dam_id || undefined
+            } : undefined,
+            boosted_until: dbPet.boosted_until,
+            created_at: dbPet.created_at,
+            media_type: mediaType as 'image' | 'video',
+            video_url: videoUrl,
+            source: source as 'internal' | 'instagram' | 'pinterest' | 'youtube' | undefined,
+            external_link: externalLink,
+            description: descriptionText,
+        };
+    };
 
     const formatRelativeTime = (value?: string | null) => {
         if (!value) return '';
@@ -253,60 +346,19 @@ const EibpoLayout: React.FC = () => {
     };
 
     // External Card Handler
-    const handleAddExternalCard = async (data: { link: string; caption: string; mediaType: 'image' | 'video' }) => {
+    const handleAddExternalCard = async (data: { link: string; caption: string; mediaType: 'image' | 'video'; autoPostFb?: boolean }) => {
         let newCard: any;
 
-        if (user) {
-            try {
-                // Determine source roughly
-                let source = 'internal';
-                if (data.link.includes('instagram')) source = 'instagram';
-                else if (data.link.includes('youtube') || data.link.includes('youtu.be')) source = 'youtube';
-                else if (data.link.includes('pinterest')) source = 'pinterest';
-
-                const savedPet = await createPet({
-                    name: data.caption || 'Magic Card',
-                    type: 'dog',
-                    breed: 'External Import',
-                    gender: 'male',
-                    birth_date: new Date().toISOString().split('T')[0],
-                    image_url: data.mediaType === 'image' ? data.link : 'https://placehold.co/600x400/1a1a1a/c5a059?text=Video', // Placeholder if video
-                    media_type: data.mediaType,
-                    video_url: data.mediaType === 'video' ? data.link : undefined,
-                    external_link: data.link,
-                    source: source as any,
-                    is_sponsored: false
-                });
-                newCard = savedPet;
-            } catch (err) {
-                console.error("Failed to save magic card", err);
-                alert("Failed to save to database. Adding locally.");
-                // Fallback to local
-                newCard = {
-                    id: `ext-${Date.now()}`,
-                    name: data.caption || 'Magic Card',
-                    breed: 'External Import',
-                    type: 'dog',
-                    gender: 'male',
-                    birth_date: '2024-01-01', created_at: new Date().toISOString(), updated_at: '',
-                    image: data.link,
-                    video_url: data.mediaType === 'video' ? data.link : undefined,
-                    media_type: data.mediaType,
-                    source: 'internal',
-                    is_public: true,
-                    owner_id: user.id,
-                    owner: user.profile || { full_name: 'Me', email: '', verified_breeder: false }
-                };
-            }
-        } else {
+        if (!user) {
             alert("Guest Mode: Card will generally fade after refresh. Log in to save forever!");
+            // Fallback to local
             newCard = {
                 id: `ext-${Date.now()}`,
                 name: data.caption || 'Magic Card',
                 breed: 'External Import',
                 type: 'dog',
                 gender: 'male',
-                birth_date: '2024-01-01', created_at: new Date().toISOString(), updated_at: '',
+                birthDate: '2024-01-01', created_at: new Date().toISOString(),
                 image: data.link,
                 image_url: data.link,
                 video_url: data.mediaType === 'video' ? data.link : undefined,
@@ -314,7 +366,106 @@ const EibpoLayout: React.FC = () => {
                 source: 'internal',
                 is_public: true,
                 owner_id: 'guest',
-                owner: { full_name: 'Guest User', email: '', verified_breeder: false }
+                owner: 'Guest User'
+            };
+            // Prepend to feed
+            setAllPets(prev => [newCard, ...prev]);
+            setFilteredPets(prev => [newCard, ...prev]);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return;
+        }
+
+        // PERMISSION CHECK: Pro (Verified) or Trial ( < 1 month account age)
+        const isPro = user.profile?.verified_breeder || false;
+        const joinedDate = user.profile?.created_at ? new Date(user.profile.created_at) : new Date();
+        const trialEndDate = new Date(joinedDate);
+        trialEndDate.setMonth(trialEndDate.getMonth() + 1);
+        const isTrial = new Date() < trialEndDate;
+
+        if (!isPro && !isTrial) {
+            alert("🔒 Pro Feature Only\n\nMagic Cards are exclusive to Pro Members. Your 1-month trial has ended.\n\nPlease upgrade to continue adding Magic Cards!");
+            return;
+        }
+
+        try {
+            // Determine source roughly
+            let source = 'internal';
+            if (data.link.includes('instagram')) source = 'instagram';
+            else if (data.link.includes('youtube') || data.link.includes('youtu.be')) source = 'youtube';
+            else if (data.link.includes('pinterest')) source = 'pinterest';
+
+            const savedPet = await createPet({
+                name: data.caption || 'Magic Card',
+                type: 'dog',
+                breed: 'External Import',
+                gender: 'male',
+                birth_date: new Date().toISOString().split('T')[0],
+                image_url: data.mediaType === 'image' ? data.link : 'https://placehold.co/600x400/1a1a1a/c5a059?text=Video', // Placeholder if video
+                media_type: data.mediaType,
+                video_url: data.mediaType === 'video' ? data.link : undefined,
+                external_link: data.link,
+                source: source as any,
+                is_sponsored: false
+            });
+            newCard = convertDbPet(savedPet);
+
+            // AUTO POST TO FACEBOOK
+            if (data.autoPostFb) {
+                // Determine target link
+                const petLink = `${window.location.protocol}//${window.location.host}/pets/${savedPet.id}`; // Simple deep link using current host
+
+                triggerSocialAutomation({
+                    petId: savedPet.id,
+                    mediaUrl: data.link,
+                    description: data.caption,
+                    targetPlatform: 'facebook',
+                    linkBackUrl: petLink
+                }).then(res => {
+                    console.log("Social Post Result:", res);
+                    // Optionally notify user
+                    createUserNotification({
+                        user_id: user.id,
+                        type: 'system',
+                        title: '🚀 Facebook Post Scheduled',
+                        message: 'Your Magic Card is being posted to our Facebook Page!',
+                        payload: { action: 'view_pet', petId: savedPet.id }
+                    });
+                });
+            }
+
+            // NOTIFICATION: Nudge to complete info
+            await createUserNotification({
+                user_id: user.id,
+                type: 'system',
+                title: '✨ Magic Card Added!',
+                message: `Success! Now, please add full details for "${data.caption || 'your pet'}" to get the best breeding matches.`,
+                payload: { action: 'edit_pet', petId: savedPet.id }
+            });
+
+            // Refresh notifications
+            setTimeout(() => {
+                loadNotificationCounts();
+                loadNotificationItems();
+            }, 1000);
+
+        } catch (err) {
+            console.error("Failed to save magic card", err);
+            alert(`Failed to save to database: ${(err as Error).message || JSON.stringify(err)}. Adding locally.`);
+            // Fallback to local
+            newCard = {
+                id: `ext-${Date.now()}`,
+                name: data.caption || 'Magic Card',
+                breed: 'External Import',
+                type: 'dog',
+                gender: 'male',
+                birthDate: '2024-01-01', created_at: new Date().toISOString(),
+                image: data.link,
+                video_url: data.mediaType === 'video' ? data.link : undefined,
+                media_type: data.mediaType,
+                source: 'internal',
+                is_public: true,
+                owner_id: user.id,
+                owner: user.profile?.full_name || 'Me'
             };
         }
 
@@ -333,8 +484,15 @@ const EibpoLayout: React.FC = () => {
                 const aBoost = a.boosted_until && new Date(a.boosted_until) > now ? 1 : 0;
                 const bBoost = b.boosted_until && new Date(b.boosted_until) > now ? 1 : 0;
 
+                // 1. Boosted Status
                 if (aBoost !== bBoost) return bBoost - aBoost;
-                // Fallback to Newest First
+
+                // 2. Popularity (Likes) - assuming property exists or is derived
+                const aLikes = a.likes || 0;
+                const bLikes = b.likes || 0;
+                if (aLikes !== bLikes) return bLikes - aLikes;
+
+                // 3. Newest First
                 const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
                 const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
                 return dateB - dateA;
@@ -348,16 +506,16 @@ const EibpoLayout: React.FC = () => {
                     breed: 'Golden Retriever',
                     type: 'dog',
                     gender: 'male',
-                    birth_date: '2023-01-01', created_at: new Date().toISOString(), updated_at: '',
+                    birthDate: '2023-01-01', created_at: new Date().toISOString(),
                     image_url: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1',
                     image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1',
                     video_url: 'https://assets.mixkit.co/videos/preview/mixkit-dog-catching-a-ball-in-slow-motion-1271-large.mp4',
                     media_type: 'video',
                     location: 'Viral',
-                    health_certified: false,
-                    is_public: true,
-                    owner_id: 'mock',
-                    owner: { full_name: 'DogLovers', email: '', verified_breeder: false }
+                    healthCertified: false,
+                    isOwnerVerified: false, // Added to fix loose type
+                    available: false,
+                    owner: 'DogLovers'
                 },
                 {
                     id: 'mock-ext-1',
@@ -365,15 +523,13 @@ const EibpoLayout: React.FC = () => {
                     breed: 'Poodle',
                     type: 'dog',
                     gender: 'female',
-                    birth_date: '2023-01-01', created_at: new Date().toISOString(), updated_at: '',
+                    birthDate: '2023-01-01', created_at: new Date().toISOString(),
                     image_url: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7',
                     image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7',
                     source: 'instagram',
                     location: 'Instagram',
-                    health_certified: false,
-                    is_public: true,
-                    owner_id: 'mock',
-                    owner: { full_name: 'PetStyle', email: '', verified_breeder: false }
+                    healthCertified: false,
+                    owner: 'PetStyle'
                 },
                 {
                     id: 'mock-ext-2',
@@ -381,16 +537,14 @@ const EibpoLayout: React.FC = () => {
                     breed: 'Mixed',
                     type: 'dog',
                     gender: 'male',
-                    birth_date: '2023-01-01', created_at: new Date().toISOString(), updated_at: '',
+                    birthDate: '2023-01-01', created_at: new Date().toISOString(),
                     image_url: 'https://images.unsplash.com/photo-1541599540903-216a46ca1dc0',
                     image: 'https://images.unsplash.com/photo-1541599540903-216a46ca1dc0',
                     source: 'pinterest',
                     is_sponsored: true,
                     location: 'Pinterest',
-                    health_certified: false,
-                    is_public: true,
-                    owner_id: 'mock',
-                    owner: { full_name: 'DesignWeekly', email: '', verified_breeder: false }
+                    healthCertified: false,
+                    owner: 'DesignWeekly'
                 }
             ];
 
@@ -400,6 +554,16 @@ const EibpoLayout: React.FC = () => {
             setFilteredPets(finalPets);
         });
     }, []);
+
+    // Auto-open pet modal from shared link
+    useEffect(() => {
+        if (initialPetId && allPets.length > 0) {
+            const pet = allPets.find(p => p.id === initialPetId);
+            if (pet) {
+                handleViewPetDetails(pet);
+            }
+        }
+    }, [initialPetId, allPets]);
 
     const loadMessageThreads = useCallback(async () => {
         if (!user) {
@@ -837,14 +1001,25 @@ const EibpoLayout: React.FC = () => {
         }
     };
 
-    const handleViewPetDetails = (pet: Pet) => {
+    const handleViewPetDetails = (pet: Pet, focus?: 'comments' | 'edit' | null) => {
         setSelectedPet(pet);
+        setPetDetailsFocus(focus || null);
         setPetDetailsModalOpen(true);
     };
 
     const handleViewPedigree = (pet: Pet) => {
         setSelectedPet(pet);
-        setPedigreeModalOpen(true);
+        // If called from family tree (pedigree modal is open), close it and open pet details
+        if (pedigreeModalOpen) {
+            setPedigreeModalOpen(false);
+            // Small delay to allow modal close animation
+            setTimeout(() => {
+                setPetDetailsModalOpen(true);
+            }, 150);
+        } else {
+            // If called from pet details, open pedigree modal
+            setPedigreeModalOpen(true);
+        }
     };
 
     const handleQuickView = (product: Product) => {
@@ -1017,15 +1192,58 @@ const EibpoLayout: React.FC = () => {
             });
 
             // Add AI response with search results
+            // Add AI response with search results
+            let finalPets = searchResults;
+
+            // Use AI-found pets if available (smarter matching than dumb DB search)
+            if (response.data) {
+                if (Array.isArray(response.data)) {
+                    // Map simplified Brain pets to full Pet interface
+                    finalPets = response.data.map((p: any) => ({
+                        ...p, // Spread first to allow overrides
+                        id: p.id,
+                        name: p.name,
+                        breed: p.breed,
+                        type: 'dog', // Default to dog if missing
+                        gender: 'male', // Default valid gender
+                        birth_date: new Date().toISOString(), // Default
+                        image: p.image_url || p.imageUrl || '',
+                        location: p.location || '',
+                        owner: typeof p.owner === 'object' ? (p.owner.full_name || 'Unknown') : (p.owner || p.owner_name || 'Unknown'),
+                        owner_id: p.owner_id || (typeof p.owner === 'object' ? p.owner.id : ''),
+                        healthCertified: false,
+                        created_at: new Date().toISOString()
+                    }));
+                } else if (response.data.id) {
+                    // Single pet response
+                    const p = response.data;
+                    finalPets = [{
+                        ...p, // Spread first
+                        id: p.id,
+                        name: p.name,
+                        breed: p.breed,
+                        type: p.type || 'dog',
+                        gender: p.gender || 'male',
+                        birth_date: p.birthday || p.birth_date || new Date().toISOString(),
+                        image: p.image_url || p.imageUrl || '',
+                        location: p.location || '',
+                        owner: typeof p.owner === 'object' ? (p.owner.full_name || 'Unknown') : (p.owner || p.owner_name || 'Unknown'),
+                        owner_id: p.owner_id || p.owner?.id || '',
+                        healthCertified: p.verified || false,
+                        created_at: p.created_at || new Date().toISOString()
+                    }];
+                }
+            }
+
             setChatHistory(prev => [...prev, {
                 role: 'ai',
                 text: response.text,
-                pets: searchResults.slice(0, 12)
+                pets: finalPets.slice(0, 12)
             }]);
 
             // Update filtered pets
-            if (searchResults.length > 0) {
-                setFilteredPets(searchResults);
+            if (finalPets.length > 0) {
+                setFilteredPets(finalPets);
             }
 
         } catch (error) {
@@ -1076,13 +1294,13 @@ const EibpoLayout: React.FC = () => {
 
     // Render main content
     const renderMainContent = () => {
-        // Search Mode - ChatGPT style
+        // Search Mode - ChatGPT style (Light Theme)
         if (isSearchMode) {
             return (
                 <div className="p-6">
                     <button
                         onClick={exitSearchMode}
-                        className="mb-6 text-[#C5A059] hover:text-[#D4C4B5] flex items-center gap-2 text-sm"
+                        className="mb-8 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors"
                     >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -1090,35 +1308,38 @@ const EibpoLayout: React.FC = () => {
                         {language === 'th' ? 'กลับหน้าหลัก' : 'Back to Home'}
                     </button>
 
-                    {/* Chat History - ChatGPT Style */}
-                    <div className="max-w-4xl mx-auto space-y-6">
+                    {/* Chat History */}
+                    <div className="max-w-4xl mx-auto space-y-8">
                         {chatHistory.map((msg, i) => (
                             <div key={i}>
                                 {/* Message */}
                                 <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] px-4 py-3 rounded-2xl ${msg.role === 'user'
-                                        ? 'bg-[#C5A059] text-[#0A0A0A]'
-                                        : 'bg-[#1A1A1A] text-[#F5F5F0] border border-[#C5A059]/10'
+                                    <div className={`max-w-[80%] px-6 py-4 rounded-[24px] shadow-sm ${msg.role === 'user'
+                                        ? 'bg-[#ea4c89] text-white rounded-br-none'
+                                        : 'bg-white text-[#0d0c22] border border-gray-100 rounded-bl-none'
                                         }`}>
-                                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                                        <p className="text-sm leading-relaxed whitespace-pre-wrap font-medium">{msg.text}</p>
                                     </div>
                                 </div>
 
                                 {/* Search Results - Pinterest Grid */}
                                 {msg.role === 'ai' && msg.pets && msg.pets.length > 0 && (
-                                    <div className="mt-6">
-                                        <p className="text-xs text-[#C5A059]/60 uppercase tracking-wider mb-4">
-                                            {language === 'th' ? 'ผลการค้นหา' : 'Search Results'} ({msg.pets.length})
+                                    <div className="mt-8 pl-4 border-l-2 border-[#ea4c89]/20 ml-4">
+                                        <p className="text-xs text-[#ea4c89] font-bold uppercase tracking-wider mb-6">
+                                            {language === 'th' ? 'ผลการค้นหา' : 'Found results'} ({msg.pets.length})
                                         </p>
-                                        <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+                                        <div className="columns-2 md:columns-3 lg:columns-4 gap-6 space-y-6">
                                             {msg.pets.map(pet => (
-                                                <PetCard
+                                                <ExpandablePetCard
                                                     key={pet.id}
                                                     pet={pet}
-                                                    onClick={() => handleViewPetDetails(pet)}
+                                                    isExpanded={false} // Never expand inline
+                                                    onToggle={() => handleViewPetDetails(pet)} // Open Pinterest modal!
                                                     onPedigreeClick={() => handleViewPedigree(pet)}
                                                     onChatClick={() => handleChatWithOwner(pet)}
                                                     onLikeClick={() => handleLike(pet.id)}
+                                                    onCommentClick={() => handleViewPetDetails(pet, 'comments')}
+                                                    onEditClick={() => handleViewPetDetails(pet, 'edit')}
                                                 />
                                             ))}
                                         </div>
@@ -1129,11 +1350,11 @@ const EibpoLayout: React.FC = () => {
 
                         {isAiTyping && (
                             <div className="flex justify-start">
-                                <div className="bg-[#1A1A1A] border border-[#C5A059]/10 px-4 py-3 rounded-2xl flex items-center gap-2">
-                                    <div className="flex gap-1">
-                                        <span className="w-2 h-2 bg-[#C5A059] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                                        <span className="w-2 h-2 bg-[#C5A059] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                                        <span className="w-2 h-2 bg-[#C5A059] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                                <div className="bg-white border border-gray-100 px-6 py-4 rounded-[24px] rounded-bl-none flex items-center gap-2 shadow-sm">
+                                    <div className="flex gap-1.5">
+                                        <span className="w-2 h-2 bg-[#ea4c89] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                                        <span className="w-2 h-2 bg-[#ea4c89] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                                        <span className="w-2 h-2 bg-[#ea4c89] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                                     </div>
                                 </div>
                             </div>
@@ -1148,7 +1369,7 @@ const EibpoLayout: React.FC = () => {
             case 'products':
                 return (
                     <div className="p-6">
-                        <button onClick={() => setActiveView('home')} className="mb-6 text-[#C5A059] hover:text-[#D4C4B5] flex items-center gap-2 text-sm">
+                        <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Back
                         </button>
@@ -1159,7 +1380,7 @@ const EibpoLayout: React.FC = () => {
             case 'puppies':
                 return (
                     <div className="p-6">
-                        <button onClick={() => setActiveView('home')} className="mb-6 text-[#C5A059] hover:text-[#D4C4B5] flex items-center gap-2 text-sm">
+                        <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Back
                         </button>
@@ -1174,7 +1395,7 @@ const EibpoLayout: React.FC = () => {
             case 'breeding':
                 return (
                     <div className="p-6">
-                        <button onClick={() => setActiveView('home')} className="mb-6 text-[#C5A059] hover:text-[#D4C4B5] flex items-center gap-2 text-sm">
+                        <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Back
                         </button>
@@ -1185,7 +1406,7 @@ const EibpoLayout: React.FC = () => {
             case 'notifications':
                 return (
                     <div className="p-6">
-                        <button onClick={() => setActiveView('home')} className="mb-6 text-[#C5A059] hover:text-[#D4C4B5] flex items-center gap-2 text-sm">
+                        <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Back
                         </button>
@@ -1196,39 +1417,43 @@ const EibpoLayout: React.FC = () => {
             case 'favorites':
                 return (
                     <div className="p-6">
-                        <button onClick={() => setActiveView('home')} className="mb-6 text-[#C5A059] hover:text-[#D4C4B5] flex items-center gap-2 text-sm">
+                        <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             {language === 'th' ? 'กลับ' : 'Back'}
                         </button>
 
-                        <h1 className="font-['Playfair_Display'] text-3xl text-[#F5F5F0] mb-2">
+                        <h1 className="font-['Playfair_Display'] text-3xl text-[#0d0c22] mb-2 font-bold italic">
                             {language === 'th' ? 'รายการโปรด' : 'Favorites'}
                         </h1>
-                        <p className="text-[#B8B8B8]/60 mb-6">{favorites.length} {language === 'th' ? 'รายการ' : 'items'}</p>
+                        <p className="text-gray-500 mb-8 font-medium">{favorites.length} {language === 'th' ? 'รายการ' : 'items'}</p>
 
                         {favorites.length > 0 ? (
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                                 {allPets.filter(pet => favorites.includes(pet.id)).map(pet => (
                                     <div
                                         key={pet.id}
-                                        className="bg-[#1A1A1A] rounded-xl overflow-hidden border border-[#C5A059]/10 hover:border-[#C5A059]/30 cursor-pointer transition-all group"
+                                        className="bg-white rounded-[20px] overflow-hidden border border-gray-100 shadow-sm hover:shadow-lg cursor-pointer transition-all group"
                                         onClick={() => handleViewPetDetails(pet)}
                                     >
-                                        <div className="h-40 overflow-hidden">
-                                            <img src={pet.image} alt={pet.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                        <div className="h-48 overflow-hidden relative">
+                                            <img src={pet.image} alt={pet.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                         </div>
-                                        <div className="p-3">
-                                            <p className="font-bold text-[#F5F5F0] truncate">{pet.name}</p>
-                                            <p className="text-sm text-[#B8B8B8]/60 truncate">{pet.breed}</p>
-                                            <p className="text-xs text-[#C5A059]/60 mt-1">{pet.location}</p>
+                                        <div className="p-4">
+                                            <p className="font-bold text-[#0d0c22] truncate text-lg">{pet.name}</p>
+                                            <p className="text-sm text-gray-500 truncate font-medium">{pet.breed}</p>
+                                            <p className="text-xs text-[#ea4c89] mt-2 font-bold flex items-center gap-1">
+                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                                {pet.location}
+                                            </p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-center py-12">
-                                <span className="text-4xl mb-4 block">❤️</span>
-                                <p className="text-[#B8B8B8]/40">{language === 'th' ? 'ยังไม่มีรายการโปรด' : 'No favorites yet'}</p>
+                            <div className="text-center py-20 bg-white rounded-3xl border border-gray-100 dashed">
+                                <span className="text-5xl mb-4 block opacity-50">❤️</span>
+                                <p className="text-gray-400 font-medium">{language === 'th' ? 'ยังไม่มีรายการโปรด' : 'No favorites yet'}</p>
                             </div>
                         )}
                     </div>
@@ -1237,138 +1462,158 @@ const EibpoLayout: React.FC = () => {
             case 'myspace':
                 return (
                     <div className="p-6">
-                        <button onClick={() => setActiveView('home')} className="mb-6 text-[#C5A059] hover:text-[#D4C4B5] flex items-center gap-2 text-sm">
+                        <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             {language === 'th' ? 'กลับ' : 'Back'}
                         </button>
 
                         {/* My Space Header */}
-                        <div className="mb-8">
-                            <h1 className="font-['Playfair_Display'] text-3xl text-[#F5F5F0] mb-2">
+                        <div className="mb-10 text-center md:text-left">
+                            <h1 className="font-['Playfair_Display'] text-4xl text-[#0d0c22] mb-3 font-black italic">
                                 {language === 'th' ? 'พื้นที่ของฉัน' : 'My Space'}
                             </h1>
-                            <p className="text-[#B8B8B8]/60">
+                            <p className="text-gray-500 font-medium text-lg">
                                 {language === 'th' ? 'จัดการสัตว์เลี้ยง สินค้า และรายการโปรดของคุณ' : 'Manage your pets, products and favorites'}
                             </p>
                         </div>
 
                         {!user ? (
-                            <div className="bg-[#1A1A1A] rounded-2xl p-8 text-center border border-[#C5A059]/10">
-                                <div className="w-16 h-16 bg-[#C5A059]/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <svg className="w-8 h-8 text-[#C5A059]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            <div className="bg-white rounded-[32px] p-12 text-center border border-gray-100 shadow-xl shadow-gray-100/50 max-w-2xl mx-auto">
+                                <div className="w-20 h-20 bg-[#ea4c89]/10 rounded-2xl flex items-center justify-center mx-auto mb-6 transform rotate-3">
+                                    <svg className="w-10 h-10 text-[#ea4c89]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                     </svg>
                                 </div>
-                                <h3 className="text-xl font-bold text-[#F5F5F0] mb-2">
+                                <h3 className="text-2xl font-bold text-[#0d0c22] mb-3">
                                     {language === 'th' ? 'เข้าสู่ระบบเพื่อเข้าถึงพื้นที่ของคุณ' : 'Sign in to access your space'}
                                 </h3>
-                                <p className="text-[#B8B8B8]/60 mb-6">
+                                <p className="text-gray-500 mb-8 max-w-md mx-auto">
                                     {language === 'th' ? 'จัดการสัตว์เลี้ยง ดูรายการโปรด และอื่นๆ' : 'Manage your pets, view favorites, and more'}
                                 </p>
                                 <button
                                     onClick={() => setAuthModalOpen(true)}
-                                    className="px-8 py-3 bg-[#C5A059] text-[#0A0A0A] font-bold rounded-xl hover:bg-[#D4C4B5] transition-colors"
+                                    className="px-10 py-4 bg-[#0d0c22] text-white font-bold rounded-xl hover:bg-[#ea4c89] transition-all shadow-lg hover:shadow-[#ea4c89]/30 hover:-translate-y-1"
                                 >
                                     {language === 'th' ? 'เข้าสู่ระบบ' : 'Sign In'}
                                 </button>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                 {/* My Pets */}
-                                <div className="bg-[#1A1A1A] rounded-2xl p-6 border border-[#C5A059]/10 hover:border-[#C5A059]/30 transition-colors group cursor-pointer"
+                                <div className="bg-white rounded-[32px] p-8 border border-gray-100 hover:border-[#ea4c89]/20 shadow-sm hover:shadow-xl hover:shadow-[#ea4c89]/5 transition-all group cursor-pointer relative overflow-hidden"
                                     onClick={() => { setCurrentBreederId(user.id); setBreederProfileOpen(true); }}>
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-12 h-12 bg-[#C5A059]/10 rounded-xl flex items-center justify-center group-hover:bg-[#C5A059]/20 transition-colors">
-                                            <span className="text-2xl">🐕</span>
+                                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                                        <span className="text-9xl">🐕</span>
+                                    </div>
+                                    <div className="flex items-center gap-6 mb-6 relative z-10">
+                                        <div className="w-16 h-16 bg-[#ea4c89]/10 rounded-2xl flex items-center justify-center group-hover:bg-[#ea4c89] group-hover:text-white transition-all duration-300 shadow-sm">
+                                            <span className="text-3xl">🐕</span>
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-[#F5F5F0]">{language === 'th' ? 'สัตว์เลี้ยงของฉัน' : 'My Pets'}</h3>
-                                            <p className="text-xs text-[#B8B8B8]/60">{language === 'th' ? 'จัดการและดูสัตว์เลี้ยงที่ลงทะเบียน' : 'Manage your registered pets'}</p>
+                                            <h3 className="text-xl font-bold text-[#0d0c22] group-hover:text-[#ea4c89] transition-colors">{language === 'th' ? 'สัตว์เลี้ยงของฉัน' : 'My Pets'}</h3>
+                                            <p className="text-sm text-gray-500 font-medium">{language === 'th' ? 'จัดการและดูสัตว์เลี้ยงที่ลงทะเบียน' : 'Manage your registered pets'}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-2xl font-bold text-[#C5A059]">
+                                    <div className="flex items-center justify-between mt-8">
+                                        <span className="text-4xl font-black text-[#0d0c22] group-hover:text-[#ea4c89] transition-colors pixel-nums">
                                             {allPets.filter(p => (p as any).owner_id === user.id).length}
                                         </span>
-                                        <svg className="w-5 h-5 text-[#B8B8B8]/40 group-hover:text-[#C5A059] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
+                                        <div className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-[#ea4c89] group-hover:bg-[#ea4c89] group-hover:text-white transition-all">
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* My Puppies */}
-                                <div className="bg-[#1A1A1A] rounded-2xl p-6 border border-[#C5A059]/10 hover:border-[#C5A059]/30 transition-colors group cursor-pointer"
+                                <div className="bg-white rounded-[32px] p-8 border border-gray-100 hover:border-[#ea4c89]/20 shadow-sm hover:shadow-xl hover:shadow-[#ea4c89]/5 transition-all group cursor-pointer relative overflow-hidden"
                                     onClick={() => setActiveView('puppies')}>
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-12 h-12 bg-[#C5A059]/10 rounded-xl flex items-center justify-center group-hover:bg-[#C5A059]/20 transition-colors">
-                                            <span className="text-2xl">🐾</span>
+                                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                                        <span className="text-9xl">🐾</span>
+                                    </div>
+                                    <div className="flex items-center gap-6 mb-6 relative z-10">
+                                        <div className="w-16 h-16 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-all duration-300 shadow-sm">
+                                            <span className="text-3xl">🐾</span>
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-[#F5F5F0]">{language === 'th' ? 'ลูกหมาของฉัน' : 'My Puppies'}</h3>
-                                            <p className="text-xs text-[#B8B8B8]/60">{language === 'th' ? 'ดูลูกหมาที่กำลังจะเกิด' : 'View upcoming litters'}</p>
+                                            <h3 className="text-xl font-bold text-[#0d0c22] group-hover:text-blue-500 transition-colors">{language === 'th' ? 'ลูกหมาของฉัน' : 'My Puppies'}</h3>
+                                            <p className="text-sm text-gray-500 font-medium">{language === 'th' ? 'ดูลูกหมาที่กำลังจะเกิด' : 'View upcoming litters'}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-[#C5A059]">{language === 'th' ? 'ดูทั้งหมด' : 'View All'}</span>
-                                        <svg className="w-5 h-5 text-[#B8B8B8]/40 group-hover:text-[#C5A059] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
+                                    <div className="flex items-center justify-between mt-8">
+                                        <span className="text-sm font-bold text-gray-400 uppercase tracking-wider group-hover:text-blue-500 transition-colors">{language === 'th' ? 'ดูทั้งหมด' : 'View All'}</span>
+                                        <div className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* My Products */}
-                                <div className="bg-[#1A1A1A] rounded-2xl p-6 border border-[#C5A059]/10 hover:border-[#C5A059]/30 transition-colors group cursor-pointer"
+                                <div className="bg-white rounded-[32px] p-8 border border-gray-100 hover:border-[#ea4c89]/20 shadow-sm hover:shadow-xl hover:shadow-[#ea4c89]/5 transition-all group cursor-pointer relative overflow-hidden"
                                     onClick={() => setActiveView('products')}>
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-12 h-12 bg-[#C5A059]/10 rounded-xl flex items-center justify-center group-hover:bg-[#C5A059]/20 transition-colors">
-                                            <span className="text-2xl">🛍️</span>
+                                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
+                                        <span className="text-9xl">🛍️</span>
+                                    </div>
+                                    <div className="flex items-center gap-6 mb-6 relative z-10">
+                                        <div className="w-16 h-16 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center group-hover:bg-purple-500 group-hover:text-white transition-all duration-300 shadow-sm">
+                                            <span className="text-3xl">🛍️</span>
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-[#F5F5F0]">{language === 'th' ? 'สินค้าของฉัน' : 'My Products'}</h3>
-                                            <p className="text-xs text-[#B8B8B8]/60">{language === 'th' ? 'จัดการสินค้าที่ขาย' : 'Manage your listings'}</p>
+                                            <h3 className="text-xl font-bold text-[#0d0c22] group-hover:text-purple-500 transition-colors">{language === 'th' ? 'สินค้าของฉัน' : 'My Products'}</h3>
+                                            <p className="text-sm text-gray-500 font-medium">{language === 'th' ? 'จัดการสินค้าที่ขาย' : 'Manage your listings'}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-[#C5A059]">{language === 'th' ? 'ดูทั้งหมด' : 'View All'}</span>
-                                        <svg className="w-5 h-5 text-[#B8B8B8]/40 group-hover:text-[#C5A059] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
+                                    <div className="flex items-center justify-between mt-8">
+                                        <span className="text-sm font-bold text-gray-400 uppercase tracking-wider group-hover:text-purple-500 transition-colors">{language === 'th' ? 'ดูทั้งหมด' : 'View All'}</span>
+                                        <div className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center group-hover:border-purple-500 group-hover:bg-purple-500 group-hover:text-white transition-all">
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Favorites */}
-                                <div className="bg-[#1A1A1A] rounded-2xl p-6 border border-[#C5A059]/10 hover:border-[#C5A059]/30 transition-colors group col-span-2">
-                                    <div className="flex items-center gap-4 mb-4">
-                                        <div className="w-12 h-12 bg-[#C5A059]/10 rounded-xl flex items-center justify-center group-hover:bg-[#C5A059]/20 transition-colors">
-                                            <span className="text-2xl">❤️</span>
+                                <div className="bg-white rounded-[32px] p-8 border border-gray-100 hover:border-[#ea4c89]/20 shadow-sm hover:shadow-xl hover:shadow-[#ea4c89]/5 transition-all group col-span-1 md:col-span-2 relative overflow-hidden">
+                                    <div className="flex items-center gap-6 mb-8 relative z-10">
+                                        <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-all duration-300 shadow-sm">
+                                            <span className="text-3xl">❤️</span>
                                         </div>
                                         <div>
-                                            <h3 className="font-bold text-[#F5F5F0]">{language === 'th' ? 'รายการโปรด' : 'Favorites'}</h3>
-                                            <p className="text-xs text-[#B8B8B8]/60">{language === 'th' ? 'สัตว์เลี้ยงที่คุณถูกใจ' : 'Pets you\'ve liked'} ({favorites.length})</p>
+                                            <h3 className="text-xl font-bold text-[#0d0c22] group-hover:text-red-500 transition-colors">{language === 'th' ? 'รายการโปรด' : 'Favorites'}</h3>
+                                            <p className="text-sm text-gray-500 font-medium">{language === 'th' ? 'สัตว์เลี้ยงที่คุณถูกใจ' : 'Pets you\'ve liked'} ({favorites.length})</p>
                                         </div>
                                     </div>
 
                                     {/* Favorite Pet Cards */}
                                     {favorites.length > 0 ? (
-                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                                            {allPets.filter(pet => favorites.includes(pet.id)).slice(0, 8).map(pet => (
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                            {allPets.filter(pet => favorites.includes(pet.id)).slice(0, 4).map(pet => (
                                                 <div
                                                     key={pet.id}
-                                                    className="bg-[#0D0D0D] rounded-xl overflow-hidden border border-[#C5A059]/10 hover:border-[#C5A059]/30 cursor-pointer transition-all group"
+                                                    className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100 hover:shadow-lg cursor-pointer transition-all group/card"
                                                     onClick={() => handleViewPetDetails(pet)}
                                                 >
-                                                    <div className="h-24 overflow-hidden">
-                                                        <img src={pet.image} alt={pet.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                    <div className="h-28 overflow-hidden">
+                                                        <img src={pet.image} alt={pet.name} className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500" />
                                                     </div>
-                                                    <div className="p-2">
-                                                        <p className="text-sm font-bold text-[#F5F5F0] truncate">{pet.name}</p>
-                                                        <p className="text-[10px] text-[#B8B8B8]/60 truncate">{pet.breed}</p>
+                                                    <div className="p-3">
+                                                        <p className="text-sm font-bold text-[#0d0c22] truncate">{pet.name}</p>
+                                                        <p className="text-[10px] text-gray-500 truncate font-medium">{pet.breed}</p>
                                                     </div>
                                                 </div>
                                             ))}
+                                            {favorites.length > 4 && (
+                                                <div className="flex items-center justify-center bg-gray-50 rounded-2xl border border-gray-100 text-gray-400 font-bold hover:bg-[#ea4c89] hover:text-white transition-colors cursor-pointer" onClick={() => setActiveView('favorites')}>
+                                                    +{favorites.length - 4}
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
-                                        <p className="text-sm text-[#B8B8B8]/40 text-center py-4">{language === 'th' ? 'ยังไม่มีรายการโปรด' : 'No favorites yet'}</p>
+                                        <p className="text-sm text-gray-400 text-center py-8 italic">{language === 'th' ? 'ยังไม่มีรายการโปรด' : 'No favorites yet'}</p>
                                     )}
                                 </div>
                             </div>
@@ -1379,29 +1624,47 @@ const EibpoLayout: React.FC = () => {
             default:
                 // Home - Pinterest-style masonry grid
                 return (
-                    <div className="p-4">
-                        {/* Masonry Grid */}
-                        <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
-                            {filteredPets.map((pet) => (
-                                <PetCard
+                    <div className="p-4 md:p-6">
+                        {/* Smart Filter Bar - TEMPORARILY DISABLED
+                        <SmartFilterBar
+                            allPets={allPets}
+                            onFilterChange={(filtered) => setFilteredPets(filtered)}
+                        />
+                        */}
+
+                        {/* Masonry Grid - Click Opens Pinterest Modal */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                            {visiblePets.map((pet) => (
+                                <ExpandablePetCard
                                     key={pet.id}
                                     pet={pet}
+                                    isExpanded={false} // Never expand inline
+                                    onToggle={() => handleViewPetDetails(pet)} // Open Pinterest modal!
                                     isLiked={favorites.includes(pet.id)}
                                     isOwner={user?.id === (pet as any).owner_id}
-                                    onClick={() => handleViewPetDetails(pet)}
+                                    allPets={allPets}
+                                    onUpdateParents={async (sireId, damId) => {
+                                        // Update in database (implement this)
+                                        console.log('Updating parents:', { petId: pet.id, sireId, damId });
+                                        // TODO: Call Supabase API to update
+                                    }}
                                     onPedigreeClick={() => handleViewPedigree(pet)}
                                     onChatClick={() => handleChatWithOwner(pet)}
                                     onLikeClick={() => handleAddToFavorites(pet.id)}
-                                    onBoostClick={() => handleBoostRequest(pet)}
+                                    onCommentClick={() => handleViewPetDetails(pet, 'comments')}
+                                    onEditClick={() => handleViewPetDetails(pet, 'edit')}
                                 />
                             ))}
                         </div>
 
                         {/* Load more */}
-                        {filteredPets.length > 0 && (
-                            <div className="text-center mt-12">
-                                <button className="px-8 py-3 border border-[#C5A059]/30 text-[#C5A059] text-xs tracking-wider uppercase hover:bg-[#C5A059]/10 transition-all">
-                                    Load More
+                        {hasMore && (
+                            <div className="text-center mt-16 mb-12">
+                                <button
+                                    onClick={loadMore}
+                                    className="px-10 py-4 border-2 border-gray-100 bg-white text-[#0d0c22] text-sm font-bold tracking-widest uppercase hover:bg-[#0d0c22] hover:text-white hover:border-[#0d0c22] transition-all rounded-full shadow-sm hover:shadow-lg transform hover:-translate-y-1"
+                                >
+                                    Load More {hasMore && `(${filteredPets.length - visiblePets.length} more)`}
                                 </button>
                             </div>
                         )}
@@ -1414,18 +1677,25 @@ const EibpoLayout: React.FC = () => {
     const seenNotificationItems = notificationItems.filter(item => item.is_read);
 
     return (
-        <div className="min-h-screen bg-[#0A0A0A] text-[#F5F5F0] flex">
-            {/* ===== LEFT SIDEBAR - Pinterest Style ===== */}
-            <aside className="w-16 bg-[#0D0D0D] border-r border-[#C5A059]/10 flex flex-col items-center py-6 fixed left-0 top-0 bottom-0 z-40">
+        <div className="flex min-h-screen w-full bg-[#f9f8fd] font-sans text-[#0d0c22] overflow-hidden selection:bg-[#ea4c89]/20">
+            {/* Ambient Background - Subtle Gradient Mesh */}
+            <div className="fixed inset-0 pointer-events-none z-0 opacity-40">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-200 rounded-full blur-[120px] mix-blend-multiply filter animate-blob"></div>
+                <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] bg-pink-100 rounded-full blur-[120px] mix-blend-multiply filter animate-blob animation-delay-2000"></div>
+                <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] bg-blue-100 rounded-full blur-[120px] mix-blend-multiply filter animate-blob animation-delay-4000"></div>
+            </div>
+
+            {/* ===== LEFT SIDEBAR - Clean White ===== */}
+            <aside className="w-16 md:w-20 fixed left-0 top-0 bottom-0 z-50 flex flex-col items-center py-6 bg-white border-r border-gray-100 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
                 {/* Logo - Eibpo */}
                 <div className="mb-8">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#C5A059] to-[#8B7355] flex items-center justify-center">
-                        <span className="text-[#0A0A0A] font-bold text-lg">E</span>
+                    <div className="w-10 h-10 rounded-xl bg-[#0d0c22] flex items-center justify-center shadow-lg shadow-black/20 cursor-pointer hover:scale-105 transition-transform">
+                        <EibpoMark className="w-6 h-6 text-white" />
                     </div>
                 </div>
 
                 {/* Navigation Icons */}
-                <nav className="flex-1 flex flex-col items-center gap-2">
+                <nav className="flex-1 flex flex-col items-center gap-4">
                     <SidebarIcon
                         icon={<HomeIcon />}
                         label={language === 'th' ? 'หน้าแรก' : 'Home'}
@@ -1434,7 +1704,7 @@ const EibpoLayout: React.FC = () => {
                     />
                     {/* My Space with Dropdown */}
                     <div
-                        className="relative"
+                        className="relative group"
                         onMouseEnter={() => {
                             if (mySpaceMenuTimeoutRef.current) {
                                 clearTimeout(mySpaceMenuTimeoutRef.current);
@@ -1445,58 +1715,68 @@ const EibpoLayout: React.FC = () => {
                         onMouseLeave={() => {
                             mySpaceMenuTimeoutRef.current = setTimeout(() => {
                                 setShowMySpaceMenu(false);
-                            }, 1000);
+                            }, 300);
                         }}
                     >
                         <button
                             onClick={() => setActiveView('myspace')}
-                            className={`relative group w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${activeView === 'myspace'
-                                ? 'bg-[#C5A059]/20 text-[#C5A059]'
-                                : 'text-[#B8B8B8]/60 hover:text-[#F5F5F0] hover:bg-[#C5A059]/10'
+                            className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 ${activeView === 'myspace'
+                                ? 'bg-[#ea4c89] text-white shadow-[#ea4c89]/30 shadow-lg'
+                                : 'bg-gray-50 text-gray-400 hover:text-[#0d0c22] hover:bg-gray-100'
                                 }`}
                         >
                             <MySpaceIcon />
                         </button>
 
-                        {/* Dropdown Menu */}
-                        {showMySpaceMenu && (
-                            <div className="absolute left-full ml-2 top-0 w-48 bg-[#1A1A1A] border border-[#C5A059]/20 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-left-2 fade-in duration-200">
-                                <div className="px-3 py-2 border-b border-[#C5A059]/10">
-                                    <p className="text-[10px] text-[#C5A059]/60 uppercase tracking-wider">{language === 'th' ? 'พื้นที่ของฉัน' : 'My Space'}</p>
-                                </div>
-                                <button
-                                    onClick={() => { setActiveView('myspace'); setShowMySpaceMenu(false); if (user) { setCurrentBreederId(user.id); setBreederProfileOpen(true); } }}
-                                    className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[#C5A059]/10 transition-colors text-left"
-                                >
-                                    <span className="text-lg">🐕</span>
-                                    <span className="text-sm text-[#F5F5F0]">{language === 'th' ? 'สัตว์เลี้ยงของฉัน' : 'My Pets'}</span>
-                                </button>
-                                <button
-                                    onClick={() => { setActiveView('puppies'); setShowMySpaceMenu(false); }}
-                                    className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[#C5A059]/10 transition-colors text-left"
-                                >
-                                    <span className="text-lg">🐾</span>
-                                    <span className="text-sm text-[#F5F5F0]">{language === 'th' ? 'ลูกหมาของฉัน' : 'My Puppies'}</span>
-                                </button>
-                                <button
-                                    onClick={() => { setActiveView('products'); setShowMySpaceMenu(false); }}
-                                    className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[#C5A059]/10 transition-colors text-left"
-                                >
-                                    <span className="text-lg">🛍️</span>
-                                    <span className="text-sm text-[#F5F5F0]">{language === 'th' ? 'สินค้าของฉัน' : 'My Products'}</span>
-                                </button>
-                                <button
-                                    onClick={() => { setActiveView('favorites'); setShowMySpaceMenu(false); }}
-                                    className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-[#C5A059]/10 transition-colors text-left border-t border-[#C5A059]/10"
-                                >
-                                    <span className="text-lg">❤️</span>
-                                    <div className="flex-1 flex items-center justify-between">
-                                        <span className="text-sm text-[#F5F5F0]">{language === 'th' ? 'รายการโปรด' : 'Favorites'}</span>
-                                        <span className="text-xs text-[#C5A059] font-bold">{favorites.length}</span>
-                                    </div>
-                                </button>
+                        {/* Dropdown Menu - Light Theme */}
+                        <div className={`
+                            absolute left-14 top-0 ml-4 w-60 bg-white rounded-2xl border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.08)] p-2 z-[60] 
+                            transition-all duration-300 origin-left
+                            ${showMySpaceMenu ? 'opacity-100 translate-x-0 scale-100' : 'opacity-0 -translate-x-4 scale-95 pointer-events-none'}
+                        `}>
+                            <div className="p-3 border-b border-gray-100 mb-2 bg-gradient-to-r from-gray-50 to-white rounded-xl">
+                                <h3 className="font-['Playfair_Display'] text-lg font-bold text-[#0d0c22]">My Space</h3>
+                                <p className="text-xs text-[#6e6d7a]">Manage your kennel</p>
                             </div>
-                        )}
+                            <button
+                                onClick={() => { setActiveView('myspace'); setShowMySpaceMenu(false); if (user) { setCurrentBreederId(user.id); setBreederProfileOpen(true); } }}
+                                className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 rounded-lg transition-colors text-left group/item"
+                            >
+                                <span className="text-lg group-hover/item:scale-110 transition-transform">🐕</span>
+                                <span className="text-sm font-medium text-gray-600 group-hover/item:text-[#0d0c22]">{language === 'th' ? 'สัตว์เลี้ยงของฉัน' : 'My Pets'}</span>
+                            </button>
+                            <button
+                                onClick={() => { setActiveView('puppies'); setShowMySpaceMenu(false); }}
+                                className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 rounded-lg transition-colors text-left group/item"
+                            >
+                                <span className="text-lg group-hover/item:scale-110 transition-transform">🐾</span>
+                                <span className="text-sm font-medium text-gray-600 group-hover/item:text-[#0d0c22]">{language === 'th' ? 'ลูกหมาของฉัน' : 'My Puppies'}</span>
+                            </button>
+                            <button
+                                onClick={() => { setActiveView('products'); setShowMySpaceMenu(false); }}
+                                className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 rounded-lg transition-colors text-left group/item"
+                            >
+                                <span className="text-lg group-hover/item:scale-110 transition-transform">🛍️</span>
+                                <span className="text-sm font-medium text-gray-600 group-hover/item:text-[#0d0c22]">{language === 'th' ? 'สินค้าของฉัน' : 'My Products'}</span>
+                            </button>
+
+                            {/* Theme Switcher */}
+                            <div className="mt-2 pt-2 border-t border-gray-100">
+                                <p className="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Theme</p>
+                                <ThemeSwitcher />
+                            </div>
+
+                            <button
+                                onClick={() => { setActiveView('favorites'); setShowMySpaceMenu(false); }}
+                                className="w-full px-3 py-2.5 flex items-center gap-3 hover:bg-gray-50 rounded-lg transition-colors text-left group/item"
+                            >
+                                <span className="text-lg group-hover/item:scale-110 transition-transform">❤️</span>
+                                <div className="flex-1 flex items-center justify-between">
+                                    <span className="text-sm font-medium text-gray-600 group-hover/item:text-[#0d0c22]">{language === 'th' ? 'รายการโปรด' : 'Favorites'}</span>
+                                    <span className="text-xs bg-[#ea4c89] text-white px-1.5 py-0.5 rounded-full font-bold">{favorites.length}</span>
+                                </div>
+                            </button>
+                        </div>
                     </div>
                     <SidebarIcon
                         icon={<RegisterIcon />}
@@ -1517,7 +1797,7 @@ const EibpoLayout: React.FC = () => {
                         onClick={() => setActiveView('products')}
                     />
 
-                    <div className="h-px w-8 bg-[#C5A059]/20 my-4" />
+                    <div className="h-px w-8 bg-gray-200 my-4" />
 
                     <SidebarIcon
                         icon={<NotificationIcon count={unreadNotifications} />}
@@ -1531,10 +1811,10 @@ const EibpoLayout: React.FC = () => {
                         active={messagePanelOpen}
                         onClick={handleMessageShortcut}
                     />
-                </nav>
+                </nav >
 
                 {/* Bottom icons */}
-                <div className="mt-auto flex flex-col items-center gap-2">
+                < div className="mt-auto flex flex-col items-center gap-2" >
                     <SidebarIcon
                         icon={<CartIconSidebar count={cartCount} />}
                         label={language === 'th' ? 'ตะกร้า' : 'Cart'}
@@ -1572,163 +1852,127 @@ const EibpoLayout: React.FC = () => {
                         label={language === 'th' ? 'ตั้งค่า' : 'Settings'}
                         onClick={() => { }}
                     />
-                </div>
-            </aside>
+                </div >
+            </aside >
 
-            {/* ===== MAIN CONTENT ===== */}
-            <main className="flex-1 ml-16 flex flex-col min-h-screen">
-                {/* Top Bar with Filter Menu - Fixed */}
-                <header className="sticky top-0 z-30 bg-[#0A0A0A]">
-                    {/* Logo Row */}
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-[#C5A059]/10">
-                        <h1 className="font-['Playfair_Display'] text-xl text-[#F5F5F0]">
-                            Eib<span className="text-[#C5A059]">po</span>
-                        </h1>
+            {/* ===== MAIN CONTENT (Fades out when searching) ===== */}
+            < div className={`transition-all duration-700 ease-in-out transform ${isImmersiveSearch ? 'opacity-0 scale-95 filter blur-lg pointer-events-none' : 'opacity-100 scale-100'}`}>
+                <main className="flex-1 ml-16 md:ml-20 flex flex-col min-h-screen bg-[#F9F8FD]">
+                    {/* Top Sticky Header - White */}
+                    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-100 transition-all duration-300">
+                        <div className="max-w-[1800px] mx-auto px-6 py-4">
+                            <div className="flex items-center justify-between gap-4">
+                                {/* Title/Spacer */}
+                                <div className="flex-1">
+                                    <h1 className="font-['Playfair_Display'] text-2xl text-[#0d0c22] font-black italic tracking-tight hidden md:block">
+                                        {activeView === 'home' ? 'Discover' :
+                                            activeView === 'myspace' ? 'My Space' :
+                                                activeView === 'favorites' ? 'Favorites' :
+                                                    activeView === 'products' ? 'Marketplace' : 'Eibpo'}
+                                    </h1>
+                                </div>
 
-                        <div className="flex items-center gap-4 mr-8">
-                            <select
-                                value={language}
-                                onChange={(e) => setLanguage(e.target.value as any)}
-                                className="bg-transparent text-xs tracking-wider text-[#B8B8B8] border-none focus:ring-0 cursor-pointer hover:text-[#C5A059]"
-                            >
-                                <option value="en" className="bg-[#1A1A1A]">EN</option>
-                                <option value="th" className="bg-[#1A1A1A]">TH</option>
-                            </select>
+                                {/* Header Actions */}
+                                <div className="flex items-center gap-2">
+                                    {/* Admin Button - Only for admins */}
+                                    {user && (user.email === 'geowahaha@gmail.com' || user.email === 'truesaveus@hotmail.com' || user.profile?.is_admin) && (
+                                        <button
+                                            onClick={() => setAdminPanelOpen(true)}
+                                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 hover:bg-gray-800 transition-colors"
+                                        >
+                                            <svg className="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.350 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                            <span className="text-yellow-400 font-bold text-sm">{language === 'th' ? 'แอดมิน' : 'Admin'}</span>
+                                        </button>
+                                    )}
 
-                            {user?.profile?.role === 'admin' && (
+                                    {/* Language Selector */}
+                                    <select
+                                        value={language}
+                                        onChange={(e) => setLanguage(e.target.value as any)}
+                                        className="bg-gray-50 text-[#0d0c22] font-bold text-xs rounded-full px-3 py-2 border border-gray-200 focus:ring-0 cursor-pointer hover:border-gray-300 transition-colors"
+                                    >
+                                        <option value="en">EN</option>
+                                        <option value="th">TH</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Filter Tags - Clean Dribbble Pills */}
+                            <div className="flex items-center gap-3 mt-4 overflow-x-auto no-scrollbar pb-2">
                                 <button
-                                    onClick={() => setAdminPanelOpen(true)}
-                                    className="px-3 py-1.5 text-[#C5A059] text-xs tracking-wider border border-[#C5A059]/30 hover:bg-[#C5A059]/10 transition-colors"
+                                    onClick={() => setActiveView('home')}
+                                    className={`px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all shadow-sm ${activeView === 'home' ? 'bg-[#0d0c22] text-white' : 'bg-white text-gray-500 hover:text-[#0d0c22] hover:shadow-md'}`}
                                 >
-                                    Admin
+                                    All
                                 </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Filter Menu Row - Fixed below Eibpo */}
-                    {activeView === 'home' && !isSearchMode && (
-                        <div className="px-6 py-3 bg-[#0A0A0A] border-b border-[#C5A059]/10">
-                            <div className="flex items-center gap-4 flex-wrap text-xs tracking-wider uppercase">
-                                <button className="text-[#C5A059] font-semibold hover:text-[#F5F5F0] transition-colors">All</button>
-                                {['Dogs', 'Cats', 'Horses', 'Cattle', 'Exotic', 'Males', 'Females', 'Verified', 'With Pedigree'].map(filter => (
-                                    <button key={filter} className="text-[#B8B8B8]/70 hover:text-[#C5A059] transition-colors">
+                                {['Dogs', 'Cats', 'Male', 'Female', 'Verified', 'Pedigree'].map(filter => (
+                                    <button key={filter} className="px-5 py-2 rounded-full text-sm font-bold bg-white text-gray-500 border border-transparent shadow-sm hover:shadow-md hover:text-[#ea4c89] whitespace-nowrap transition-all">
                                         {filter}
                                     </button>
                                 ))}
-                                <button
-                                    onClick={() => executeSmartSearch(language === 'th' ? 'ปรึกษาหมอ AI' : 'Vet AI consultation')}
-                                    className="text-[#D4A574] hover:text-[#F5F5F0] transition-colors font-medium"
-                                >
-                                    {language === 'th' ? 'ปรึกษาหมอ AI' : 'Vet AI'}
-                                </button>
+                                {/* Smart Suggestion Chips - Pink Accent */}
+                                {getSearchSuggestions().filter(s => s.type === 'popular').map(s => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => {
+                                            if (s.action) s.action();
+                                        }}
+                                        className="px-5 py-2 rounded-full text-sm font-bold bg-white text-gray-500 hover:text-[#ea4c89] hover:shadow-md border border-transparent whitespace-nowrap transition-all flex items-center gap-2"
+                                    >
+                                        <span className="text-xs">🔥</span> {s.text}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                    )}
-                </header>
+                    </header>
 
-                {/* Scrollable Content */}
-                <div ref={chatContainerRef} className="flex-1 overflow-y-auto pb-32">
-                    {renderMainContent()}
-                </div>
+                    {/* Scrollable Content */}
+                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto w-full px-4 md:px-8 py-6 pb-32">
+                        <div className="max-w-[1800px] mx-auto">
+                            {renderMainContent()}
+                        </div>
+                    </div>
+                </main>
+            </div >
 
-                {/* ===== BOTTOM CHAT BAR - ChatGPT Style with Auto-Hide ===== */}
-                {/* Hover trigger area - invisible zone at bottom */}
-                <div
-                    className="fixed bottom-0 left-16 right-0 h-20 z-30"
-                    onMouseEnter={() => setShowBottomBar(true)}
-                />
+            {/* Fixed Bottom Smart Bar (Moved outside main wrapper to fix 'fixed' positioning) */}
+            {
+                !isImmersiveSearch && (
+                    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-2xl z-40 animate-slide-up flex flex-col justify-end">
 
-                <div
-                    className={`fixed left-16 right-0 p-4 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A] to-transparent transition-all duration-500 ease-out z-40 ${(showBottomBar || isSearchMode) ? 'bottom-0 opacity-100' : '-bottom-24 opacity-0'
-                        }`}
-                    onMouseEnter={() => setShowBottomBar(true)}
-                    onMouseLeave={() => !isSearchMode && setTimeout(() => setShowBottomBar(false), 2000)}
-                >
-                    <div
-                        className="max-w-3xl mx-auto relative"
-                        onMouseEnter={() => setShowSearchSuggestions(true)}
-                        onMouseLeave={() => setTimeout(() => setShowSearchSuggestions(false), 1000)}
-                    >
-                        {/* Search Suggestions Popup */}
+                        {/* Smart Suggestions Popup - White Theme */}
                         {showSearchSuggestions && (
-                            <div className="absolute bottom-full mb-2 left-0 right-0 bg-[#1A1A1A] border border-[#C5A059]/20 rounded-2xl overflow-hidden shadow-2xl max-h-[70vh] overflow-y-auto animate-fade-in">
-                                {/* Recent Searches */}
+                            <div className="w-full bg-white border border-gray-100 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.12)] mb-3 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
                                 <div className="p-4">
-                                    <p className="text-xs text-[#C5A059]/60 uppercase tracking-wider mb-3">
-                                        {language === 'th' ? 'ค้นหาล่าสุด' : 'Recent Searches'}
-                                    </p>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {getSearchSuggestions().filter(s => s.type === 'recent').map(s => (
+                                    <div className="flex items-center justify-between mb-3">
+                                        <p className="text-xs text-[#ea4c89] font-bold ml-1 uppercase tracking-wider">
+                                            {language === 'th' ? 'แนะนำสำหรับคุณ' : 'Suggested for you'}
+                                        </p>
+                                        <button
+                                            onClick={() => setShowSearchSuggestions(false)}
+                                            className="text-gray-300 hover:text-gray-500"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {getSearchSuggestions().slice(0, 4).map(s => (
                                             <button
                                                 key={s.id}
-                                                onClick={() => {
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
                                                     setShowSearchSuggestions(false);
                                                     if (s.action) s.action();
                                                 }}
-                                                className="flex items-center gap-3 p-2 hover:bg-[#C5A059]/10 rounded-lg transition-colors text-left"
+                                                className="flex items-center gap-3 px-3 py-2 bg-gray-50 border border-gray-100 hover:border-[#ea4c89]/50 hover:bg-white rounded-xl transition-all group text-left"
                                             >
-                                                {s.image && <img src={s.image} className="w-10 h-10 rounded-lg object-cover" alt="" />}
-                                                <span className="text-sm text-[#F5F5F0]">{s.text}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Pets For You */}
-                                <div className="p-4 border-t border-[#C5A059]/10">
-                                    <p className="text-xs text-[#C5A059]/60 uppercase tracking-wider mb-3">
-                                        🐾 {language === 'th' ? 'แนะนำสำหรับคุณ' : 'Pets For You'}
-                                    </p>
-                                    <div className="grid grid-cols-4 gap-2 mb-3">
-                                        {allPets.slice(0, 4).map(pet => (
-                                            <button
-                                                key={pet.id}
-                                                onClick={() => {
-                                                    setShowSearchSuggestions(false);
-                                                    handleViewPetDetails(pet);
-                                                }}
-                                                className="flex flex-col items-center p-2 hover:bg-[#C5A059]/10 rounded-lg transition-colors text-center group"
-                                            >
-                                                <img src={pet.image} className="w-10 h-10 rounded-full object-cover mb-1 group-hover:ring-2 ring-[#C5A059] transition-all" alt="" />
-                                                <span className="text-[10px] text-[#F5F5F0] truncate w-full">{pet.name}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => { setShowSearchSuggestions(false); setActiveView('puppies'); }}
-                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-[#C5A059]/10 hover:bg-[#C5A059]/20 rounded-full transition-colors"
-                                        >
-                                            <span>🐶</span>
-                                            <span className="text-xs text-[#F5F5F0]">{language === 'th' ? 'ลูกหมาเร็วๆนี้' : 'Coming Soon'}</span>
-                                        </button>
-                                        <button
-                                            onClick={() => { setShowSearchSuggestions(false); setActiveView('breeding'); }}
-                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-pink-500/10 hover:bg-pink-500/20 rounded-full transition-colors"
-                                        >
-                                            <span>💕</span>
-                                            <span className="text-xs text-pink-400">{language === 'th' ? 'หาคู่ผสม' : 'Breeding'}</span>
-                                        </button>
-                                    </div>
-                                </div>
-
-                                {/* Popular Searches */}
-                                <div className="p-4 border-t border-[#C5A059]/10">
-                                    <p className="text-xs text-[#C5A059]/60 uppercase tracking-wider mb-3">
-                                        🔥 {language === 'th' ? 'ยอดนิยม' : 'Popular'}
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {getSearchSuggestions().filter(s => s.type === 'popular').map(s => (
-                                            <button
-                                                key={s.id}
-                                                onClick={() => {
-                                                    setShowSearchSuggestions(false);
-                                                    if (s.action) s.action();
-                                                }}
-                                                className="flex items-center gap-2 px-3 py-2 bg-[#C5A059]/10 hover:bg-[#C5A059]/20 rounded-full transition-colors"
-                                            >
-                                                <span className="text-sm text-[#F5F5F0]">{s.text}</span>
+                                                <span className="text-lg bg-white w-8 h-8 flex items-center justify-center rounded-lg shadow-sm group-hover:shadow group-hover:bg-[#ea4c89]/10 transition-colors">
+                                                    {s.type === 'recent' ? '🕒' : s.type === 'popular' ? '🔥' : '🐕'}
+                                                </span>
+                                                <span className="text-sm font-medium text-gray-600 group-hover:text-[#0d0c22]">{s.text}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -1736,50 +1980,232 @@ const EibpoLayout: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Chat Input */}
-                        <form onSubmit={handleSearch} className="relative group">
-                            <div className="flex items-center bg-[#1A1A1A] rounded-full px-4 transition-all duration-300 border border-white/5 focus-within:border-white/10 focus-within:shadow-[0_0_20px_rgba(197,160,89,0.1)] focus-within:bg-[#1E1E1E]">
-                                <button
-                                    type="button"
-                                    onClick={() => setAddCardModalOpen(true)}
-                                    className="p-2 text-[#C5A059]/40 hover:text-[#C5A059] transition-colors"
-                                    title="Add Magic Card"
-                                >
-                                    <span className="text-lg">✨</span>
-                                </button>
+                        {/* Search Input - Glass White */}
+                        <div className="w-full bg-white/95 backdrop-blur-xl border border-white/50 rounded-full p-2 flex items-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] ring-1 ring-black/5">
+                            {/* Magic Card Button - Pink Gradient */}
+                            <button
+                                onClick={() => setAddCardModalOpen(true)}
+                                className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#ea4c89] to-[#ff8fab] flex items-center justify-center text-white shadow-lg shadow-[#ea4c89]/30 hover:scale-110 transition-transform flex-shrink-0"
+                                title="Create Magic Card"
+                            >
+                                <span className="text-lg">✨</span>
+                            </button>
 
+                            {/* Smart Search Input */}
+                            <div className="flex-1 mx-3 relative">
                                 <input
-                                    ref={searchInputRef}
                                     type="text"
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    onFocus={() => setShowSearchSuggestions(false)}
-                                    onBlur={() => { }}
-                                    placeholder={language === 'th' ? 'ค้นหาหรือถาม AI อะไรก็ได้...' : 'Search or ask AI anything...'}
-                                    className="flex-1 bg-transparent py-4 px-3 text-[#F5F5F0] placeholder:text-[#B8B8B8]/30 outline-none text-sm caret-[#C5A059] focus-visible:!shadow-none"
+                                    onFocus={() => setIsImmersiveSearch(true)}
+                                    onChange={(e) => {
+                                        setSearchQuery(e.target.value);
+                                        if (e.target.value.trim().length > 0) setShowSearchSuggestions(true);
+                                    }}
+                                    onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleSearch(e as any);
+                                            setShowSearchSuggestions(false);
+                                        }
+                                    }}
+                                    placeholder={language === 'th' ? 'ค้นหาหรือถาม AI...' : 'Search or ask AI...'}
+                                    className="w-full bg-transparent border-none text-[#0d0c22] placeholder:text-gray-400 focus:ring-0 text-sm font-medium"
                                 />
+                                {isAiTyping && (
+                                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
+                                        <div className="flex gap-1">
+                                            <div className="w-1.5 h-1.5 bg-[#ea4c89] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                            <div className="w-1.5 h-1.5 bg-[#ea4c89] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                            <div className="w-1.5 h-1.5 bg-[#ea4c89] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
 
+                            {/* Action Buttons */}
+                            <div className="flex items-center gap-1">
                                 <button
-                                    type="submit"
-                                    disabled={!searchQuery.trim()}
-                                    className={`p-2 rounded-full transition-all ${searchQuery.trim()
-                                        ? 'bg-[#C5A059] text-[#0A0A0A] hover:bg-[#D4C4B5]'
-                                        : 'text-[#C5A059]/30'
-                                        }`}
+                                    onClick={() => {
+                                        if (searchQuery.trim()) handleSearch({ preventDefault: () => { } } as any);
+                                    }}
+                                    className="p-2 rounded-full hover:bg-gray-100 text-[#ea4c89] transition-colors"
+                                >
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                </button>
+                                <div className="w-px h-6 bg-gray-100 mx-1"></div>
+                                <button
+                                    onClick={() => setActiveView('favorites')}
+                                    className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-[#ea4c89] transition-colors relative"
+                                    title={language === 'th' ? 'รายการโปรด' : 'Favorites'}
                                 >
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                                     </svg>
                                 </button>
                             </div>
-                        </form>
-
-                        <p className="text-center text-[10px] text-[#B8B8B8]/40 mt-2">
-                            Eibpo AI • Powered by Gemini
-                        </p>
+                        </div>
                     </div>
-                </div>
-            </main>
+                )
+            }
+
+            {/* ===== IMMERSIVE SEARCH OVERLAY (The 'Thanos' New World) ===== */}
+            {
+                immersiveAnimation !== 'hidden' && (
+                    <div className={`fixed inset-0 z-[60] bg-[#FDFBF7] transition-all duration-700 ease-in-out flex flex-col ${immersiveAnimation === 'active' ? 'opacity-100' : 'opacity-0'}`}>
+                        {/* Header for Immersive Mode */}
+                        <div className="flex items-center justify-between px-8 py-6">
+                            <h1 className="font-['Playfair_Display'] text-3xl text-[#333] font-black tracking-tight flex items-center gap-2">
+                                Eibpo <span className="bg-[#EA4C89] text-white text-[10px] px-2 py-1 rounded-full tracking-widest font-sans font-bold uppercase shadow-md transform -rotate-6">Design</span>
+                            </h1>
+                            <button
+                                onClick={() => {
+                                    setIsImmersiveSearch(false);
+                                    setSearchQuery('');
+                                }}
+                                className="w-10 h-10 rounded-full bg-[#EEE] hover:bg-[#DDD] flex items-center justify-center text-[#555] transition-colors"
+                            >
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+
+                        {/* Content Container */}
+                        <div className="flex-1 overflow-y-auto px-4 md:px-20 pb-40">
+                            <div className="max-w-7xl mx-auto w-full">
+
+                                {/* 1. Hero Search Section */}
+                                <div className="text-center py-16 md:py-24">
+                                    <h2 className="text-4xl md:text-6xl font-['Playfair_Display'] font-black text-[#0D0C22] mb-6 leading-tight">
+                                        Discover the World's<br />
+                                        <span className="text-[#EA4C89]">Top Breeding Lines</span>
+                                    </h2>
+                                    <p className="text-lg md:text-xl text-[#6e6d7a] mb-12 max-w-2xl mx-auto leading-relaxed">
+                                        Explore work from the most talented breeders and accomplished kennels ready to take on your next improvement.
+                                    </p>
+
+                                    <div className="max-w-2xl mx-auto relative z-20 group">
+                                        {/* Soft Glow */}
+                                        <div className="absolute inset-0 bg-pink-200 blur-3xl opacity-20 rounded-full transform translate-y-4 scale-90 group-hover:opacity-30 transition-opacity duration-500"></div>
+
+                                        {/* Magic Bar Container */}
+                                        <div className="bg-white rounded-full shadow-[0_8px_40px_rgba(0,0,0,0.08)] p-2 pr-6 flex items-center gap-3 border border-pink-50/50 backdrop-blur-xl transition-all duration-300 hover:shadow-[0_12px_50px_rgba(234,76,137,0.12)] hover:-translate-y-1">
+
+                                            {/* Magic Button (Left) */}
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#ea4c89] to-[#ff8da1] flex items-center justify-center text-white shadow-lg shadow-pink-500/30 flex-shrink-0 cursor-pointer animate-pulse-slow group/btn hover:scale-105 transition-transform">
+                                                <svg className="w-6 h-6 group-hover/btn:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                                                </svg>
+                                            </div>
+
+                                            {/* Input */}
+                                            <input
+                                                autoFocus
+                                                type="text"
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        handleSearch(e);
+                                                        setIsImmersiveSearch(false);
+                                                    }
+                                                }}
+                                                placeholder={language === 'th' ? "ค้นหาสายพันธุ์ หรือถาม AI..." : "Search or ask AI..."}
+                                                className="flex-1 bg-transparent border-none outline-none text-[#0d0c22] placeholder-gray-400 font-medium text-lg h-12 px-2"
+                                            />
+
+                                            {/* Right Icons */}
+                                            <div className="flex items-center gap-5 pl-5 border-l border-gray-100">
+                                                <button
+                                                    onClick={(e) => { handleSearch(e as any); setIsImmersiveSearch(false); }}
+                                                    className="text-[#ea4c89] hover:scale-110 transition-transform"
+                                                    title="Search"
+                                                >
+                                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                    </svg>
+                                                </button>
+                                                <button
+                                                    className="text-gray-300 hover:text-red-500 transition-colors"
+                                                    title="Favorites"
+                                                    onClick={() => setActiveView('favorites')}
+                                                >
+                                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Popular Tags */}
+                                    <div className="flex flex-wrap justify-center gap-3 mt-8">
+                                        <span className="text-[#9e9ea7] font-medium mr-2">Popular:</span>
+                                        {['Thai Ridgeback', 'Pomeranian', 'French Bulldog', 'Golden Retriever'].map(tag => (
+                                            <button key={tag} onClick={() => { setSearchQuery(tag); setIsImmersiveSearch(false); executeSmartSearch(tag); }} className="border border-gray-200 bg-white text-[#6e6d7a] px-4 py-1.5 rounded-full text-sm font-medium hover:border-[#EA4C89] hover:text-[#EA4C89] transition-colors shadow-sm">
+                                                {tag}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 2. Video Timeline Inspiration (Ken Burns simulated) */}
+                                <div className="mb-20">
+                                    <div className="flex items-center justify-between mb-8">
+                                        <h3 className="text-2xl font-bold text-[#0D0C22]">Inspiration for you</h3>
+                                        <div className="flex gap-2">
+                                            <button className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></button>
+                                            <button className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                                        {/* Generate 4 mock video cards from existing pets */}
+                                        {allPets.slice(0, 4).map((pet, i) => (
+                                            <div key={pet.id} className="group relative">
+                                                <div className="aspect-[3/4] rounded-[32px] overflow-hidden bg-gray-100 relative shadow-md group-hover:shadow-2xl transition-all duration-500 translate-y-0 group-hover:-translate-y-2">
+                                                    {/* Image with Ken Burns Effect on Hover */}
+                                                    <img
+                                                        src={pet.image}
+                                                        alt={pet.name}
+                                                        className="w-full h-full object-cover transform scale-100 group-hover:scale-110 transition-transform duration-kenburns ease-out"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60 opacity-60 group-hover:opacity-80 transition-opacity"></div>
+
+                                                    {/* Play Button Mock */}
+                                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                                        <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/50">
+                                                            <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Meta Info */}
+                                                    <div className="absolute bottom-6 left-6 right-6 text-white transform translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <div className="w-6 h-6 rounded-full bg-white/20 overflow-hidden">
+                                                                <div className="w-full h-full bg-gradient-to-tr from-pink-500 to-orange-400"></div>
+                                                            </div>
+                                                            <span className="text-sm font-medium text-white/90">{pet.owner}</span>
+                                                        </div>
+                                                        <p className="font-bold text-lg leading-tight mb-1">{pet.name}</p>
+                                                        <p className="text-xs text-white/70 line-clamp-1">{pet.breed}</p>
+                                                    </div>
+
+                                                    {/* Badge */}
+                                                    <div className="absolute top-4 right-4 bg-black/40 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold text-white border border-white/10 uppercase tracking-widest">
+                                                        Timeline
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+
 
             {/* ===== MESSAGE / NOTIFICATION POPUPS ===== */}
 
@@ -1817,160 +2243,18 @@ const EibpoLayout: React.FC = () => {
             </Dialog>
 
             {/* ===== MESSAGE / NOTIFICATION POPUPS ===== */}
-            {messagePanelOpen && (
-                <div className="fixed inset-0 z-[70]" onClick={closePanels}>
-                    <div
-                        className="absolute left-20 top-6 bottom-6 w-[360px] bg-[#111111] border border-[#C5A059]/15 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="p-4 border-b border-[#C5A059]/15 flex items-center justify-between">
-                            <div>
-                                <p className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60">Messages</p>
-                                <h3 className="text-lg font-['Playfair_Display'] text-[#F5F5F0]">Inbox</h3>
-                            </div>
-                            <button
-                                onClick={closePanels}
-                                className="w-8 h-8 rounded-full border border-[#C5A059]/20 text-[#B8B8B8] hover:text-[#F5F5F0] hover:border-[#C5A059]/40 transition-colors"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        {!user ? (
-                            <div className="p-6 text-center">
-                                <p className="text-sm text-[#B8B8B8]/70 mb-4">
-                                    {language === 'th' ? 'เข้าสู่ระบบเพื่อดูข้อความ' : 'Sign in to view messages.'}
-                                </p>
-                                <button
-                                    onClick={() => { closePanels(); setAuthModalOpen(true); }}
-                                    className="px-6 py-2 rounded-full bg-[#C5A059] text-[#0A0A0A] text-xs font-bold hover:bg-[#D4C4B5] transition-colors"
-                                >
-                                    {language === 'th' ? 'เข้าสู่ระบบ' : 'Sign In'}
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex-1 overflow-y-auto">
-                                <div className="px-4 pt-4">
-                                    <button
-                                        onClick={() => { closePanels(); setActiveView('home'); }}
-                                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A0A0A] border border-[#C5A059]/20 text-[#F5F5F0] hover:border-[#C5A059]/50 transition-colors"
-                                    >
-                                        <span className="w-9 h-9 rounded-full bg-[#C5A059] text-[#0A0A0A] flex items-center justify-center text-lg font-bold">＋</span>
-                                        <span className="text-sm font-semibold">{language === 'th' ? 'ส่งข้อความใหม่' : 'New message'}</span>
-                                    </button>
+            {
+                messagePanelOpen && (
+                    <div className="fixed inset-0 z-[70]" onClick={closePanels}>
+                        <div
+                            className="absolute left-20 top-6 bottom-6 w-[360px] bg-[#111111] border border-[#C5A059]/15 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-4 border-b border-[#C5A059]/15 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60">Messages</p>
+                                    <h3 className="text-lg font-['Playfair_Display'] text-[#F5F5F0]">Inbox</h3>
                                 </div>
-
-                                <div className="px-4 pt-5 pb-2">
-                                    <p className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60">
-                                        {language === 'th' ? 'ข้อความล่าสุด' : 'Messages'}
-                                    </p>
-                                </div>
-
-                                {messageLoading ? (
-                                    <div className="px-4 py-6 text-center text-xs text-[#B8B8B8]/60">Loading...</div>
-                                ) : messageError ? (
-                                    <div className="px-4 py-6 text-center text-xs text-red-400">{messageError}</div>
-                                ) : messageThreads.length === 0 ? (
-                                    <div className="px-4 py-6 text-center text-xs text-[#B8B8B8]/60">
-                                        {language === 'th' ? 'ยังไม่มีข้อความ' : 'No messages yet.'}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-1 px-2">
-                                        {(expandedMessages ? messageThreads : messageThreads.slice(0, 4)).map((thread) => (
-                                            <button
-                                                key={thread.roomId}
-                                                onClick={() => handleThreadOpen(thread)}
-                                                className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[#1A1A1A] transition-colors"
-                                            >
-                                                <div className="w-10 h-10 rounded-full bg-[#C5A059]/10 overflow-hidden flex items-center justify-center text-sm font-bold text-[#C5A059]">
-                                                    {thread.avatarUrl ? (
-                                                        <img src={thread.avatarUrl} alt={thread.targetUserName} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        thread.targetUserName.charAt(0).toUpperCase()
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 min-w-0 text-left">
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <p className="text-sm font-semibold text-[#F5F5F0] truncate">{thread.targetUserName}</p>
-                                                        <span className="text-[10px] text-[#B8B8B8]/60">{formatRelativeTime(thread.lastMessageAt)}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        {thread.unreadCount > 0 && (
-                                                            <span className="text-[9px] uppercase tracking-wide bg-[#C5A059] text-[#0A0A0A] px-2 py-0.5 rounded-full">
-                                                                New
-                                                            </span>
-                                                        )}
-                                                        <p className="text-xs text-[#B8B8B8]/70 truncate">{formatMessagePreview(thread)}</p>
-                                                    </div>
-                                                </div>
-                                                {thread.unreadCount > 0 && (
-                                                    <span className="ml-2 w-5 h-5 rounded-full bg-[#C5A059] text-[#0A0A0A] text-[10px] font-bold flex items-center justify-center">
-                                                        {thread.unreadCount > 9 ? '9+' : thread.unreadCount}
-                                                    </span>
-                                                )}
-                                            </button>
-                                        ))}
-                                        {messageThreads.length > 4 && (
-                                            <button
-                                                onClick={() => setExpandedMessages(!expandedMessages)}
-                                                className="w-full py-2 text-xs text-[#C5A059] hover:text-[#D4C4B5] transition-colors flex items-center justify-center gap-1 font-medium mt-2"
-                                            >
-                                                {expandedMessages ? (
-                                                    <>{language === 'th' ? 'แสดงน้อยลง' : 'Show Less'} <span className="transform rotate-180">▼</span></>
-                                                ) : (
-                                                    <>{language === 'th' ? 'ดูข้อความทั้งหมด' : 'Show All Messages'} ({messageThreads.length - 4}) ▼</>
-                                                )}
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div className="px-4 pt-6 pb-6">
-                                    <p className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60 mb-3">
-                                        {language === 'th' ? 'แนะนำ' : 'Suggested'}
-                                    </p>
-                                    <div className="space-y-2">
-                                        {messageSuggestions.map((suggestion) => (
-                                            <button
-                                                key={suggestion.id}
-                                                onClick={suggestion.action}
-                                                className="w-full text-left px-4 py-3 rounded-xl bg-[#0A0A0A] border border-[#C5A059]/15 hover:border-[#C5A059]/40 transition-colors"
-                                            >
-                                                <p className="text-sm font-semibold text-[#F5F5F0]">{suggestion.title}</p>
-                                                <p className="text-xs text-[#B8B8B8]/60 mt-1">{suggestion.description}</p>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {notificationPanelOpen && (
-                <div className="fixed inset-0 z-[70]" onClick={closePanels}>
-                    <div
-                        className="absolute left-20 top-6 bottom-6 w-[360px] bg-[#111111] border border-[#C5A059]/15 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="p-4 border-b border-[#C5A059]/15 flex items-center justify-between">
-                            <div>
-                                <p className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60">Updates</p>
-                                <h3 className="text-lg font-['Playfair_Display'] text-[#F5F5F0]">Notifications</h3>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {notificationItems.some(item => !item.is_read) && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            markAllNotificationsRead();
-                                        }}
-                                        className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059] hover:text-[#D4C4B5]"
-                                    >
-                                        Mark all
-                                    </button>
-                                )}
                                 <button
                                     onClick={closePanels}
                                     className="w-8 h-8 rounded-full border border-[#C5A059]/20 text-[#B8B8B8] hover:text-[#F5F5F0] hover:border-[#C5A059]/40 transition-colors"
@@ -1978,169 +2262,325 @@ const EibpoLayout: React.FC = () => {
                                     ✕
                                 </button>
                             </div>
+
+                            {!user ? (
+                                <div className="p-6 text-center">
+                                    <p className="text-sm text-[#B8B8B8]/70 mb-4">
+                                        {language === 'th' ? 'เข้าสู่ระบบเพื่อดูข้อความ' : 'Sign in to view messages.'}
+                                    </p>
+                                    <button
+                                        onClick={() => { closePanels(); setAuthModalOpen(true); }}
+                                        className="px-6 py-2 rounded-full bg-[#C5A059] text-[#0A0A0A] text-xs font-bold hover:bg-[#D4C4B5] transition-colors"
+                                    >
+                                        {language === 'th' ? 'เข้าสู่ระบบ' : 'Sign In'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex-1 overflow-y-auto">
+                                    <div className="px-4 pt-4">
+                                        <button
+                                            onClick={() => { closePanels(); setActiveView('home'); }}
+                                            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0A0A0A] border border-[#C5A059]/20 text-[#F5F5F0] hover:border-[#C5A059]/50 transition-colors"
+                                        >
+                                            <span className="w-9 h-9 rounded-full bg-[#C5A059] text-[#0A0A0A] flex items-center justify-center text-lg font-bold">＋</span>
+                                            <span className="text-sm font-semibold">{language === 'th' ? 'ส่งข้อความใหม่' : 'New message'}</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="px-4 pt-5 pb-2">
+                                        <p className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60">
+                                            {language === 'th' ? 'ข้อความล่าสุด' : 'Messages'}
+                                        </p>
+                                    </div>
+
+                                    {messageLoading ? (
+                                        <div className="px-4 py-6 text-center text-xs text-[#B8B8B8]/60">Loading...</div>
+                                    ) : messageError ? (
+                                        <div className="px-4 py-6 text-center text-xs text-red-400">{messageError}</div>
+                                    ) : messageThreads.length === 0 ? (
+                                        <div className="px-4 py-6 text-center text-xs text-[#B8B8B8]/60">
+                                            {language === 'th' ? 'ยังไม่มีข้อความ' : 'No messages yet.'}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-1 px-2">
+                                            {(expandedMessages ? messageThreads : messageThreads.slice(0, 4)).map((thread) => (
+                                                <button
+                                                    key={thread.roomId}
+                                                    onClick={() => handleThreadOpen(thread)}
+                                                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[#1A1A1A] transition-colors"
+                                                >
+                                                    <div className="w-10 h-10 rounded-full bg-[#C5A059]/10 overflow-hidden flex items-center justify-center text-sm font-bold text-[#C5A059]">
+                                                        {thread.avatarUrl ? (
+                                                            <img src={thread.avatarUrl} alt={thread.targetUserName} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            thread.targetUserName.charAt(0).toUpperCase()
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0 text-left">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <p className="text-sm font-semibold text-[#F5F5F0] truncate">{thread.targetUserName}</p>
+                                                            <span className="text-[10px] text-[#B8B8B8]/60">{formatRelativeTime(thread.lastMessageAt)}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            {thread.unreadCount > 0 && (
+                                                                <span className="text-[9px] uppercase tracking-wide bg-[#C5A059] text-[#0A0A0A] px-2 py-0.5 rounded-full">
+                                                                    New
+                                                                </span>
+                                                            )}
+                                                            <p className="text-xs text-[#B8B8B8]/70 truncate">{formatMessagePreview(thread)}</p>
+                                                        </div>
+                                                    </div>
+                                                    {thread.unreadCount > 0 && (
+                                                        <span className="ml-2 w-5 h-5 rounded-full bg-[#C5A059] text-[#0A0A0A] text-[10px] font-bold flex items-center justify-center">
+                                                            {thread.unreadCount > 9 ? '9+' : thread.unreadCount}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            ))}
+                                            {messageThreads.length > 4 && (
+                                                <button
+                                                    onClick={() => setExpandedMessages(!expandedMessages)}
+                                                    className="w-full py-2 text-xs text-[#C5A059] hover:text-[#D4C4B5] transition-colors flex items-center justify-center gap-1 font-medium mt-2"
+                                                >
+                                                    {expandedMessages ? (
+                                                        <>{language === 'th' ? 'แสดงน้อยลง' : 'Show Less'} <span className="transform rotate-180">▼</span></>
+                                                    ) : (
+                                                        <>{language === 'th' ? 'ดูข้อความทั้งหมด' : 'Show All Messages'} ({messageThreads.length - 4}) ▼</>
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="px-4 pt-6 pb-6">
+                                        <p className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60 mb-3">
+                                            {language === 'th' ? 'แนะนำ' : 'Suggested'}
+                                        </p>
+                                        <div className="space-y-2">
+                                            {messageSuggestions.map((suggestion) => (
+                                                <button
+                                                    key={suggestion.id}
+                                                    onClick={suggestion.action}
+                                                    className="w-full text-left px-4 py-3 rounded-xl bg-[#0A0A0A] border border-[#C5A059]/15 hover:border-[#C5A059]/40 transition-colors"
+                                                >
+                                                    <p className="text-sm font-semibold text-[#F5F5F0]">{suggestion.title}</p>
+                                                    <p className="text-xs text-[#B8B8B8]/60 mt-1">{suggestion.description}</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-
-                        {!user ? (
-                            <div className="p-6 text-center">
-                                <p className="text-sm text-[#B8B8B8]/70 mb-4">
-                                    {language === 'th' ? 'เข้าสู่ระบบเพื่อดูการแจ้งเตือน' : 'Sign in to view notifications.'}
-                                </p>
-                                <button
-                                    onClick={() => { closePanels(); setAuthModalOpen(true); }}
-                                    className="px-6 py-2 rounded-full bg-[#C5A059] text-[#0A0A0A] text-xs font-bold hover:bg-[#D4C4B5] transition-colors"
-                                >
-                                    {language === 'th' ? 'เข้าสู่ระบบ' : 'Sign In'}
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex-1 overflow-y-auto px-2 py-4">
-                                {notificationLoading ? (
-                                    <div className="px-4 py-6 text-center text-xs text-[#B8B8B8]/60">Loading...</div>
-                                ) : notificationItems.length === 0 ? (
-                                    <div className="px-4 py-6 text-center text-xs text-[#B8B8B8]/60">
-                                        {language === 'th' ? 'ยังไม่มีการแจ้งเตือน' : 'No updates yet.'}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-6">
-                                        {unreadNotificationItems.length > 0 && (
-                                            <div>
-                                                <p className="px-4 pb-2 text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60">
-                                                    {language === 'th' ? 'ใหม่' : 'New'}
-                                                </p>
-                                                <div className="space-y-1">
-                                                    {unreadNotificationItems.map((item) => (
-                                                        <button
-                                                            key={item.id}
-                                                            onClick={() => handleNotificationItemClick(item)}
-                                                            className="w-full flex items-start gap-3 px-3 py-3 rounded-xl bg-[#1A1A1A] border border-[#C5A059]/20 transition-colors"
-                                                        >
-                                                            <div className="w-9 h-9 rounded-full bg-[#0A0A0A] border border-[#C5A059]/20 flex items-center justify-center text-lg">
-                                                                {renderNotificationIcon(item.type)}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0 text-left">
-                                                                <div className="flex items-center justify-between gap-2">
-                                                                    <p className="text-sm font-semibold text-[#F5F5F0]">
-                                                                        {item.title}
-                                                                    </p>
-                                                                    <span className="text-[10px] text-[#B8B8B8]/60">{formatRelativeTime(item.created_at)}</span>
-                                                                </div>
-                                                                <p className="text-xs text-[#B8B8B8]/70 mt-1 line-clamp-2">{item.message}</p>
-                                                            </div>
-                                                            <span className="mt-2 w-2 h-2 rounded-full bg-[#C5A059]" />
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {seenNotificationItems.length > 0 && (
-                                            <div>
-                                                <p className="px-4 pb-2 text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60">
-                                                    {language === 'th' ? 'เห็นแล้ว' : 'Seen'}
-                                                </p>
-                                                <div className="space-y-1">
-                                                    {seenNotificationItems.map((item) => (
-                                                        <button
-                                                            key={item.id}
-                                                            onClick={() => handleNotificationItemClick(item)}
-                                                            className="w-full flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-[#1A1A1A] transition-colors"
-                                                        >
-                                                            <div className="w-9 h-9 rounded-full bg-[#0A0A0A] border border-[#C5A059]/10 flex items-center justify-center text-lg">
-                                                                {renderNotificationIcon(item.type)}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0 text-left">
-                                                                <div className="flex items-center justify-between gap-2">
-                                                                    <p className="text-sm font-semibold text-[#B8B8B8]">
-                                                                        {item.title}
-                                                                    </p>
-                                                                    <span className="text-[10px] text-[#B8B8B8]/60">{formatRelativeTime(item.created_at)}</span>
-                                                                </div>
-                                                                <p className="text-xs text-[#B8B8B8]/60 mt-1 line-clamp-2">{item.message}</p>
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* ===== ACTIVE CHAT WINDOWS ===== */}
-            {
-                activeChats.map((chat, index) => (
-                    <div
-                        key={chat.roomId}
-                        style={{
-                            position: 'fixed',
-                            bottom: '1rem',
-                            right: `${1 + (index * 25)}rem`,
-                            zIndex: 1000 + index
-                        }}
-                    >
-                        <ChatWindow
-                            roomId={chat.roomId}
-                            targetUserName={chat.targetUserName}
-                            initialMessage={chat.initialMessage}
-                            petInfo={chat.petInfo}
-                            onClose={() => closeChat(chat.roomId)}
-                        />
-                    </div>
-                ))
-            }
-
-            {/* ===== MODALS ===== */}
-            {
-                dashboardOpen && (
-                    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0A0A0A]/95 backdrop-blur-sm">
-                        <BreederDashboard onClose={() => setDashboardOpen(false)} />
                     </div>
                 )
             }
 
-            <PetRegistrationModal isOpen={registerModalOpen} onClose={() => setRegisterModalOpen(false)} onSuccess={handlePetRegistered} />
-            <PedigreeModal isOpen={pedigreeModalOpen} onClose={() => setPedigreeModalOpen(false)} pet={selectedPet} onPetClick={handleViewPedigree} />
-            <CartModal isOpen={cartModalOpen} onClose={() => setCartModalOpen(false)} items={cart} onUpdateQuantity={updateCartQuantity} onRemoveItem={removeFromCart} onClearCart={clearCart} />
-            <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
-            <ProductModal isOpen={productModalOpen} onClose={() => setProductModalOpen(false)} product={selectedProduct} onAddToCart={(p, q) => addToCart(p, q)} />
-            <PetDetailsModal
+            {
+                notificationPanelOpen && (
+                    <div className="fixed inset-0 z-[70]" onClick={closePanels}>
+                        <div
+                            className="absolute left-20 top-6 bottom-6 w-[360px] bg-[#111111] border border-[#C5A059]/15 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-4 border-b border-[#C5A059]/15 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60">Updates</p>
+                                    <h3 className="text-lg font-['Playfair_Display'] text-[#F5F5F0]">Notifications</h3>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {notificationItems.some(item => !item.is_read) && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                markAllNotificationsRead();
+                                            }}
+                                            className="text-[10px] uppercase tracking-[0.2em] text-[#C5A059] hover:text-[#D4C4B5]"
+                                        >
+                                            Mark all
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={closePanels}
+                                        className="w-8 h-8 rounded-full border border-[#C5A059]/20 text-[#B8B8B8] hover:text-[#F5F5F0] hover:border-[#C5A059]/40 transition-colors"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+
+                            {!user ? (
+                                <div className="p-6 text-center">
+                                    <p className="text-sm text-[#B8B8B8]/70 mb-4">
+                                        {language === 'th' ? 'เข้าสู่ระบบเพื่อดูการแจ้งเตือน' : 'Sign in to view notifications.'}
+                                    </p>
+                                    <button
+                                        onClick={() => { closePanels(); setAuthModalOpen(true); }}
+                                        className="px-6 py-2 rounded-full bg-[#C5A059] text-[#0A0A0A] text-xs font-bold hover:bg-[#D4C4B5] transition-colors"
+                                    >
+                                        {language === 'th' ? 'เข้าสู่ระบบ' : 'Sign In'}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex-1 overflow-y-auto px-2 py-4">
+                                    {notificationLoading ? (
+                                        <div className="px-4 py-6 text-center text-xs text-[#B8B8B8]/60">Loading...</div>
+                                    ) : notificationItems.length === 0 ? (
+                                        <div className="px-4 py-6 text-center text-xs text-[#B8B8B8]/60">
+                                            {language === 'th' ? 'ยังไม่มีการแจ้งเตือน' : 'No updates yet.'}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-6">
+                                            {unreadNotificationItems.length > 0 && (
+                                                <div>
+                                                    <p className="px-4 pb-2 text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60">
+                                                        {language === 'th' ? 'ใหม่' : 'New'}
+                                                    </p>
+                                                    <div className="space-y-1">
+                                                        {unreadNotificationItems.map((item) => (
+                                                            <button
+                                                                key={item.id}
+                                                                onClick={() => handleNotificationItemClick(item)}
+                                                                className="w-full flex items-start gap-3 px-3 py-3 rounded-xl bg-[#1A1A1A] border border-[#C5A059]/20 transition-colors"
+                                                            >
+                                                                <div className="w-9 h-9 rounded-full bg-[#0A0A0A] border border-[#C5A059]/20 flex items-center justify-center text-lg">
+                                                                    {renderNotificationIcon(item.type)}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0 text-left">
+                                                                    <div className="flex items-center justify-between gap-2">
+                                                                        <p className="text-sm font-semibold text-[#F5F5F0]">
+                                                                            {item.title}
+                                                                        </p>
+                                                                        <span className="text-[10px] text-[#B8B8B8]/60">{formatRelativeTime(item.created_at)}</span>
+                                                                    </div>
+                                                                    <p className="text-xs text-[#B8B8B8]/70 mt-1 line-clamp-2">{item.message}</p>
+                                                                </div>
+                                                                <span className="mt-2 w-2 h-2 rounded-full bg-[#C5A059]" />
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {seenNotificationItems.length > 0 && (
+                                                <div>
+                                                    <p className="px-4 pb-2 text-[10px] uppercase tracking-[0.2em] text-[#C5A059]/60">
+                                                        {language === 'th' ? 'เห็นแล้ว' : 'Seen'}
+                                                    </p>
+                                                    <div className="space-y-1">
+                                                        {seenNotificationItems.map((item) => (
+                                                            <button
+                                                                key={item.id}
+                                                                onClick={() => handleNotificationItemClick(item)}
+                                                                className="w-full flex items-start gap-3 px-3 py-3 rounded-xl hover:bg-[#1A1A1A] transition-colors"
+                                                            >
+                                                                <div className="w-9 h-9 rounded-full bg-[#0A0A0A] border border-[#C5A059]/10 flex items-center justify-center text-lg">
+                                                                    {renderNotificationIcon(item.type)}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0 text-left">
+                                                                    <div className="flex items-center justify-between gap-2">
+                                                                        <p className="text-sm font-semibold text-[#B8B8B8]">
+                                                                            {item.title}
+                                                                        </p>
+                                                                        <span className="text-[10px] text-[#B8B8B8]/60">{formatRelativeTime(item.created_at)}</span>
+                                                                    </div>
+                                                                    <p className="text-xs text-[#B8B8B8]/60 mt-1 line-clamp-2">{item.message}</p>
+                                                                </div>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )
+            }
+
+            <Suspense fallback={<LazyModalFallback />}>
+                {/* ===== ACTIVE CHAT WINDOWS ===== */}
+                {
+                    activeChats.map((chat, index) => (
+                        <div
+                            key={chat.roomId}
+                            style={{
+                                position: 'fixed',
+                                bottom: '1rem',
+                                right: `${1 + (index * 25)}rem`,
+                                zIndex: 1000 + index
+                            }}
+                        >
+                            <ChatWindow
+                                roomId={chat.roomId}
+                                targetUserName={chat.targetUserName}
+                                initialMessage={chat.initialMessage}
+                                petInfo={chat.petInfo}
+                                onClose={() => closeChat(chat.roomId)}
+                            />
+                        </div>
+                    ))
+                }
+
+                {/* ===== MODALS ===== */}
+                {
+                    dashboardOpen && (
+                        <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0A0A0A]/95 backdrop-blur-sm">
+                            <BreederDashboard onClose={() => setDashboardOpen(false)} />
+                        </div>
+                    )
+                }
+
+                <PetRegistrationModal isOpen={registerModalOpen} onClose={() => setRegisterModalOpen(false)} onSuccess={handlePetRegistered} />
+                <PedigreeModal isOpen={pedigreeModalOpen} onClose={() => setPedigreeModalOpen(false)} pet={selectedPet} onPetClick={handleViewPedigree} />
+                <CartModal isOpen={cartModalOpen} onClose={() => setCartModalOpen(false)} items={cart} onUpdateQuantity={updateCartQuantity} onRemoveItem={removeFromCart} onClearCart={clearCart} />
+                <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+                <ProductModal isOpen={productModalOpen} onClose={() => setProductModalOpen(false)} product={selectedProduct} onAddToCart={(p, q) => addToCart(p, q)} />
+                {/* Enhanced Pinterest-Style Pet Modal v2 */}
+            <EnhancedPinterestModal
                 isOpen={petDetailsModalOpen}
-                onClose={() => setPetDetailsModalOpen(false)}
-                pet={selectedPet}
+                onClose={() => {
+                    setPetDetailsModalOpen(false);
+                    setPetDetailsFocus(null);
+                }}
+                pet={selectedPet!}
                 onViewPedigree={handleViewPedigree}
-                onChatWithOwner={handleChatWithOwner}
                 onFindMate={(pet) => {
                     setPetDetailsModalOpen(false);
+                    setPetDetailsFocus(null);
                     setBreedingMatchPet(pet);
                 }}
-            />
-            <BreedingMatchModal
-                isOpen={!!breedingMatchPet}
-                onClose={() => setBreedingMatchPet(null)}
-                sourcePet={breedingMatchPet}
-            />
-            <AdminPanel isOpen={adminPanelOpen} onClose={() => setAdminPanelOpen(false)} />
-            <BreederProfileModal
-                isOpen={breederProfileOpen}
-                onClose={() => setBreederProfileOpen(false)}
-                userId={currentBreederId || user?.id}
+                isOwner={selectedPet?.owner_id === user?.id}
                 currentUserId={user?.id}
-                onViewPet={handleViewPetDetails}
+                canManageHealthProfile={Boolean(user && (user.profile?.role === 'admin' || selectedPet?.owner_id === user.id))}
+                initialSection={petDetailsFocus}
             />
-            {/* Wallet Modal */}
-            <WalletModal
-                isOpen={walletModalOpen}
-                onClose={() => setWalletModalOpen(false)}
-            />
-            <AddExternalCardModal
-                isOpen={addCardModalOpen}
-                onClose={() => setAddCardModalOpen(false)}
-                onAdd={handleAddExternalCard}
-            />
+                <BreedingMatchModal
+                    isOpen={!!breedingMatchPet}
+                    onClose={() => setBreedingMatchPet(null)}
+                    sourcePet={breedingMatchPet}
+                />
+                <AdminPanel isOpen={adminPanelOpen} onClose={() => setAdminPanelOpen(false)} />
+                <BreederProfileModal
+                    isOpen={breederProfileOpen}
+                    onClose={() => setBreederProfileOpen(false)}
+                    userId={currentBreederId || user?.id}
+                    currentUserId={user?.id}
+                    onViewPet={handleViewPetDetails}
+                />
+                {/* Wallet Modal */}
+                <WalletModal
+                    isOpen={walletModalOpen}
+                    onClose={() => setWalletModalOpen(false)}
+                />
+                <AddExternalCardModal
+                    isOpen={addCardModalOpen}
+                    onClose={() => setAddCardModalOpen(false)}
+                    onAdd={handleAddExternalCard}
+                />
+            </Suspense>
         </div >
     );
 };
@@ -2159,14 +2599,14 @@ const SidebarIcon: React.FC<{
         onClick={onClick}
         className={`
       relative group w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300
-      ${active ? 'bg-[#C5A059]/20 text-[#C5A059]' : 'text-[#B8B8B8]/60 hover:text-[#F5F5F0] hover:bg-[#C5A059]/10'}
-      ${highlight ? 'bg-[#C5A059] text-[#0A0A0A] hover:bg-[#D4C4B5]' : ''}
+      ${active ? 'bg-[#ea4c89] text-white shadow-lg shadow-[#ea4c89]/20' : 'text-gray-400 hover:text-[#0d0c22] hover:bg-gray-100'}
+      ${highlight ? 'bg-[#ea4c89] text-white hover:bg-[#d63f7a] shadow-lg shadow-[#ea4c89]/20' : ''}
     `}
     >
         {icon}
 
         {/* Tooltip */}
-        <span className="absolute left-full ml-3 px-3 py-1.5 bg-[#1A1A1A] text-[#F5F5F0] text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap border border-[#C5A059]/20 z-50">
+        <span className="absolute left-full ml-3 px-3 py-1.5 bg-[#0d0c22] text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 shadow-xl font-medium">
             {label}
         </span>
     </button>
@@ -2201,7 +2641,7 @@ const MessageIcon: React.FC<{ count?: number }> = ({ count }) => (
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
         {count && count > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C5A059] text-[#0A0A0A] text-[10px] font-bold rounded-full flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
                 {count}
             </span>
         )}
@@ -2214,7 +2654,7 @@ const CartIconSidebar: React.FC<{ count: number }> = ({ count }) => (
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
         </svg>
         {count > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#C5A059] text-[#0A0A0A] text-[10px] font-bold rounded-full flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-white">
                 {count}
             </span>
         )}
@@ -2222,7 +2662,7 @@ const CartIconSidebar: React.FC<{ count: number }> = ({ count }) => (
 );
 
 const UserAvatar: React.FC<{ name: string }> = ({ name }) => (
-    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#C5A059] to-[#8B7355] flex items-center justify-center text-[#0A0A0A] text-xs font-bold">
+    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 text-xs font-bold border border-white shadow-sm">
         {name?.charAt(0).toUpperCase() || 'U'}
     </div>
 );

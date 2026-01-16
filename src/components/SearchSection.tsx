@@ -1,14 +1,7 @@
 /**
  * SearchSection - Pet Search & Breeding Pairs
  * 
- * Zen Design System Applied
- * "Simplicity is the ultimate sophistication." - Leonardo da Vinci
- * 
- * Design Principles:
- * - Clean, purposeful typography
- * - Generous whitespace for visual breathing room
- * - Subtle micro-animations for engagement
- * - Premium color palette (emerald/teal accents)
+ * Dribbble Style Update
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -107,6 +100,10 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
       location: dbPet.location || '',
       owner: dbPet.owner?.full_name || dbPet.owner_name || 'Unknown',
       owner_id: dbPet.owner_id, // Important for chat!
+      ownership_status: dbPet.ownership_status,
+      claimed_by: dbPet.claimed_by,
+      claim_date: dbPet.claim_date,
+      verification_evidence: dbPet.verification_evidence,
       parentIds: dbPet.pedigree ? {
         sire: dbPet.pedigree.sire_id || undefined,
         dam: dbPet.pedigree.dam_id || undefined
@@ -218,29 +215,29 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
   };
 
   return (
-    <section id="search" className="py-24 lg:py-32 bg-gradient-to-b from-background via-emerald-50/20 to-background relative overflow-hidden">
+    <section id="search" className="py-24 lg:py-32 bg-white relative overflow-hidden">
       {/* Background decorations */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-40 right-1/4 w-[500px] h-[500px] bg-emerald-100/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
-        <div className="absolute bottom-40 left-1/4 w-[400px] h-[400px] bg-teal-100/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
+        <div className="absolute top-40 right-1/4 w-[500px] h-[500px] bg-pink-100/30 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }} />
+        <div className="absolute bottom-40 left-1/4 w-[400px] h-[400px] bg-purple-100/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '6s', animationDelay: '2s' }} />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Section Header - Zen Typography */}
         <div className="text-center mb-16 space-y-6">
-          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-emerald-50 text-emerald-700 text-sm font-semibold tracking-wide border border-emerald-100 shadow-sm">
+          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-pink-50 text-[#ea4c89] text-sm font-semibold tracking-wide border border-pink-100 shadow-sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             {language === 'th' ? 'ค้นหาขั้นสูง' : 'Advanced Search'}
           </span>
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight">
-            <span className="text-foreground">{language === 'th' ? 'ค้นหา' : 'Find Your'} </span>
-            <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-[#0d0c22]">
+            <span className="text-[#0d0c22]">{language === 'th' ? 'ค้นหา' : 'Find Your'} </span>
+            <span className="text-[#ea4c89]">
               {language === 'th' ? 'คู่ที่สมบูรณ์แบบ' : 'Perfect Match'}
             </span>
           </h2>
-          <p className="text-lg sm:text-xl text-foreground/60 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-lg sm:text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed font-medium">
             {language === 'th'
               ? 'ค้นหาจากฐานข้อมูลสัตว์เลี้ยงที่ลงทะเบียน ตามสายพันธุ์ สถานที่ หรือสายเลือด'
               : 'Search through our comprehensive database of registered pets by breed, location, or bloodline.'
@@ -254,11 +251,11 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
         </div>
 
         {/* Search Box - Premium Glass Effect */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 lg:p-10 shadow-2xl shadow-emerald-100/30 border border-white/50 mb-12">
+        <div className="bg-white rounded-[32px] p-8 lg:p-10 shadow-xl shadow-gray-100 border border-gray-100 mb-12">
           {/* Main Search */}
           <div className="relative mb-8 group">
-            <div className="absolute left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center group-focus-within:bg-emerald-100 transition-colors">
-              <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="absolute left-5 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-pink-50 flex items-center justify-center group-focus-within:bg-[#ea4c89] group-focus-within:text-white transition-all">
+              <svg className="w-5 h-5 text-[#ea4c89] group-focus-within:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -267,11 +264,11 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
               placeholder={language === 'th' ? 'ค้นหาตามชื่อ สายพันธุ์ หรือเลขทะเบียน...' : 'Search by name, breed, or registration number...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-20 pr-6 py-5 rounded-2xl border-2 border-emerald-100/50 bg-white/70 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100 outline-none transition-all text-foreground text-lg placeholder:text-foreground/40 shadow-inner"
+              className="w-full pl-20 pr-6 py-5 rounded-2xl border-2 border-gray-100 bg-gray-50/50 focus:border-[#ea4c89] focus:ring-4 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] text-lg placeholder:text-gray-400 font-medium"
             />
             {searching && (
               <div className="absolute right-5 top-1/2 -translate-y-1/2">
-                <svg className="w-6 h-6 animate-spin text-emerald-500" fill="none" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 animate-spin text-[#ea4c89]" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
@@ -283,7 +280,7 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {/* Pet Type */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-foreground/80">
+              <label className="block text-sm font-bold text-[#0d0c22]">
                 {language === 'th' ? 'ประเภท' : 'Pet Type'}
               </label>
               <select
@@ -292,7 +289,7 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                   setPetType(e.target.value as 'all' | 'dog' | 'cat');
                   setSelectedBreed('');
                 }}
-                className="w-full px-4 py-3.5 rounded-xl border-2 border-emerald-100/50 bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-foreground cursor-pointer hover:border-emerald-200"
+                className="w-full px-4 py-3.5 rounded-xl border-2 border-gray-100 bg-white focus:border-[#ea4c89] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] cursor-pointer hover:border-gray-300 font-medium"
               >
                 <option value="all">{language === 'th' ? 'ทั้งหมด' : 'All Types'}</option>
                 <option value="dog">{language === 'th' ? 'สุนัข' : 'Dogs'}</option>
@@ -302,13 +299,13 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
 
             {/* Breed */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-foreground/80">
+              <label className="block text-sm font-bold text-[#0d0c22]">
                 {language === 'th' ? 'สายพันธุ์' : 'Breed'}
               </label>
               <select
                 value={selectedBreed}
                 onChange={(e) => setSelectedBreed(e.target.value)}
-                className="w-full px-4 py-3.5 rounded-xl border-2 border-emerald-100/50 bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-foreground cursor-pointer hover:border-emerald-200"
+                className="w-full px-4 py-3.5 rounded-xl border-2 border-gray-100 bg-white focus:border-[#ea4c89] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] cursor-pointer hover:border-gray-300 font-medium"
               >
                 <option value="">{language === 'th' ? 'ทุกสายพันธุ์' : 'All Breeds'}</option>
                 {availableBreeds.map(breed => (
@@ -319,13 +316,13 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
 
             {/* Location */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-foreground/80">
+              <label className="block text-sm font-bold text-[#0d0c22]">
                 {language === 'th' ? 'พื้นที่' : 'Location'}
               </label>
               <select
                 value={selectedLocation}
                 onChange={(e) => setSelectedLocation(e.target.value)}
-                className="w-full px-4 py-3.5 rounded-xl border-2 border-emerald-100/50 bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 outline-none transition-all text-foreground cursor-pointer hover:border-emerald-200"
+                className="w-full px-4 py-3.5 rounded-xl border-2 border-gray-100 bg-white focus:border-[#ea4c89] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] cursor-pointer hover:border-gray-300 font-medium"
               >
                 <option value="">{language === 'th' ? 'ทุกพื้นที่' : 'All Locations'}</option>
                 {locations.map(loc => (
@@ -336,17 +333,17 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
 
             {/* Health Certified */}
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-foreground/80">
+              <label className="block text-sm font-bold text-[#0d0c22]">
                 {language === 'th' ? 'การรับรอง' : 'Certification'}
               </label>
               <button
                 onClick={() => setHealthCertified(!healthCertified)}
-                className={`w-full px-4 py-3.5 rounded-xl border-2 transition-all flex items-center justify-center gap-2 font-medium ${healthCertified
-                  ? 'border-emerald-400 bg-emerald-50 text-emerald-700 shadow-sm'
-                  : 'border-emerald-100/50 text-foreground/60 hover:border-emerald-200 hover:bg-emerald-50/30'
+                className={`w-full px-4 py-3.5 rounded-xl border-2 transition-all flex items-center justify-center gap-2 font-bold ${healthCertified
+                  ? 'border-[#ea4c89] bg-pink-50 text-[#ea4c89] shadow-sm'
+                  : 'border-gray-100 text-gray-400 hover:border-gray-300 hover:bg-gray-50'
                   }`}
               >
-                <svg className={`w-5 h-5 transition-colors ${healthCertified ? 'text-emerald-600' : ''}`} fill="currentColor" viewBox="0 0 20 20">
+                <svg className={`w-5 h-5 transition-colors ${healthCertified ? 'text-[#ea4c89]' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
                 {language === 'th' ? 'ผ่านการตรวจสุขภาพ' : 'Health Certified'}
@@ -355,13 +352,13 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
           </div>
 
           {/* Clear Filters */}
-          <div className="flex items-center justify-between mt-8 pt-8 border-t border-emerald-100">
-            <p className="text-sm text-foreground/60">
-              {language === 'th' ? 'พบ' : 'Found'} <span className="font-bold text-emerald-600 text-base">{filteredPairs.length}</span> {language === 'th' ? 'คู่ผสมพันธุ์' : 'proven breeding pairs'}
+          <div className="flex items-center justify-between mt-8 pt-8 border-t border-gray-100">
+            <p className="text-sm text-gray-500 font-medium">
+              {language === 'th' ? 'พบ' : 'Found'} <span className="font-bold text-[#ea4c89] text-base">{filteredPairs.length}</span> {language === 'th' ? 'คู่ผสมพันธุ์' : 'proven breeding pairs'}
             </p>
             <button
               onClick={() => { setSearchQuery(''); setPetType('all'); setSelectedBreed(''); }}
-              className="inline-flex items-center gap-1.5 text-sm text-rose-500 hover:text-rose-600 font-semibold transition-colors"
+              className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-[#0d0c22] font-semibold transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -376,20 +373,20 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
           {loading ? (
             <div className="grid grid-cols-1 gap-8">
               {[1, 2].map((i) => (
-                <div key={i} className="h-72 bg-gradient-to-r from-emerald-50/50 to-teal-50/50 rounded-3xl animate-pulse" />
+                <div key={i} className="h-72 bg-gray-50 rounded-3xl animate-pulse" />
               ))}
             </div>
           ) : filteredPairs.length === 0 ? (
-            <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-16 text-center border border-white/50 shadow-xl">
-              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-50 flex items-center justify-center">
-                <svg className="w-10 h-10 text-emerald-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-white rounded-3xl p-16 text-center border border-gray-100 shadow-md">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-pink-50 flex items-center justify-center">
+                <svg className="w-10 h-10 text-[#ea4c89]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-bold text-foreground mb-3">
+              <h3 className="text-2xl font-bold text-[#0d0c22] mb-3">
                 {language === 'th' ? 'ไม่พบคู่ผสมพันธุ์' : 'No mating pairs found'}
               </h3>
-              <p className="text-foreground/60 text-lg">
+              <p className="text-gray-500 text-lg">
                 {language === 'th' ? 'ลองใช้คำค้นหาหรือตัวกรองอื่น' : 'Try different search terms or filters.'}
               </p>
             </div>
@@ -397,16 +394,16 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
             filteredPairs.map((pair, idx) => (
               <div
                 key={idx}
-                className="group bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-xl shadow-emerald-100/20 border border-white/50 hover:shadow-2xl hover:shadow-emerald-100/30 transition-all duration-300 hover:-translate-y-1"
+                className="group bg-white rounded-[32px] p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
               >
                 {/* Pair Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-100">
+                    <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-50 border border-pink-100">
                       <span className="text-lg">❤️</span>
-                      <span className="text-xs font-bold uppercase tracking-wider text-rose-600">Proven Pair</span>
+                      <span className="text-xs font-bold uppercase tracking-wider text-[#ea4c89]">Proven Pair</span>
                     </span>
-                    <h3 className="text-xl font-bold text-foreground">
+                    <h3 className="text-xl font-bold text-[#0d0c22]">
                       {pair.sire.breed} Match
                     </h3>
                   </div>
@@ -422,7 +419,7 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                 <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10 mb-10">
                   {/* Sire */}
                   <div
-                    className="flex-1 w-full bg-gradient-to-br from-blue-50/80 to-sky-50/50 rounded-2xl p-5 flex gap-5 items-center cursor-pointer hover:from-blue-100/80 hover:to-sky-100/50 transition-all duration-200 border border-blue-100/50 group/sire"
+                    className="flex-1 w-full bg-slate-50 rounded-3xl p-6 flex gap-5 items-center cursor-pointer hover:bg-slate-100 transition-all duration-200 border border-gray-100 group/sire"
                     onClick={() => onViewDetails(pair.sire)}
                   >
                     <div className="relative">
@@ -436,21 +433,21 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-blue-500 text-white font-bold uppercase tracking-wider">Sire</span>
+                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-blue-500 text-white font-bold uppercase tracking-wider shadow-sm shadow-blue-200">Sire</span>
                       </div>
-                      <h4 className="font-bold text-lg text-foreground truncate">{pair.sire.name}</h4>
-                      <p className="text-sm text-foreground/60">{pair.sire.color || 'Unknown Color'}</p>
-                      <p className="text-xs text-emerald-600 mt-2 font-medium group-hover/sire:underline">View Profile →</p>
+                      <h4 className="font-bold text-lg text-[#0d0c22] truncate">{pair.sire.name}</h4>
+                      <p className="text-sm text-gray-500">{pair.sire.color || 'Unknown Color'}</p>
+                      <p className="text-xs text-[#ea4c89] mt-2 font-bold group-hover/sire:underline">View Profile →</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-rose-400 to-pink-500 text-white font-bold text-xl shadow-lg shadow-rose-200">
+                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-[#ea4c89] to-[#ff8fab] text-white font-bold text-xl shadow-lg shadow-[#ea4c89]/30">
                     +
                   </div>
 
                   {/* Dam */}
                   <div
-                    className="flex-1 w-full bg-gradient-to-br from-pink-50/80 to-rose-50/50 rounded-2xl p-5 flex gap-5 items-center flex-row-reverse text-right cursor-pointer hover:from-pink-100/80 hover:to-rose-100/50 transition-all duration-200 border border-pink-100/50 group/dam"
+                    className="flex-1 w-full bg-pink-50/50 rounded-3xl p-6 flex gap-5 items-center flex-row-reverse text-right cursor-pointer hover:bg-pink-50 transition-all duration-200 border border-pink-100 group/dam"
                     onClick={() => onViewDetails(pair.dam)}
                   >
                     <div className="relative">
@@ -460,46 +457,46 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                         alt="Dam"
                         onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
-                      <div className="absolute -bottom-2 -left-2 w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">♀</div>
+                      <div className="absolute -bottom-2 -left-2 w-8 h-8 rounded-full bg-[#ea4c89] flex items-center justify-center text-white text-xs font-bold shadow-lg">♀</div>
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2 justify-end">
-                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-pink-500 text-white font-bold uppercase tracking-wider">Dam</span>
+                        <span className="px-2.5 py-1 rounded-full text-[10px] bg-[#ea4c89] text-white font-bold uppercase tracking-wider shadow-sm shadow-pink-200">Dam</span>
                       </div>
-                      <h4 className="font-bold text-lg text-foreground truncate">{pair.dam.name}</h4>
-                      <p className="text-sm text-foreground/60">{pair.dam.color || 'Unknown Color'}</p>
-                      <p className="text-xs text-emerald-600 mt-2 font-medium group-hover/dam:underline">← View Profile</p>
+                      <h4 className="font-bold text-lg text-[#0d0c22] truncate">{pair.dam.name}</h4>
+                      <p className="text-sm text-gray-500">{pair.dam.color || 'Unknown Color'}</p>
+                      <p className="text-xs text-[#ea4c89] mt-2 font-bold group-hover/dam:underline">← View Profile</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Offspring List */}
-                <div className="border-t border-[#8B9D83]/10 pt-6">
-                  <h4 className="text-sm font-bold text-[#2C2C2C] mb-4 flex items-center gap-2">
+                <div className="border-t border-gray-100 pt-6">
+                  <h4 className="text-sm font-bold text-[#0d0c22] mb-4 flex items-center gap-2">
                     🏆 Registered Offspring
-                    <span className="text-xs font-normal text-[#2C2C2C]/50">({pair.offspring.length})</span>
+                    <span className="text-xs font-normal text-gray-400">({pair.offspring.length})</span>
                   </h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
                     {pair.offspring.slice(0, 5).map(child => (
                       <div key={child.id}
                         onClick={() => onViewPedigree(child)}
-                        className="bg-[#F5F1E8]/50 p-2 rounded-lg flex flex-col items-center text-center cursor-pointer hover:bg-[#F5F1E8] transition-colors">
+                        className="bg-gray-50 p-2 rounded-xl flex flex-col items-center text-center cursor-pointer hover:bg-white hover:shadow-md border border-transparent hover:border-gray-100 transition-all">
                         {child.image ? (
                           <img src={child.image}
-                            className="w-10 h-10 rounded-full object-cover mb-2 border border-white shadow-sm"
+                            className="w-10 h-10 rounded-full object-cover mb-2 border-2 border-white shadow-sm"
                             onError={(e) => { e.currentTarget.style.display = 'none'; }}
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-gray-200 mb-2 flex items-center justify-center text-gray-400 text-[10px] font-bold">
+                          <div className="w-10 h-10 rounded-full bg-white border border-gray-100 mb-2 flex items-center justify-center text-gray-400 text-[10px] font-bold">
                             {child.name.charAt(0)}
                           </div>
                         )}
-                        <p className="text-xs font-bold text-[#2C2C2C] truncate w-full">{child.name}</p>
-                        <p className="text-[10px] text-[#2C2C2C]/50">{child.gender === 'male' ? 'M' : 'F'} • {calculateAge(child.birthDate || '')}</p>
+                        <p className="text-xs font-bold text-[#0d0c22] truncate w-full">{child.name}</p>
+                        <p className="text-[10px] text-gray-500">{child.gender === 'male' ? 'M' : 'F'} • {calculateAge(child.birthDate || '')}</p>
                       </div>
                     ))}
                     {pair.offspring.length > 5 && (
-                      <div className="flex items-center justify-center text-xs text-[#8B9D83] font-medium bg-[#F5F1E8]/30 rounded-lg">
+                      <div className="flex items-center justify-center text-xs text-gray-400 font-bold bg-gray-50 rounded-xl">
                         +{pair.offspring.length - 5}
                       </div>
                     )}
@@ -507,22 +504,22 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row items-center gap-4 mt-8 pt-6 border-t border-emerald-50">
+                <div className="flex flex-col sm:flex-row items-center gap-4 mt-8 pt-6 border-t border-gray-100">
                   <button
                     onClick={() => openInteraction('report', pair.sire, pair.dam)}
-                    className="text-sm text-foreground/40 hover:text-rose-500 transition-colors mr-auto hidden sm:block">
+                    className="text-sm text-gray-400 hover:text-red-500 transition-colors mr-auto hidden sm:block font-medium">
                     {language === 'th' ? 'รายงานปัญหา' : 'Report Issue'}
                   </button>
                   <div className="flex gap-3 w-full sm:w-auto">
                     <button
                       onClick={() => openInteraction('chat', pair.sire, pair.dam, pair.sire.owner)}
-                      className="flex-1 sm:flex-none px-6 py-3 rounded-xl border-2 border-emerald-200 text-emerald-700 font-semibold text-sm hover:bg-emerald-50 hover:border-emerald-300 transition-all flex items-center justify-center gap-2">
+                      className="flex-1 sm:flex-none px-6 py-3 rounded-xl border border-gray-200 text-[#0d0c22] font-bold text-sm hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                       {language === 'th' ? 'แชทกับเจ้าของ' : 'Chat with Owner'}
                     </button>
                     <button
                       onClick={() => openInteraction('reserve', pair.sire, pair.dam)}
-                      className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-sm hover:from-emerald-600 hover:to-teal-600 transition-all shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 hover:-translate-y-0.5">
+                      className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-[#0d0c22] text-white font-bold text-sm hover:bg-[#ea4c89] transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-2 hover:-translate-y-0.5">
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                       {language === 'th' ? 'จองลูกสุนัข' : 'Reserve Puppy'}
                     </button>
@@ -535,60 +532,60 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
 
         {/* Interaction Modal */}
         {modalOpen && selectedInteraction && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl scale-100 animate-in zoom-in-95 duration-200">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white rounded-[32px] w-full max-w-md p-6 shadow-2xl scale-100 animate-in zoom-in-95 duration-200 border border-gray-100">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-bold text-[#2C2C2C]">
+                <h3 className="text-xl font-bold text-[#0d0c22]">
                   {modalType === 'reserve' && '📅 Reserve Puppy Queue'}
                   {modalType === 'chat' && '💬 Chat Request'}
                   {modalType === 'report' && '⚠️ Report Issue'}
                 </h3>
-                <button onClick={() => setModalOpen(false)} className="text-[#2C2C2C]/30 hover:text-[#2C2C2C]">
+                <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-[#0d0c22]">
                   <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
 
               {submitStatus === 'success' ? (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-[#ea4c89]/10 text-[#ea4c89] rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                   </div>
-                  <h4 className="text-lg font-bold text-[#2C2C2C] mb-2">Request Sent!</h4>
-                  <p className="text-[#2C2C2C]/60">We have received your request and will contact you shortly.</p>
+                  <h4 className="text-lg font-bold text-[#0d0c22] mb-2">Request Sent!</h4>
+                  <p className="text-gray-500">We have received your request and will contact you shortly.</p>
                 </div>
               ) : (
                 <form onSubmit={handleSubmitInteraction} className="space-y-4">
-                  <div className="p-4 bg-[#F5F1E8] rounded-xl flex items-center gap-4 mb-4">
+                  <div className="p-4 bg-gray-50 rounded-2xl flex items-center gap-4 mb-4 border border-gray-100">
                     <div className="flex -space-x-2 overflow-hidden">
                       <img src={selectedInteraction.sire.image} className="w-10 h-10 rounded-full object-cover border-2 border-white" />
                       <img src={selectedInteraction.dam.image} className="w-10 h-10 rounded-full object-cover border-2 border-white" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-[#2C2C2C]/50 uppercase tracking-wider">Pairing</p>
-                      <p className="text-sm font-bold text-[#2C2C2C]">{selectedInteraction.sire.name} + {selectedInteraction.dam.name}</p>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pairing</p>
+                      <p className="text-sm font-bold text-[#0d0c22]">{selectedInteraction.sire.name} + {selectedInteraction.dam.name}</p>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Your Contact (Email/Line/Tel)</label>
+                    <label className="block text-sm font-bold text-[#0d0c22] mb-2">Your Contact (Email/Line/Tel)</label>
                     <input
                       required
                       type="text"
                       value={formData.contact}
                       onChange={e => setFormData({ ...formData, contact: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#C97064] outline-none"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ea4c89] outline-none font-medium"
                       placeholder="e.g. 081-234-5678"
                     />
                   </div>
 
                   {modalType === 'chat' && (
                     <div>
-                      <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">Message to Owner</label>
+                      <label className="block text-sm font-bold text-[#0d0c22] mb-2">Message to Owner</label>
                       <textarea
                         required
                         value={formData.message}
                         onChange={e => setFormData({ ...formData, message: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#C97064] outline-none h-24 resize-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ea4c89] outline-none h-24 resize-none font-medium"
                         placeholder="I'm interested in..."
                       ></textarea>
                     </div>
@@ -596,11 +593,11 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
 
                   {(modalType === 'reserve' || modalType === 'report') && (
                     <div>
-                      <label className="block text-sm font-medium text-[#2C2C2C]/70 mb-2">{modalType === 'report' ? 'Issue Details' : 'Special Note (Optional)'}</label>
+                      <label className="block text-sm font-bold text-[#0d0c22] mb-2">{modalType === 'report' ? 'Issue Details' : 'Special Note (Optional)'}</label>
                       <textarea
                         value={formData.note}
                         onChange={e => setFormData({ ...formData, note: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border border-[#8B9D83]/20 focus:border-[#C97064] outline-none h-24 resize-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-[#ea4c89] outline-none h-24 resize-none font-medium"
                         placeholder={modalType === 'report' ? 'Describe the issue...' : 'Any preferences for color/gender?'}
                       ></textarea>
                     </div>
@@ -609,7 +606,7 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                   <button
                     disabled={submitStatus === 'submitting'}
                     type="submit"
-                    className="w-full py-4 rounded-xl bg-[#C97064] text-white font-bold hover:bg-[#B86054] transition-all disabled:opacity-50 flex justify-center"
+                    className="w-full py-4 rounded-xl bg-[#0d0c22] text-white font-bold hover:bg-[#ea4c89] transition-all disabled:opacity-50 flex justify-center shadow-lg"
                   >
                     {submitStatus === 'submitting' ? (
                       <svg className="w-5 h-5 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -618,7 +615,7 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                     )}
                   </button>
 
-                  <p className="text-center text-xs text-[#2C2C2C]/40 mt-4">
+                  <p className="text-center text-xs text-gray-400 mt-4">
                     By clicking confirm, you agree to share your contact details with the breeder.
                   </p>
                 </form>
@@ -633,4 +630,3 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
 };
 
 export default SearchSection;
-

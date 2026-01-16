@@ -19,6 +19,10 @@ export interface Pet {
   is_public: boolean;
   for_sale?: boolean;
   price?: number;
+  ownership_status?: 'verified' | 'waiting_owner' | 'pending_claim' | 'disputed';
+  claimed_by?: string | null;
+  claim_date?: string | null;
+  verification_evidence?: any;
   created_at: string;
   updated_at: string;
   mother_id: string | null;
@@ -133,15 +137,55 @@ export function mapPet(pet: any): Pet {
     finalImageUrl = ''; // Falls back to placeholder
   }
 
+  // Extract Metadata from Description (Hack for missing columns)
+  // Extract Metadata from Description (Hack for missing columns)
+  const desc = pet.description || '';
+  let meta: any = {};
+  let descriptionText: string | null = pet.description ?? null;
+
+  // Try JSON first (New format)
+  if (desc.trim().startsWith('{')) {
+    try {
+      const parsed = JSON.parse(desc);
+      meta = parsed;
+      if (typeof parsed.description === 'string') {
+        descriptionText = parsed.description;
+      }
+      // If description was wrapped in the JSON, use it as the main description text if needed, 
+      // but mapPet returns the full description string usually. 
+      // We will extract metadata fields for the Pet object properties.
+      meta = parsed;
+    } catch (e) { /* ignore */ }
+  }
+
+  // Fallback to Regex (Old format)
+  if (!meta.video_url) {
+    const videoUrlMatch = desc.match(/Video URL: (.*)/);
+    if (videoUrlMatch) meta.video_url = videoUrlMatch[1].trim();
+  }
+  if (!meta.media_type) {
+    const mediaTypeMatch = desc.match(/Media Type: (.*)/);
+    if (mediaTypeMatch) meta.media_type = mediaTypeMatch[1].trim();
+  }
+  if (!meta.source) {
+    const sourceMatch = desc.match(/Source: (.*)/);
+    if (sourceMatch) meta.source = sourceMatch[1].trim();
+  }
+  if (!meta.external_link) {
+    const externalLinkMatch = desc.match(/External Link: (.*)/) || desc.match(/External Source: (.*)/);
+    if (externalLinkMatch) meta.external_link = externalLinkMatch[1].trim();
+  }
+
   return {
     ...pet,
     type: finalType,
     birth_date: pet.birthday, // Map DB 'birthday' to Interface 'birth_date'
     health_certified: pet.verified, // Map DB 'verified' to Interface 'health_certified'
     image_url: finalImageUrl,
+    image: finalImageUrl || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=500&h=500&fit=crop',
     price: pet.price,
     for_sale: pet.for_sale,
-    description: pet.description,
+    description: descriptionText,
     age: pet.birthday ? (new Date().getFullYear() - new Date(pet.birthday).getFullYear()) : undefined,
     owner: ownerName || undefined,
     owner_name: ownerName,
@@ -149,9 +193,19 @@ export function mapPet(pet: any): Pet {
       sire_id: pet.father_id,
       dam_id: pet.mother_id
     },
+    ownership_status: pet.ownership_status || (pet.owner_id ? 'verified' : 'waiting_owner'),
+    claimed_by: pet.claimed_by || null,
+    claim_date: pet.claim_date || null,
+    verification_evidence: pet.verification_evidence || null,
     father_verified_status: pet.father_verified_status || (pet.father_id ? 'pending' : 'verified'),
     mother_verified_status: pet.mother_verified_status || (pet.mother_id ? 'pending' : 'verified'),
-    boosted_until: pet.boosted_until
+    boosted_until: pet.boosted_until,
+    // Map deserialized metadata from description if columns are missing
+    media_type: pet.media_type || meta.media_type || 'image',
+    video_url: pet.video_url || meta.video_url,
+    source: pet.source || meta.source || 'internal',
+    external_link: pet.external_link || meta.external_link,
+    is_sponsored: pet.is_sponsored || false
   };
 }
 
@@ -185,6 +239,25 @@ export async function createPet(petData: {
   // Use provided Reg No or generate new one
   const registration_number = petData.registration_number || generateRegistrationNumber(petData.breed);
 
+  // APPEND External Link to Description since column does not exist
+  // APPEND Metadata to Description since columns do not exist
+  // Save Metadata as JSON in Description if Magic Card
+  let finalDescription = petData.description || '';
+  if (petData.media_type || petData.video_url || petData.source || petData.external_link) {
+    const metaPayload = {
+      description: petData.description,
+      media_type: petData.media_type,
+      video_url: petData.video_url,
+      source: petData.source,
+      external_link: petData.external_link
+    };
+    finalDescription = JSON.stringify(metaPayload);
+  } else {
+    // Legacy append for non-JSON cases (optional, but JSON is safer if we stick to one)
+    // Actually, let's just stick to JSON for new Magic items. 
+    // Regular pets might just have plain text description.
+  }
+
   const { data: pet, error } = await supabase
     .from('pets')
     .insert({
@@ -198,18 +271,18 @@ export async function createPet(petData: {
       registration_number,
       location: petData.location || null,
       image_url: petData.image_url || null,
-      description: petData.description || null,
+      description: finalDescription || null, // Updated description
       mother_id: petData.mother_id || null,
       father_id: petData.father_id || null,
       father_verified_status: petData.father_id ? 'pending' : null,
       mother_verified_status: petData.mother_id ? 'pending' : null,
       is_public: true,
       verified: petData.health_certified,
-      media_type: petData.media_type || 'image',
-      video_url: petData.video_url || null,
-      source: petData.source || 'internal',
-      external_link: petData.external_link || null,
-      is_sponsored: petData.is_sponsored || false
+      // media_type: petData.media_type || 'image', // REMOVED: Column missing
+      // video_url: petData.video_url || null, // REMOVED: Column missing
+      // source: petData.source || 'internal' // REMOVED: Column missing
+      // external_link: petData.external_link || null, // REMOVED: Column does not exist
+      // is_sponsored: petData.is_sponsored || false // REMOVED: Column does not exist
     })
     .select()
     .single();
@@ -217,6 +290,8 @@ export async function createPet(petData: {
   if (error) throw error;
   return mapPet(pet);
 }
+
+
 
 // Get all public pets
 export async function getPublicPets(filters?: {
@@ -301,6 +376,9 @@ export async function getPetByRegistration(registrationNumber: string) {
 // Update pet
 export async function updatePet(petId: string, updates: Partial<Pet>) {
   const payload: any = { ...updates };
+  const metaUpdateProvided = ['media_type', 'video_url', 'source', 'external_link'].some(
+    (key) => updates[key as keyof Pet] !== undefined
+  );
 
   if (updates.birth_date) {
     payload.birthday = updates.birth_date;
@@ -312,12 +390,65 @@ export async function updatePet(petId: string, updates: Partial<Pet>) {
     delete payload.health_certified;
   }
 
+  if (metaUpdateProvided) {
+    let baseDescription = updates.description;
+
+    if (baseDescription === undefined) {
+      const { data, error } = await supabase
+        .from('pets')
+        .select('description')
+        .eq('id', petId)
+        .single();
+      if (!error) {
+        baseDescription = data?.description ?? '';
+      }
+    }
+
+    let descriptionText = typeof baseDescription === 'string' ? baseDescription : '';
+    let existingMeta: any = {};
+
+    if (typeof baseDescription === 'string' && baseDescription.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(baseDescription);
+        existingMeta = parsed;
+        if (typeof parsed.description === 'string') {
+          descriptionText = parsed.description;
+        }
+      } catch (e) {
+        existingMeta = {};
+      }
+    }
+
+    const mergedMeta = {
+      description: descriptionText || '',
+      media_type: updates.media_type ?? existingMeta.media_type,
+      video_url: updates.video_url ?? existingMeta.video_url,
+      source: updates.source ?? existingMeta.source,
+      external_link: updates.external_link ?? existingMeta.external_link
+    };
+
+    const hasMetaValues = Boolean(
+      mergedMeta.media_type || mergedMeta.video_url || mergedMeta.source || mergedMeta.external_link
+    );
+
+    payload.description = hasMetaValues
+      ? JSON.stringify(mergedMeta)
+      : descriptionText || null;
+  } else if (updates.description !== undefined) {
+    payload.description = updates.description;
+  }
+
   // Remove fields that don't satisfy DB schema
   delete payload.owner_name;
   delete payload.pedigree;
   delete payload.id; // DB PK, no update
   delete payload.created_at;
   delete payload.owner; // Relation object, not a column
+  delete payload.media_type;
+  delete payload.video_url;
+  delete payload.source;
+  delete payload.external_link;
+  delete payload.is_sponsored;
 
   const { data, error } = await supabase
     .from('pets')
@@ -1018,3 +1149,140 @@ export async function markMessagesAsRead(roomId: string) {
 
   if (error) console.error('Error marking messages as read:', error);
 }
+// ============ COMMUNITY VOTING (CHAMPIONS) ============
+
+export interface ChampionVote {
+  id: string;
+  pet_id: string;
+  user_id: string;
+  category: 'champion' | 'beautiful' | 'smart';
+  created_at: string;
+}
+
+/*
+  SQL SCHEMA REQUIREMENT:
+  create table pet_champion_votes (
+    id uuid default uuid_generate_v4() primary key,
+    pet_id text not null, -- references pets(id)
+    user_id uuid not null references auth.users(id),
+    category text default 'champion',
+    created_at timestamp with time zone default timezone('utc'::text, now()),
+    unique(pet_id, user_id, category) -- Prevent duplicate votes
+  );
+*/
+
+export async function voteForPet(petId: string, category: 'champion' | 'beautiful' | 'smart' = 'champion') {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+
+  // Optimistic UI or actual DB call
+  const { error } = await supabase
+    .from('pet_champion_votes')
+    .insert({
+      pet_id: petId,
+      user_id: user.id,
+      category: category
+    });
+
+  if (error) {
+    // Check for duplicate vote (Postgres error 23505)
+    if (error.code === '23505') throw new Error('You have already voted for this pet.');
+    throw error;
+  }
+}
+
+export async function getPetVotes(petId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('pet_champion_votes')
+    .select('*', { count: 'exact', head: true })
+    .eq('pet_id', petId);
+
+  if (error) {
+    // Fallback for demo/dev if table missing
+    console.warn('Voting table missing or error, returning 0', error.message);
+    return 0;
+  }
+  return count || 0;
+}
+
+export async function hasUserVoted(petId: string): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return false;
+
+  const { data, error } = await supabase
+    .from('pet_champion_votes')
+    .select('id')
+    .eq('pet_id', petId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (error) return false;
+  return !!data;
+}
+// ============ PET STORIES (TIMELINE) ============
+
+export interface PetStory {
+  id: string;
+  pet_id: string;
+  title: string;
+  description: string;
+  image_url: string | null;
+  event_date: string;
+  event_type: 'milestone' | 'medical' | 'competition' | 'travel' | 'other';
+  created_at: string;
+}
+
+/*
+  SQL SCHEMA REQUIREMENT:
+  create table pet_stories (
+    id uuid default uuid_generate_v4() primary key,
+    pet_id text not null, -- references pets(id)
+    title text not null,
+    description text,
+    image_url text,
+    event_date date default CURRENT_DATE,
+    event_type text default 'other',
+    created_at timestamp with time zone default timezone('utc'::text, now())
+  );
+*/
+
+export async function addPetStory(story: Omit<PetStory, 'id' | 'created_at'>) {
+  const { error } = await supabase
+    .from('pet_stories')
+    .insert(story);
+
+  if (error) {
+    console.error("Add Story Error Details:", JSON.stringify(error, null, 2));
+    if (error.code === '42P01') {
+      throw new Error("Story feature not initialized (Table missing). Please contact admin.");
+    }
+    throw error;
+  }
+}
+
+export async function getPetStories(petId: string): Promise<PetStory[]> {
+  const { data, error } = await supabase
+    .from('pet_stories')
+    .select('*')
+    .eq('pet_id', petId)
+    .order('event_date', { ascending: false }); // Newest first
+
+  if (error) {
+    // Silently fail if table missing (dev mode)
+    // console.warn('Story table missing or error', error.message);
+    return [];
+  }
+  return data as PetStory[];
+}
+
+export async function deletePetStory(id: string) {
+  const { error } = await supabase
+    .from('pet_stories')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
+
+

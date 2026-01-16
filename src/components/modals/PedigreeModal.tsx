@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { Pet } from '@/data/petData';
 import { getPedigreeTree, getPetOffspring } from '@/lib/petsService';
 import PedigreeTree from '../PedigreeTree';
+import { PedigreeAnalytics } from '../PedigreeAnalytics';
 
 interface PedigreeModalProps {
   isOpen: boolean;
@@ -23,7 +24,6 @@ const PedigreeModal: React.FC<PedigreeModalProps> = ({ isOpen, onClose, pet, onP
   const [loading, setLoading] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // Fetch pedigree tree and offspring when pet changes
   // Fetch pedigree tree and offspring when pet changes
   useEffect(() => {
     async function fetchData() {
@@ -147,7 +147,7 @@ Powered by Eibpo
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 animate-in fade-in duration-300">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
 
@@ -193,11 +193,11 @@ Powered by Eibpo
                   <img
                     src={resolvedImage}
                     alt={pet.name}
-                    className="w-32 h-32 rounded-xl object-cover shadow-lg group-hover:scale-105 transition-transform duration-500 border border-[#C5A059]/20"
+                    className="w-12 h-12 rounded-xl object-cover shadow-lg group-hover:scale-105 transition-transform duration-500 border border-[#C5A059]/20"
                   />
                 ) : (
-                  <div className="w-32 h-32 rounded-xl bg-[#1A1A1A] flex items-center justify-center border border-[#C5A059]/20">
-                    <span className="text-4xl opacity-30">🐾</span>
+                  <div className="w-12 h-12 rounded-xl bg-[#1A1A1A] flex items-center justify-center border border-[#C5A059]/20">
+                    <span className="text-2xl opacity-30">🐾</span>
                   </div>
                 )}
               </div>
@@ -330,6 +330,19 @@ Powered by Eibpo
               </div>
             )}
           </div>
+
+          {/* Analytics Dashboard */}
+          {!isFullScreen && (
+            <div className="bg-[#0D0D0D] rounded-xl p-6 border border-[#C5A059]/10 mb-6 transition-all hover:border-[#C5A059]/30">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-[#F5F5F0]">Pedigree Analytics</h3>
+                  <p className="text-sm text-[#B8B8B8]/60">Genetic Profile & Influence</p>
+                </div>
+              </div>
+              <PedigreeAnalytics pet={pet} tree={pedigreeTree} />
+            </div>
+          )}
 
           {/* Offspring / Progeny Section */}
           <div className="bg-[#0D0D0D] rounded-xl p-6 border border-[#C5A059]/10">

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getUserNotifications, markUserNotifRead, UserNotification } from '@/lib/database';
 import { supabase } from '@/lib/supabase';
+import { EibpoMark } from '@/components/branding/EibpoLogo';
 
 interface HeaderProps {
   cartCount: number;
@@ -108,15 +109,13 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
             {/* Minimal Gold Icon */}
             <div className="relative w-10 h-10 flex items-center justify-center">
               <div className="absolute inset-0 border border-[#C5A059]/40 rotate-45 group-hover:rotate-[50deg] transition-transform duration-500" />
-              <svg className="w-5 h-5 text-[#C5A059]" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-              </svg>
+              <EibpoMark className="w-5 h-5 text-[#C5A059]" />
             </div>
 
             {/* Logo Text - Serif Typography */}
             <div className="flex flex-col">
               <span className="font-['Playfair_Display',_Georgia,_serif] text-xl lg:text-2xl tracking-wide text-[#F5F5F0] group-hover:text-[#C5A059] transition-colors duration-300">
-                Pet<span className="text-[#C5A059]">degree</span>
+                Eibpo<span className="text-[#C5A059]"> Pedigree</span>
               </span>
               <span className="text-[8px] lg:text-[9px] tracking-[0.3em] text-[#C5A059]/60 uppercase font-light">
                 Premium Bloodlines

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Pet, pets as allPets } from '@/data/petData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -131,7 +131,9 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                 if (pet.location === candidate.location) score += 10;
 
                 // Age compatibility (simple mock)
-                if (Math.abs(parseInt(pet.age) - parseInt(candidate.age)) < 5) score += 20;
+                const age1 = typeof pet.age === 'number' ? pet.age : parseInt(String(pet.age || '0'));
+                const age2 = typeof candidate.age === 'number' ? candidate.age : parseInt(String(candidate.age || '0'));
+                if (Math.abs(age1 - age2) < 5) score += 20;
 
                 return { pet: candidate, score: Math.min(score, 100) };
             })
@@ -355,6 +357,7 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                                         Register New Pet (OCR)
                                     </button>
                                 </div>
+
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {myPets.map(pet => (
                                         <div key={pet.id} className="group relative overflow-hidden rounded-2xl bg-white border border-primary/10 hover:shadow-lg transition-all p-4 flex gap-4">
@@ -374,9 +377,28 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
                                                     </button>
                                                 </div>
                                                 <p className="text-xs text-primary/80 mt-1 uppercase tracking-wider font-semibold">{pet.registrationNumber}</p>
-                                                <div className="mt-2 flex gap-2">
-                                                    <button className="text-xs bg-muted px-2 py-1 rounded-md hover:bg-muted/80">Stats</button>
-                                                    <button className="text-xs bg-muted px-2 py-1 rounded-md hover:bg-muted/80">Edit Details</button>
+                                                <div className="mt-2 flex gap-2 justify-between items-center">
+                                                    <div className="flex gap-2">
+                                                        <button className="text-xs bg-muted px-2 py-1 rounded-md hover:bg-muted/80">Stats</button>
+                                                        <button className="text-xs bg-muted px-2 py-1 rounded-md hover:bg-muted/80">Edit Details</button>
+                                                    </div>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (confirm('Are you sure you want to delete this pet/card? This cannot be undone.')) {
+                                                                try {
+                                                                    const { deletePet } = await import('@/lib/database');
+                                                                    await deletePet(pet.id);
+                                                                    refreshPets();
+                                                                } catch (err) {
+                                                                    console.error(err);
+                                                                    alert('Failed to delete pet. Please try again.');
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="text-xs border border-red-200 text-red-500 px-2 py-1 rounded-md hover:bg-red-50 transition-colors"
+                                                    >
+                                                        Delete
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -387,87 +409,88 @@ const BreederDashboard: React.FC<BreederDashboardProps> = ({ onClose }) => {
 
                     </div>
                 </div>
-            </div>
 
-            {/* Smart Match Modal */}
-            <Dialog open={matchModalOpen} onOpenChange={setMatchModalOpen}>
-                <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                        <DialogTitle>Smart Match Results</DialogTitle>
-                        <DialogDescription>
-                            Looking for a perfect match for <span className="font-bold text-primary">{currentMatchPet?.name}</span>?
-                            Here are the top candidates based on breed, genetics, and age compatibility.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4 space-y-4">
-                        {matchResults.length > 0 ? matchResults.map((match, idx) => (
-                            <div key={match.pet.id} className="flex items-center gap-4 p-3 bg-white rounded-xl border hover:border-primary/50 transition-all cursor-pointer">
-                                <div className="relative">
-                                    <img src={match.pet.image} alt={match.pet.name} className="w-16 h-16 rounded-full object-cover" />
-                                    <div className="absolute -bottom-1 -right-1 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white">
-                                        {match.score}%
+                {/* Smart Match Modal */}
+                <Dialog open={matchModalOpen} onOpenChange={setMatchModalOpen}>
+                    <DialogContent className="sm:max-w-[500px]" aria-describedby="smart-match-description">
+                        {/* Modal Content */}
+                        <DialogHeader>
+                            <DialogTitle>Smart Match Results</DialogTitle>
+                            <DialogDescription id="smart-match-description">
+                                Looking for a perfect match for <span className="font-bold text-primary">{currentMatchPet?.name}</span>?
+                                Here are the top candidates based on breed, genetics, and age compatibility.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4 space-y-4">
+                            {matchResults.length > 0 ? matchResults.map((match, idx) => (
+                                <div key={match.pet.id} className="flex items-center gap-4 p-3 bg-white rounded-xl border hover:border-primary/50 transition-all cursor-pointer">
+                                    <div className="relative">
+                                        <img src={match.pet.image} alt={match.pet.name} className="w-16 h-16 rounded-full object-cover" />
+                                        <div className="absolute -bottom-1 -right-1 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white">
+                                            {match.score}%
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-center">
-                                        <h4 className="font-bold text-foreground">{match.pet.name}</h4>
-                                        <span className="text-xs text-muted-foreground">{match.pet.location}</span>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-center">
+                                            <h4 className="font-bold text-foreground">{match.pet.name}</h4>
+                                            <span className="text-xs text-muted-foreground">{match.pet.location}</span>
+                                        </div>
+                                        <p className="text-xs text-foreground/60">{match.pet.breed} • {match.pet.age}</p>
                                     </div>
-                                    <p className="text-xs text-foreground/60">{match.pet.breed} • {match.pet.age}</p>
+                                    <button
+                                        className="text-xs bg-primary/10 text-primary hover:bg-primary hover:text-white px-3 py-2 rounded-lg font-bold transition-all"
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            alert(`Proposal sent to ${match.pet.name}'s owner!`);
+                                            try {
+                                                if (user) {
+                                                    await createUserNotification({
+                                                        user_id: user.id,
+                                                        type: 'breeding',
+                                                        title: '💌 Match Proposal Sent',
+                                                        message: `You proposed a match between ${currentMatchPet?.name} and ${match.pet.name}. Fingers crossed!`,
+                                                        payload: { target_pet: match.pet.id }
+                                                    });
+                                                }
+                                            } catch (err) { }
+                                        }}
+                                    >
+                                        Connect
+                                    </button>
                                 </div>
-                                <button
-                                    className="text-xs bg-primary/10 text-primary hover:bg-primary hover:text-white px-3 py-2 rounded-lg font-bold transition-all"
-                                    onClick={async (e) => {
-                                        e.stopPropagation();
-                                        alert(`Proposal sent to ${match.pet.name}'s owner!`);
-                                        try {
-                                            if (user) {
-                                                await createUserNotification({
-                                                    user_id: user.id,
-                                                    type: 'breeding',
-                                                    title: '💌 Match Proposal Sent',
-                                                    message: `You proposed a match between ${currentMatchPet?.name} and ${match.pet.name}. Fingers crossed!`,
-                                                    payload: { target_pet: match.pet.id }
-                                                });
-                                            }
-                                        } catch (err) { }
-                                    }}
-                                >
-                                    Connect
-                                </button>
-                            </div>
-                        )) : (
-                            <div className="text-center py-8 text-muted-foreground">
-                                No high-probability matches found at this time.
-                            </div>
-                        )}
-                    </div>
-                </DialogContent>
-            </Dialog>
+                            )) : (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    No high-probability matches found at this time.
+                                </div>
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
 
-            {/* View Pet Details Modal */}
-            {viewPet && (
-                <PetDetailsModal
-                    isOpen={!!viewPet}
-                    onClose={() => setViewPet(null)}
-                    pet={viewPet}
-                    onViewPedigree={(p) => {
-                        console.log("View pedigree for", p.name);
-                        setViewPet(null);
+                {/* View Pet Details Modal */}
+                {viewPet && (
+                    <PetDetailsModal
+                        isOpen={!!viewPet}
+                        onClose={() => setViewPet(null)}
+                        pet={viewPet}
+                        onViewPedigree={(p) => {
+                            console.log("View pedigree for", p.name);
+                            setViewPet(null);
+                        }}
+                    />
+                )}
+
+                <PetRegistrationModal
+                    isOpen={showRegistrationModal}
+                    onClose={() => setShowRegistrationModal(false)}
+                    onSuccess={() => {
+                        refreshPets();
+                        setShowRegistrationModal(false);
+                        // Switch to pets tab to see new pet
+                        setActiveTab('pets');
                     }}
                 />
-            )}
-
-            <PetRegistrationModal
-                isOpen={showRegistrationModal}
-                onClose={() => setShowRegistrationModal(false)}
-                onSuccess={() => {
-                    refreshPets();
-                    setShowRegistrationModal(false);
-                    // Switch to pets tab to see new pet
-                    setActiveTab('pets');
-                }}
-            />
+            </div>
         </div>
     );
 };

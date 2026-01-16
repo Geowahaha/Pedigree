@@ -66,7 +66,7 @@ export async function signUp(
       await createUserNotification({
         user_id: data.user.id,
         type: 'system',
-        title: 'Welcome to Petdegree! 🐾',
+        title: 'Welcome to Eibpo! 🐾',
         message: `Hi ${nickname || fullName}! We're so happy you're here. Start exploring or register your first pet today.`,
         payload: { action: 'welcome' }
       });
@@ -164,10 +164,48 @@ export function onAuthStateChange(callback: (user: AuthUser | null) => void) {
           .then(({ data }) => data)
           .catch(() => null);
 
-        const profile = await Promise.race([
+        let profile = await Promise.race([
           profilePromise,
           new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)) // 2s timeout
         ]);
+
+        const metadata = session.user.user_metadata || {};
+        const invitedByAdmin = metadata.invited_by === 'admin';
+
+        if (invitedByAdmin && profile) {
+          const updates: Partial<UserProfile> = {};
+          const desiredRole = metadata.role;
+          const desiredAccountType = metadata.account_type;
+          const desiredVerified = metadata.verified_breeder;
+
+          if (desiredRole && profile.role !== desiredRole) {
+            updates.role = desiredRole;
+          }
+          if (desiredAccountType && profile.account_type !== desiredAccountType) {
+            updates.account_type = desiredAccountType;
+          }
+          if (typeof desiredVerified === 'boolean' && profile.verified_breeder !== desiredVerified) {
+            updates.verified_breeder = desiredVerified;
+          }
+
+          if (Object.keys(updates).length > 0) {
+            try {
+              const { data } = await supabase
+                .from('profiles')
+                .update({
+                  ...updates,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', session.user.id)
+                .select()
+                .single();
+
+              profile = (data || { ...profile, ...updates }) as UserProfile;
+            } catch (syncError) {
+              console.warn('Profile invite sync failed', syncError);
+            }
+          }
+        }
 
         callback({
           id: session.user.id,

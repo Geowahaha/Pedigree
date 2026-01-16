@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { uploadUserAvatar } from '@/lib/storage';
 import { Pet } from '@/data/petData';
-import { mapPet } from '@/lib/database';
+import { mapPet, deletePet } from '@/lib/database';
 import PetCard from '../ui/PetCard';
 
 interface BreederProfileModalProps {
@@ -16,16 +16,17 @@ interface BreederProfileModalProps {
     onClose: () => void;
     userId: string | null;
     currentUserId?: string;
-    onViewPet?: (pet: Pet) => void;
+    onViewPet?: (pet: Pet, focus?: 'comments' | 'edit') => void;
+    defaultMaximized?: boolean;
 }
 
-const BreederProfileModal: React.FC<BreederProfileModalProps> = ({ isOpen, onClose, userId, currentUserId, onViewPet }) => {
+const BreederProfileModal: React.FC<BreederProfileModalProps> = ({ isOpen, onClose, userId, currentUserId, onViewPet, defaultMaximized = false }) => {
     const { signOut, updateProfile } = useAuth();
     const [profile, setProfile] = useState<any>(null);
     const [pets, setPets] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'pets' | 'about'>('pets');
-    const [isMaximized, setIsMaximized] = useState(false);
+    const [isMaximized, setIsMaximized] = useState(defaultMaximized);
 
     // Edit Mode State
     const [isEditing, setIsEditing] = useState(false);
@@ -195,6 +196,19 @@ const BreederProfileModal: React.FC<BreederProfileModalProps> = ({ isOpen, onClo
         if (!dateString) return 'Unknown';
         const date = new Date(dateString);
         return isNaN(date.getFullYear()) ? 'Unknown' : date.getFullYear();
+    };
+
+    const handleDeletePet = async (petId: string, petName: string) => {
+        if (!confirm(`Are you sure you want to delete ${petName}? This cannot be undone.`)) return;
+
+        try {
+            await deletePet(petId);
+            setPets(prev => prev.filter(p => p.id !== petId));
+            // alert('Pet deleted.');
+        } catch (error) {
+            console.error('Error deleting pet:', error);
+            alert('Error deleting pet.');
+        }
     };
 
     if (!isOpen) return null;
@@ -426,7 +440,10 @@ const BreederProfileModal: React.FC<BreederProfileModalProps> = ({ isOpen, onClo
                                             onPedigreeClick={() => { onClose(); onViewPet?.(pet); }}
                                             onChatClick={() => { }} // Handle chat if viewing other's profile
                                             onLikeClick={() => { }} // Handle like
+                                            onCommentClick={() => { onClose(); onViewPet?.(pet, 'comments'); }}
+                                            onEditClick={() => { onClose(); onViewPet?.(pet, 'edit'); }}
                                             onBoostClick={() => window.dispatchEvent(new CustomEvent('openBoostModal', { detail: { pet } }))} // Hacky but works if modal matches
+                                            onDeleteClick={() => handleDeletePet(pet.id, pet.name)}
                                         />
                                     )) : (
                                         <div className="col-span-full py-12 text-center text-[#B8B8B8]/40 italic">No pets found.</div>

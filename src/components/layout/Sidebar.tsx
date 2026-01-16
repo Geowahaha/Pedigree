@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { EibpoMark } from '@/components/branding/EibpoLogo';
 
 interface MenuItem {
     id: string;
@@ -157,9 +158,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <div className="flex items-center gap-3">
                             {/* Eibpo Logo */}
                             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                </svg>
+                                <EibpoMark className="w-6 h-6 text-white" />
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-lg font-bold tracking-tight">
@@ -170,9 +169,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </div>
                     ) : (
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
-                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                            </svg>
+                            <EibpoMark className="w-6 h-6 text-white" />
                         </div>
                     )}
                 </div>

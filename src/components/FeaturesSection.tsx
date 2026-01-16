@@ -64,7 +64,7 @@ const FeaturesSection: React.FC = () => {
         {/* Section Header */}
         <div className="text-center mb-16">
           <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-4 animate-in fade-in zoom-in duration-500">
-            Why Choose Petdegree
+            Why Choose Eibpo
           </span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-foreground mb-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
             Everything You Need

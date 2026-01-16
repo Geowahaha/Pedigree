@@ -7,7 +7,7 @@ import SkeletonCard from './SkeletonCard';
 interface PedigreeSectionProps {
   onRegisterClick: () => void;
   onViewPedigree: (pet: Pet) => void;
-  onViewDetails: (pet: Pet) => void;
+  onViewDetails: (pet: Pet, focus?: 'comments' | 'edit') => void;
 }
 
 const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onViewPedigree, onViewDetails }) => {
@@ -52,6 +52,11 @@ const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onVi
             healthCertified: dbPet.health_certified,
             location: dbPet.location || '',
             owner: dbPet.owner?.full_name || dbPet.owner_name || 'Unknown',
+            owner_id: dbPet.owner_id,
+            ownership_status: dbPet.ownership_status,
+            claimed_by: dbPet.claimed_by,
+            claim_date: dbPet.claim_date,
+            verification_evidence: dbPet.verification_evidence,
             parentIds: dbPet.pedigree ? {
               sire: dbPet.pedigree.sire_id || undefined,
               dam: dbPet.pedigree.dam_id || undefined
@@ -147,6 +152,7 @@ const PedigreeSection: React.FC<PedigreeSectionProps> = ({ onRegisterClick, onVi
                 pet={pet}
                 onViewPedigree={onViewPedigree}
                 onViewDetails={onViewDetails}
+                onCommentClick={(target) => onViewDetails(target, 'comments')}
               />
             ))
           )}

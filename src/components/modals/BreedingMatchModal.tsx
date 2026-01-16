@@ -3,8 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Pet } from '@/data/petData';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { getWalletData } from '@/lib/wallet';
-import { PRO_STATUS_COST } from '@/lib/wallet';
+import { calculateCompatibilityScore } from '@/lib/breeding';
 
 interface BreedingMatchModalProps {
     isOpen: boolean;
@@ -22,6 +21,11 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
     const [balance, setBalance] = useState(0);
     const [unlockedMatches, setUnlockedMatches] = useState<string[]>([]);
     const [unlockingId, setUnlockingId] = useState<string | null>(null);
+    const formatBreedingLabel = (type?: string, level?: string) => {
+        if (!type) return 'Unknown';
+        const label = type.charAt(0).toUpperCase() + type.slice(1);
+        return level ? `${label} (${level})` : label;
+    };
 
     useEffect(() => {
         if (isOpen && sourcePet) {
@@ -44,51 +48,49 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
         setLoading(true);
 
         try {
-            // Gender Fix: Explicitly look for opposite gender (handling case sensitivity)
-            const targetGender = ['male', 'Male'].includes(sourcePet.gender) ? 'female' : 'male';
+            // 1. Robust Gender Detection
+            // Detect if source is male (handling 'Male', 'male', 'M', 'Boy', etc.)
+            const sGender = sourcePet.gender?.toLowerCase().trim() || '';
+            const isMale = sGender === 'male' || sGender === 'm' || sGender === 'boy';
+            const targetGender = isMale ? 'female' : 'male';
 
-            // Basic Filter: Same Breed, Target Gender, Different Owner
+            // 2. Fuzzy Breed Matching
+            // Remove common suffixes to broaden search (e.g. "Thai Ridgeback Dog" -> "Thai Ridgeback")
+            const fuzzyBreed = sourcePet.breed
+                .replace(/\s+(Dog|Cat|Puppy|Kitten)$/i, '') // Remove species suffix
+                .replace(/s$/i, '') // Remove plural 's' just in case
+                .trim();
+
+            console.log(`SmartMatch: Looking for ${targetGender} like '${fuzzyBreed}'`);
+
+            // 3. Query with Broadened Constraints
             const { data: potentialMatches, error } = await supabase
                 .from('pets')
                 .select('*, owner:profiles!owner_id(full_name, email)')
-                .eq('breed', sourcePet.breed)
-                .ilike('gender', targetGender) // Case insensitive match for opposite gender
+                // Match breed loosely: contains the core breed name
+                .ilike('breed', `%${fuzzyBreed}%`)
+                // Match gender loosely
+                .ilike('gender', targetGender)
                 .neq('owner_id', sourcePet.owner_id || '')
                 .eq('is_public', true)
-                .limit(20);
+                .limit(50); // Increased limit for better analysis pool
 
             if (error) throw error;
 
-            if (!potentialMatches) {
+            if (!potentialMatches || potentialMatches.length === 0) {
+                // FALLBACK: If fuzzy strict match failed, try VERY loose match (just species/type if available, or random same-species?)
+                // For now, let's strictly return empty but log it.
+                // Could potentially check for "all breeds" if generic 'Mixed' or allow cross-breeding
                 setMatches([]);
                 return;
             }
 
             // RELATIONSHIP ANALYSIS ENGINE 🧬
-            const getRelationship = (source: Pet, target: any) => {
-                // 1. Close Immediate Family (High Risk)
-                if (target.id === source.mother_id || target.id === source.father_id) return { type: 'Parent', risk: 'High', label: 'Inbreeding ⚠️', advice: 'Avoid. Extremely high risk of genetic defects.' };
-                if (source.id === target.mother_id || source.id === target.father_id) return { type: 'Child', risk: 'High', label: 'Inbreeding ⚠️', advice: 'Avoid. Extremely high risk of genetic defects.' };
-
-                // 2. Siblings (High/Moderate Risk)
-                const sourceSire = source.father_id;
-                const sourceDam = source.mother_id;
-                const targetSire = target.father_id;
-                const targetDam = target.mother_id;
-
-                if (sourceSire && targetSire && sourceSire === targetSire && sourceDam && targetDam && sourceDam === targetDam)
-                    return { type: 'Full Sibling', risk: 'High', label: 'Inbreeding ⚠️', advice: 'High Risk. Only for expert genetic preservation.' };
-
-                if ((sourceSire && targetSire && sourceSire === targetSire) || (sourceDam && targetDam && sourceDam === targetDam))
-                    return { type: 'Half Sibling', risk: 'Moderate', label: 'Line Breeding 🧬', advice: 'Moderate Risk. Can fix traits but requires health testing.' };
-
-                // 3. Unrelated
-                return { type: 'Unrelated', risk: 'Low', label: 'Outcross ✅', advice: 'Safest option for health and vigor.' };
-            };
+            // Powered by @/lib/breeding.ts
 
             // Analyze Relationships
             const analyzedMatches = potentialMatches.map(match => {
-                const rel = getRelationship(sourcePet, match);
+                const matchResult = calculateCompatibilityScore(sourcePet, match as unknown as Pet);
                 return {
                     ...match,
                     id: match.id,
@@ -96,20 +98,17 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
                     image: match.image_url,
                     owner_id: match.owner_id,
                     owner: match.owner,
-                    relationship: rel // Attach analysis
+                    matchResult // Attach full analysis
                 };
             });
 
-            // Sort: Outcross first, then Line Breeding
-            analyzedMatches.sort((a, b) => {
-                const riskScore = { 'Low': 0, 'Moderate': 1, 'High': 2 };
-                return riskScore[a.relationship.risk as keyof typeof riskScore] - riskScore[b.relationship.risk as keyof typeof riskScore];
-            });
+            // Sort: Highest Compatibility Score First
+            analyzedMatches.sort((a, b) => b.matchResult.score - a.matchResult.score);
 
             setMatches(analyzedMatches as any);
 
         } catch (e) {
-            console.error(e);
+            console.error("SmartMatch Failed:", e);
         } finally {
             setLoading(false);
         }
@@ -149,7 +148,9 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
 
             setBalance(prev => prev - MATCH_UNLOCK_COST);
             setUnlockedMatches(prev => [...prev, matchPet.id]);
-            alert("Contact Unlocked! Genetics: 98% Compatible 🧬");
+            // Show real score
+            const score = (matchPet as any).matchResult?.score || 95;
+            alert(`Contact Unlocked! Genetics: ${score}% Compatible 🧬`);
 
         } catch (e) {
             alert('Unlock failed');
@@ -176,84 +177,119 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-4xl p-0 bg-[#0A0A0A] border border-[#C5A059]/20 text-[#F5F5F0] overflow-hidden max-h-[85vh] flex flex-col">
-                <div className="p-6 border-b border-[#C5A059]/10 bg-[#111111]">
+            <DialogContent className="max-w-4xl p-0 bg-white border border-gray-100 text-black overflow-hidden max-h-[85vh] flex flex-col rounded-[2rem] shadow-2xl">
+                <div className="p-6 border-b border-gray-100 bg-white sticky top-0 z-10">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-3 text-[#C5A059]">
-                            <span className="text-2xl">🧬</span>
+                        <DialogTitle className="flex items-center gap-3 text-black font-bold text-2xl">
+                            <span className="text-3xl">🧬</span>
                             AI Breeding Matchmaker
-                            {isPro && <span className="text-xs bg-[#C5A059] text-black px-2 py-0.5 rounded ml-2">PRO UNLIMITED</span>}
+                            {isPro && <span className="text-xs bg-black text-white px-3 py-1 rounded-full ml-2 font-bold tracking-wide">PRO UNLIMITED</span>}
                         </DialogTitle>
-                        <DialogDescription className="text-[#B8B8B8]">
-                            Analyzing genetics for <span className="text-white font-bold">{sourcePet.name}</span> ({sourcePet.breed})
+                        <DialogDescription className="text-gray-500 text-base">
+                            Analyzing genetics for <span className="text-black font-bold">{sourcePet.name}</span> ({sourcePet.breed})
                         </DialogDescription>
                     </DialogHeader>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto p-6 bg-gray-50/50">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center h-64 space-y-4">
-                            <div className="w-16 h-16 border-4 border-[#C5A059] border-t-transparent rounded-full animate-spin"></div>
-                            <p className="animate-pulse text-[#C5A059]">Scanning Genetic compatibility...</p>
+                            <div className="w-16 h-16 border-4 border-gray-200 border-t-black rounded-full animate-spin"></div>
+                            <p className="animate-pulse text-gray-500 font-medium">Scanning Genetic compatibility...</p>
                         </div>
                     ) : matches.length === 0 ? (
                         <div className="text-center py-20">
-                            <p className="text-[#B8B8B8]">No compatible matches found yet.</p>
-                            <p className="text-xs text-[#B8B8B8]/50 mt-2">Try again later as more breeders join.</p>
+                            <p className="text-gray-500 text-lg">No compatible matches found yet.</p>
+                            <p className="text-sm text-gray-400 mt-2">Try again later as more breeders join.</p>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {matches.map(match => {
                                 const isUnlocked = unlockedMatches.includes(match.id) || isPro;
                                 return (
-                                    <div key={match.id} className="relative group bg-[#151515] rounded-xl overflow-hidden border border-[#C5A059]/10 hover:border-[#C5A059]/50 transition-all">
+                                    <div key={match.id} className="relative group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300">
                                         {/* Match Badge */}
-                                        <div className={`absolute top-2 left-2 z-10 px-2 py-1 rounded backdrop-blur-md border flex items-center gap-1 font-bold text-[10px] uppercase shadow-lg
-                                            ${(match as any).relationship.risk === 'Low' ? 'bg-green-900/80 text-green-400 border-green-500/30' :
-                                                (match as any).relationship.risk === 'Moderate' ? 'bg-yellow-900/80 text-yellow-400 border-yellow-500/30' :
-                                                    'bg-red-900/80 text-red-400 border-red-500/30'}`}>
-                                            {(match as any).relationship.label}
+                                        <div className={`absolute top-3 left-3 z-10 px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1 font-bold text-[10px] uppercase shadow-sm
+                                            ${(match as any).matchResult.score >= 80 ? 'bg-green-100 text-green-700 border border-green-200' :
+                                                (match as any).matchResult.score >= 50 ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
+                                                    'bg-red-100 text-red-700 border border-red-200'}`}>
+                                            {(match as any).matchResult.label} • {(match as any).matchResult.score}%
                                         </div>
 
                                         {/* Image */}
-                                        <div className="h-48 relative">
-                                            <img src={match.image || (match as any).image_url} className={`w-full h-full object-cover ${!isUnlocked ? 'blur-[2px] grayscale-[50%]' : ''}`} alt={match.name} />
+                                        <div className="h-56 relative bg-gray-100">
+                                            <img src={match.image || (match as any).image_url} className={`w-full h-full object-cover transition-all duration-500 ${!isUnlocked ? 'blur-md grayscale opacity-80' : 'group-hover:scale-105'}`} alt={match.name} />
                                             {!isUnlocked && (
-                                                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                                                    <span className="text-3xl">🔒</span>
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 backdrop-blur-sm">
+                                                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg mb-2">
+                                                        <span className="text-2xl">🔒</span>
+                                                    </div>
+                                                    <span className="font-bold text-gray-800 bg-white/80 px-3 py-1 rounded-full text-xs">Locked Profile</span>
                                                 </div>
                                             )}
                                         </div>
 
                                         {/* Content */}
-                                        <div className="p-4">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <h3 className="font-bold text-lg text-[#F5F5F0]">{isUnlocked ? match.name : 'Hidden Profile'}</h3>
+                                        <div className="p-5">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <h3 className="font-bold text-xl text-black leading-tight">{isUnlocked ? match.name : 'Hidden Profile'}</h3>
                                                 <div className="text-right">
-                                                    <span className="block text-xs text-[#B8B8B8]">{match.location || 'Thailand'}</span>
+                                                    <span className="px-2 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-gray-500">{match.location || 'Thailand'}</span>
                                                 </div>
                                             </div>
 
-                                            <div className="space-y-2 mb-4">
+                                            <div className="space-y-3 mb-6">
                                                 {/* Risk Analysis Quote */}
-                                                <div className="p-2 rounded bg-[#0A0A0A] border border-white/5">
-                                                    <p className="text-[10px] text-[#B8B8B8] italic">
-                                                        "{(match as any).relationship.advice}"
+                                                <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
+                                                    <p className="text-xs text-blue-800 italic font-medium">
+                                                        "{(match as any).matchResult.advice}"
                                                     </p>
                                                 </div>
 
-                                                <div className="flex justify-between text-xs border-b border-white/5 pb-1">
-                                                    <span className="text-[#B8B8B8]">Age</span>
-                                                    <span>{match.age ? `${match.age} yrs` : 'Unknown'}</span>
+                                                {(() => {
+                                                    const breeding = (match as any).matchResult?.breeding;
+                                                    if (!breeding) return null;
+                                                    const badgeClass = breeding.type === 'inbreeding'
+                                                        ? 'text-red-700'
+                                                        : breeding.type === 'linebreeding'
+                                                            ? 'text-amber-700'
+                                                            : 'text-emerald-700';
+                                                    const warningText = breeding.warnings?.slice(0, 1).join(' ');
+                                                    const prosText = breeding.pros?.slice(0, 2).join('; ');
+                                                    const consText = breeding.cons?.slice(0, 2).join('; ');
+                                                    return (
+                                                        <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-2 text-xs">
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-gray-500">Breeding strategy</span>
+                                                                <span className={`font-semibold ${badgeClass}`}>
+                                                                    {formatBreedingLabel(breeding.type, breeding.level)}
+                                                                </span>
+                                                            </div>
+                                                            {warningText && (
+                                                                <p className="text-amber-700">Warning: {warningText}</p>
+                                                            )}
+                                                            {prosText && (
+                                                                <p className="text-emerald-700">Pros: {prosText}</p>
+                                                            )}
+                                                            {consText && (
+                                                                <p className="text-rose-700">Cons: {consText}</p>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                                <div className="flex justify-between text-sm border-b border-gray-100 pb-2">
+                                                    <span className="text-gray-500">Age</span>
+                                                    <span className="font-medium text-black">{match.age ? `${match.age} yrs` : 'Unknown'}</span>
                                                 </div>
-                                                <div className="flex justify-between text-xs border-b border-white/5 pb-1">
-                                                    <span className="text-[#B8B8B8]">Color</span>
-                                                    <span>{match.color}</span>
+                                                <div className="flex justify-between text-sm border-b border-gray-100 pb-2">
+                                                    <span className="text-gray-500">Color</span>
+                                                    <span className="font-medium text-black">{match.color}</span>
                                                 </div>
-                                                <div className="flex justify-between text-xs border-b border-white/5 pb-1">
-                                                    <span className="text-[#B8B8B8]">Owner</span>
-                                                    <span className={isUnlocked ? 'text-[#C5A059]' : 'blur-sm'}>
-                                                        {isUnlocked ? (match.owner?.full_name || 'View Profile') : 'Hidden Name'}
+                                                <div className="flex justify-between text-sm border-b border-gray-100 pb-2">
+                                                    <span className="text-gray-500">Owner</span>
+                                                    <span className={isUnlocked ? 'font-medium text-black' : 'blur-sm text-gray-300'}>
+                                                        {isUnlocked ? ((match.owner as any)?.full_name || 'View Profile') : 'Hidden Name'}
                                                     </span>
                                                 </div>
                                             </div>
@@ -261,16 +297,16 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
                                             {isUnlocked ? (
                                                 <button
                                                     onClick={() => handleContact(match)}
-                                                    className="w-full py-2 bg-[#C5A059] text-[#0A0A0A] font-bold rounded-lg hover:bg-[#D4C4B5] transition-colors flex items-center justify-center gap-2"
+                                                    className="w-full py-3 bg-black text-white font-bold rounded-full hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                                                 >
-                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                                                     Contact Owner
                                                 </button>
                                             ) : (
                                                 <button
                                                     onClick={() => handleUnlock(match)}
                                                     disabled={unlockingId === match.id}
-                                                    className="w-full py-2 bg-[#1A1A1A] border border-[#C5A059] text-[#C5A059] font-bold rounded-lg hover:bg-[#C5A059] hover:text-black transition-all flex items-center justify-center gap-2"
+                                                    className="w-full py-3 bg-white border-2 border-black text-black font-bold rounded-full hover:bg-black hover:text-white transition-all flex items-center justify-center gap-2 shadow-sm"
                                                 >
                                                     {unlockingId === match.id ? 'Unlocking...' : `Unlock Match (${MATCH_UNLOCK_COST} TRD)`}
                                                 </button>

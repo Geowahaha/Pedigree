@@ -36,6 +36,7 @@ import ChatManager from '../ChatManager';
 import SearchSection from '../SearchSection';
 import MarketplaceSection from '../MarketplaceSection';
 import PuppyComingSoonSection from '../PuppyComingSoonSection';
+import { EibpoMark } from '@/components/branding/EibpoLogo';
 
 // AI Brain integration - import the 'think' function
 import { think as aiThink } from '@/lib/ai/petdegreeBrain';
@@ -664,6 +665,10 @@ const WorkspaceLayout: React.FC = () => {
         location: dbPet.location || '',
         owner: dbPet.owner?.full_name || dbPet.owner_name || 'Unknown',
         owner_id: dbPet.owner_id,
+        ownership_status: dbPet.ownership_status,
+        claimed_by: dbPet.claimed_by,
+        claim_date: dbPet.claim_date,
+        verification_evidence: dbPet.verification_evidence,
         parentIds: dbPet.pedigree ? {
             sire: dbPet.pedigree.sire_id || undefined,
             dam: dbPet.pedigree.dam_id || undefined
@@ -818,7 +823,7 @@ const WorkspaceLayout: React.FC = () => {
                 setIsAiTyping(true);
 
                 try {
-                    // Use the Petdegree Brain to process query
+                    // Use the Eibpo Brain to process query
                     const response = await aiThink(query);
 
                     // Also search for pets if applicable
@@ -1055,7 +1060,7 @@ const WorkspaceLayout: React.FC = () => {
                 {/* Logo - Gold Accent */}
                 <div className="w-10 h-10 border border-[#C5A059]/40 flex items-center justify-center mb-4 relative">
                     <div className="absolute inset-0 border border-[#C5A059]/20 rotate-45" />
-                    <span className="text-[#C5A059] text-lg">◆</span>
+                    <EibpoMark className="w-5 h-5 text-[#C5A059]" />
                 </div>
 
                 <SidebarIconButton icon={<HomeIcon />} active={workspaceView === 'idle'} tooltip={language === 'th' ? 'หน้าแรก' : 'Home'} onClick={() => transitionToView('idle')} />
@@ -1159,7 +1164,7 @@ const WorkspaceLayout: React.FC = () => {
 
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] tracking-[0.1em] uppercase text-[#C5A059]/60 border border-[#C5A059]/20">
-                                        <span>Petdegree AI</span>
+                                        <span>Eibpo AI</span>
                                     </div>
 
                                     <button

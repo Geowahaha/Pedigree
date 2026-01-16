@@ -6,10 +6,11 @@ export interface Pet {
   breed: string;
   type: 'dog' | 'cat' | 'horse';
   birthDate?: string;
-  age?: number; // Added for Airtable
+  age?: string | number; // Added for Airtable
   gender: 'male' | 'female';
   image: string;
-  color: string;
+  image_url?: string; // Sync with Supabase
+  color?: string;
   weight?: number; // Added for Airtable
   registrationNumber?: string;
   healthCertified?: boolean;
@@ -30,6 +31,10 @@ export interface Pet {
   medicalHistory?: string; // Added for Airtable
   airtableId?: string; // Added for Airtable sync
   owner_id?: string; // Added for Supabase/Chat features
+  ownership_status?: 'verified' | 'waiting_owner' | 'pending_claim' | 'disputed';
+  claimed_by?: string | null;
+  claim_date?: string | null;
+  verification_evidence?: Record<string, unknown> | null;
   boosted_until?: string | null; // VIP Promotion
   created_at?: string; // Sorting
   mother_id?: string | null;
@@ -40,6 +45,7 @@ export interface Pet {
   source?: 'internal' | 'instagram' | 'pinterest' | 'youtube';
   external_link?: string;
   is_sponsored?: boolean;
+  likes?: number;
 }
 
 export interface Product {

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getPetById } from '@/lib/petsService';
 import { Pet } from '@/data/petData';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { LitterRegistrationModal } from './modals/LitterRegistrationModal';
 
 type MatchStatus = 'planned' | 'mated' | 'confirmed' | 'born' | 'failed';
 type ApprovalStatus = 'pending' | 'approved' | 'rejected';
@@ -187,26 +188,29 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
     description: ''
   });
 
+  const [litterModalOpen, setLitterModalOpen] = useState(false);
+  const [selectedLitterMatch, setSelectedLitterMatch] = useState<MatchCard | null>(null);
+
   const statusConfig = useMemo(() => ({
     planned: {
       label: 'Planned',
-      className: 'bg-[#C5A059]/20 text-[#C5A059] border border-[#C5A059]/30'
+      className: 'bg-yellow-50 text-yellow-600 border border-yellow-100'
     },
     mated: {
       label: 'Mated',
-      className: 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+      className: 'bg-blue-50 text-blue-600 border border-blue-100'
     },
     confirmed: {
       label: 'Confirmed',
-      className: 'bg-green-500/20 text-green-400 border border-green-500/30'
+      className: 'bg-green-50 text-green-600 border border-green-100'
     },
     born: {
       label: 'Available',
-      className: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+      className: 'bg-[#ea4c89]/10 text-[#ea4c89] border border-pink-100'
     },
     failed: {
       label: 'Cancelled',
-      className: 'bg-[#B8B8B8]/10 text-[#B8B8B8] border border-[#B8B8B8]/30'
+      className: 'bg-gray-50 text-gray-500 border border-gray-100'
     }
   }), []);
 
@@ -222,7 +226,6 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
   const loadMatches = async () => {
     setLoading(true);
     try {
-      // First, try to load breeding_matches - simplified query without relations that might fail
       const { data, error } = await supabase
         .from('breeding_matches')
         .select('id, sire_id, dam_id, match_date, due_date, status, description, approval_status')
@@ -230,7 +233,6 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
         .order('match_date', { ascending: false })
         .limit(6);
 
-      // Filter for approved matches client-side to avoid complex OR conditions
       const filteredData = (data || []).filter((row: any) =>
         row.approval_status === 'approved' || row.approval_status === null
       );
@@ -251,7 +253,6 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
       const petIds = Array.from(new Set(filteredData.flatMap((row: any) => [row.sire_id, row.dam_id]).filter(Boolean)));
       let pets: PetRow[] = [];
       if (petIds.length > 0) {
-        // Try without profiles relation first (more compatible)
         const { data: petsData, error: petsError } = await supabase
           .from('pets')
           .select('id, name, breed, type, gender, birthday, image_url, registration_number, owner_id, owner_name')
@@ -336,7 +337,6 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
         .map((match) => `and(sire_id.eq.${match.sire_id},dam_id.eq.${match.dam_id})`)
         .join(',');
 
-      // Simplified query without profiles relation
       const { data, error } = await supabase
         .from('breeding_reservations')
         .select('id, sire_id, dam_id, user_id, user_contact, user_note, status, created_at')
@@ -354,7 +354,6 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
         return;
       }
 
-      // Fetch user names separately if needed
       const userIds = data.map((row: any) => row.user_id).filter(Boolean);
       let userNameMap = new Map<string, string>();
       if (userIds.length > 0) {
@@ -400,7 +399,8 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
       .eq('owner_id', user.id)
       .order('created_at', { ascending: false });
 
-    setUserPets(petsData || []);
+    // Add back type for compatibility
+    setUserPets((petsData || []).map((p: any) => ({ ...p, type: p.type || 'dog' })));
   };
 
   const loadSireOptions = async () => {
@@ -411,7 +411,7 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
       .order('created_at', { ascending: false })
       .limit(200);
 
-    setSireOptions(petsData || []);
+    setSireOptions((petsData || []).map((p: any) => ({ ...p, type: p.type || 'dog' })));
   };
 
   const loadPendingApprovals = async () => {
@@ -425,7 +425,6 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
       let pendingRows: any[] | null = null;
       let pendingError: any = null;
 
-      // Simplified query without profiles relation that might not exist
       if (user.profile?.role === 'admin') {
         const { data, error } = await supabase
           .from('breeding_matches')
@@ -440,7 +439,6 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
           .select('id')
           .eq('owner_id', user.id);
 
-        // Filter for male pets client-side
         const sireIds = (sirePets || []).map((pet: any) => pet.id);
         if (sireIds.length === 0) {
           setPendingApprovals([]);
@@ -473,7 +471,6 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
         new Set(pendingRows.flatMap((row: any) => [row.sire_id, row.dam_id]).filter(Boolean))
       );
 
-      // Get requester names separately
       const requesterIds = pendingRows
         .map((row: any) => row.requested_by)
         .filter(Boolean);
@@ -606,6 +603,17 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
       setRegisterError('Sire and dam must be different pets.');
       return;
     }
+
+    // VALIDATION: Check if match date is too old (e.g., > 8 months ago)
+    const matchDate = new Date(matchForm.matchDate);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - matchDate.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 240) { // Approx 8 months
+      setRegisterError("Puppy created long ago. For historical records, please contact admin.");
+      return;
+    }
     if (!user) {
       onRequireAuth?.();
       setRegisterError(copy.loginFirst);
@@ -711,6 +719,68 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
     }
   };
 
+  const handleMarkBorn = async (match: MatchCard) => {
+    if (!user) return;
+
+    if (match.match_date) {
+      const matchDate = new Date(match.match_date);
+      const now = new Date();
+      const diffTime = now.getTime() - matchDate.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 58) {
+        alert("Wait for your puppies to be born first.");
+        return;
+      }
+    }
+
+    if (!confirm("Confirm that litters are born? This will notify all followers.")) return;
+
+    try {
+      const { error } = await supabase
+        .from('breeding_matches')
+        .update({
+          status: 'born',
+          due_date: new Date().toISOString()
+        })
+        .eq('id', match.id);
+
+      if (error) throw error;
+
+      const reservationKey = getMatchKey(match.sire_id, match.dam_id);
+      const outputReservations = reservationsByMatch[reservationKey] || [];
+      const distinctUserIds = Array.from(new Set(outputReservations.map(r => r.user_id).filter(Boolean))) as string[];
+
+      if (distinctUserIds.length > 0) {
+        const sireName = match.sire?.name || 'Sire';
+        const damName = match.dam?.name || 'Dam';
+        const message = `Great news! Puppies from ${sireName} x ${damName} are born! Contact the breeder now.`;
+
+        await Promise.all(distinctUserIds.map(uid =>
+          createUserNotification({
+            user_id: uid,
+            type: 'puppy',
+            title: 'Puppies Born! 🐾',
+            message: message,
+            payload: { match_id: match.id, status: 'born' }
+          })
+        ));
+
+        alert(`Status updated and ${distinctUserIds.length} interested users notified!`);
+      }
+
+      await loadMatches();
+
+      // AUTO OPEN LITTER REGISTRATION
+      setSelectedLitterMatch(match);
+      setLitterModalOpen(true);
+
+    } catch (err) {
+      console.error(err);
+      alert('Failed to update status');
+    }
+  };
+
   const renderMatchCards = (list: MatchCard[]) => (
     <div className="grid gap-6 lg:grid-cols-2">
       {list.map((match) => {
@@ -722,127 +792,106 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
         const ownerLabel = getOwnerName(sire) || getOwnerName(dam) || 'Unknown';
         const reservationKey = getMatchKey(match.sire_id, match.dam_id);
         const reservations = reservationsByMatch[reservationKey] || [];
+        const isOwner = user && (user.id === sire?.owner_id || user.id === dam?.owner_id);
+
         return (
-          <div key={match.id} className="rounded-2xl bg-[#1A1A1A] border border-[#C5A059]/10 shadow-sm p-5 flex flex-col gap-4">
+          <div key={match.id} className="rounded-3xl bg-white border border-gray-100 shadow-sm hover:shadow-lg transition-all p-6 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${statusInfo.className}`}>{statusInfo.label}</span>
-              <span className="text-xs text-[#B8B8B8]/50">{copy.dueDate}: {formatDateShort(match.dueDateComputed)}</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => handlePetDetails(sire?.id)}
-                className="rounded-xl bg-[#0D0D0D] p-3 flex gap-3 items-center text-left hover:bg-[#C5A059]/10 border border-[#C5A059]/10 hover:border-[#C5A059]/30 transition-colors"
-              >
-                <img
-                  src={sire?.image_url || '/placeholder-pet.png'}
-                  alt={sire?.name || 'Sire'}
-                  className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-                />
-                <div>
-                  <p className="text-xs text-[#C5A059]/60 font-semibold">{copy.sire}</p>
-                  <p className="text-sm font-bold text-[#F5F5F0]">{sire?.name || '-'}</p>
-                  <p className="text-[10px] text-[#B8B8B8]/50">{sire?.breed || '-'}</p>
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePetDetails(dam?.id)}
-                className="rounded-xl bg-[#0D0D0D] p-3 flex gap-3 items-center text-left hover:bg-[#C5A059]/10 border border-[#C5A059]/10 hover:border-[#C5A059]/30 transition-colors"
-              >
-                <img
-                  src={dam?.image_url || '/placeholder-pet.png'}
-                  alt={dam?.name || 'Dam'}
-                  className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-                />
-                <div>
-                  <p className="text-xs text-[#C5A059]/60 font-semibold">{copy.dam}</p>
-                  <p className="text-sm font-bold text-[#F5F5F0]">{dam?.name || '-'}</p>
-                  <p className="text-[10px] text-[#B8B8B8]/50">{dam?.breed || '-'}</p>
-                </div>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-xs text-[#B8B8B8]/60">
-              <div>
-                <div className="font-semibold text-[#B8B8B8]/50">{copy.matchDate}</div>
-                <div className="font-bold text-[#F5F5F0]">{formatDateShort(match.match_date)}</div>
-              </div>
-              <div>
-                <div className="font-semibold text-[#B8B8B8]/50">{copy.offspring}</div>
-                <div className="text-[#B8B8B8]/80">
-                  {sireOffspring.length > 0 || damOffspring.length > 0
-                    ? `${sireOffspring.length ? `${copy.sire}: ${sireOffspring.join(', ')}` : ''}${sireOffspring.length && damOffspring.length ? ' | ' : ''}${damOffspring.length ? `${copy.dam}: ${damOffspring.join(', ')}` : ''}`
-                    : 'No recorded offspring yet.'}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-[#B8B8B8]/50">
-              <span>{copy.status}: {statusInfo.label}</span>
-              <span>{ownerLabel}</span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => {
-                  if (!user) {
-                    onRequireAuth?.();
-                    return;
-                  }
-                  setReserveMatch(match);
-                }}
-                disabled={!match.sire_id || !match.dam_id}
-                className="px-4 py-2 rounded-xl bg-[#C5A059] text-[#0A0A0A] text-xs font-bold shadow hover:bg-[#D4C4B5] transition-colors disabled:opacity-50"
-              >
-                {user ? copy.reserve : copy.reserveLogin}
-              </button>
-              {match.description && (
-                <span className="text-xs text-[#B8B8B8]/50 line-clamp-1">{match.description}</span>
-              )}
-            </div>
-
-            <div className="border-t border-[#C5A059]/10 pt-3">
-              <div className="flex items-center justify-between text-xs text-[#B8B8B8]/50">
-                <span>{copy.queueTitle}</span>
-                <span className="text-[#C5A059]">{reservations.length}</span>
-              </div>
-              {!user ? (
+              {isOwner && match.status !== 'born' && (
                 <button
-                  type="button"
-                  onClick={() => onRequireAuth?.()}
-                  className="mt-2 text-xs font-semibold text-[#C5A059] hover:underline"
+                  onClick={() => handleMarkBorn(match)}
+                  className="px-3 py-1 bg-[#ea4c89] text-white text-xs font-bold rounded-full hover:bg-pink-600 transition-colors"
                 >
-                  {copy.loginToQueue}
+                  Mark as Born
                 </button>
-              ) : reservationsLoading ? (
-                <p className="mt-2 text-xs text-[#B8B8B8]/50">Loading...</p>
-              ) : reservations.length === 0 ? (
-                <p className="mt-2 text-xs text-[#B8B8B8]/50">{copy.queueEmpty}</p>
-              ) : (
-                <div className="mt-2 space-y-2">
-                  {reservations.map((reservation, index) => {
-                    const reserverName = reservation.user?.full_name || copy.memberFallback;
-                    return (
-                      <div key={reservation.id} className="flex items-center justify-between text-xs text-[#B8B8B8]/70">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-[#C5A059]/60">{index + 1}.</span>
-                          <span className="font-semibold truncate text-[#F5F5F0]">{reserverName}</span>
-                          <span className="text-foreground/40">{maskContact(reservation.user_contact)}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-foreground/40">
-                          <span>{formatReservationDate(reservation.created_at)}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold capitalize ${getReservationStatusClass(reservation.status)}`}>
-                            {reservation.status || 'pending'}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
               )}
             </div>
+
+            <div className="flex items-center justify-between gap-4">
+              {/* SIRE */}
+              <div
+                className="flex flex-col items-center gap-2 cursor-pointer group"
+                onClick={() => handlePetDetails(match.sire_id)}
+              >
+                <div className="relative">
+                  <img src={sire?.image_url || ''} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md group-hover:scale-105 transition-transform" />
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center text-white text-[10px]">♂</div>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-[#0d0c22]">{sire?.name || 'Unknown'}</p>
+                  <p className="text-xs text-gray-500">{sire?.breed || ''}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-8 h-8 rounded-full bg-pink-50 flex items-center justify-center text-[#ea4c89] text-xs font-bold">X</div>
+                <p className="text-[10px] text-gray-400 font-medium">Matched</p>
+                <p className="text-xs font-bold text-[#0d0c22]">{formatDateShort(match.match_date)}</p>
+              </div>
+
+              {/* DAM */}
+              <div
+                className="flex flex-col items-center gap-2 cursor-pointer group"
+                onClick={() => handlePetDetails(match.dam_id)}
+              >
+                <div className="relative">
+                  <img src={dam?.image_url || ''} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md group-hover:scale-105 transition-transform" />
+                  <div className="absolute -bottom-1 -left-1 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-white text-[10px]">♀</div>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-[#0d0c22]">{dam?.name || 'Unknown'}</p>
+                  <p className="text-xs text-gray-500">{dam?.breed || ''}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-3 flex justify-between items-center text-xs">
+              <div>
+                <span className="text-gray-400 block mb-0.5">{match.status === 'born' ? 'Born Date' : 'Due Date'}</span>
+                <span className="font-bold text-[#0d0c22]">{formatDateShort(match.status === 'born' ? match.due_date : match.dueDateComputed)}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-gray-400 block mb-0.5">Breeder</span>
+                <span className="font-bold text-[#0d0c22]">{ownerLabel}</span>
+              </div>
+            </div>
+
+            {/* RESERVATIONS */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Queue ({reservations.length})</h4>
+                <button
+                  onClick={() => setReserveMatch(match)}
+                  className="text-xs font-bold text-[#ea4c89] hover:underline"
+                >
+                  Join Queue +
+                </button>
+              </div>
+              <div className="flex -space-x-2 overflow-hidden mb-2 pl-1">
+                {reservations.length > 0 ? reservations.slice(0, 5).map((r, i) => (
+                  <div key={i} className="w-6 h-6 rounded-full bg-white border border-gray-100 flex items-center justify-center text-xs text-gray-500 shadow-sm" title={r.user?.full_name || 'User'}>
+                    {(r.user?.full_name || 'U')[0]}
+                  </div>
+                )) : (
+                  <p className="text-xs text-gray-400 italic pl-1">No reservations yet</p>
+                )}
+                {reservations.length > 5 && (
+                  <div className="w-6 h-6 rounded-full bg-gray-100 border border-white flex items-center justify-center text-[10px] text-gray-500 font-bold">
+                    +{reservations.length - 5}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Offspring Stats */}
+            {(sireOffspring.length > 0 || damOffspring.length > 0) && (
+              <div className="pt-3 border-t border-gray-100">
+                <p className="text-[10px] text-gray-400">
+                  <span className="font-bold text-gray-600">Offspring:</span> {sireOffspring.concat(damOffspring).slice(0, 3).join(', ')}...
+                </p>
+              </div>
+            )}
           </div>
         );
       })}
@@ -850,256 +899,263 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
   );
 
   return (
-    <section id="puppy-coming-soon" className="relative py-16 px-4 scroll-mt-24">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-10">
-          <div>
-            <h3 className="text-3xl font-['Playfair_Display'] font-bold text-[#F5F5F0]">{copy.title}</h3>
-            <p className="text-[#B8B8B8]/60 mt-2 max-w-2xl">{copy.subtitle}</p>
-          </div>
-          <button
-            onClick={handleOpenRegister}
-            className="px-6 py-3 rounded-xl bg-[#C5A059] text-[#0A0A0A] text-sm font-bold shadow hover:bg-[#D4C4B5] transition-colors"
-          >
-            {copy.registerMatch}
-          </button>
-        </div>
-        {registerNotice && (
-          <div className="mb-6 rounded-2xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-400">
-            {registerNotice}
-          </div>
-        )}
-        {(user && (pendingLoading || pendingApprovals.length > 0)) && (
-          <div className="mb-8 rounded-2xl bg-[#1A1A1A] border border-[#C5A059]/10 shadow-sm p-5">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-              <div>
-                <h4 className="text-lg font-bold text-[#F5F5F0]">{copy.approvalTitle}</h4>
-                <p className="text-xs text-[#B8B8B8]/50">{copy.approvalSubtitle}</p>
+    <div className="space-y-16">
+      {/* Pending Approvals (Admin/Owner) */}
+      {pendingApprovals.length > 0 && (
+        <div className="bg-amber-50 rounded-2xl p-6 border border-amber-100">
+          <h3 className="text-lg font-bold text-amber-800 mb-2 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            {copy.approvalTitle}
+          </h3>
+          <div className="grid gap-4 md:grid-cols-2 mt-4">
+            {pendingApprovals.map(match => (
+              <div key={match.id} className="bg-white p-4 rounded-xl shadow-sm border border-amber-100/50">
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 uppercase">{copy.awaitingApproval}</span>
+                  <span className="text-xs text-gray-400">{formatDateShort(match.match_date)}</span>
+                </div>
+                <p className="text-sm text-[#0d0c22] font-medium mb-3">
+                  <span className="font-bold">{match.dam?.name}</span> wants to match with <span className="font-bold">{match.sire?.name}</span>
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleApprovalDecision(match, 'approved')}
+                    className="flex-1 py-2 bg-green-500 text-white rounded-lg text-xs font-bold hover:bg-green-600"
+                  >
+                    {copy.approve}
+                  </button>
+                  <button
+                    onClick={() => handleApprovalDecision(match, 'rejected')}
+                    className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200"
+                  >
+                    {copy.reject}
+                  </button>
+                </div>
               </div>
-            </div>
-            {pendingLoading ? (
-              <p className="text-sm text-[#B8B8B8]/50">Loading...</p>
-            ) : pendingApprovals.length === 0 ? (
-              <p className="text-sm text-[#B8B8B8]/50">{copy.approvalEmpty}</p>
-            ) : (
-              <div className="space-y-3">
-                {pendingApprovals.map((match) => (
-                  <div key={match.id} className="flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-xl border border-[#C5A059]/10 bg-[#0D0D0D] px-4 py-3">
-                    <div>
-                      <div className="text-sm font-bold text-[#F5F5F0]">
-                        {match.sire?.name || '-'} x {match.dam?.name || '-'}
-                      </div>
-                      <div className="text-xs text-[#B8B8B8]/50">
-                        Match date: {formatDateShort(match.match_date)} | Due: {formatDateShort(match.dueDateComputed)}
-                      </div>
-                      <div className="text-xs text-[#B8B8B8]/50">
-                        {copy.requesterLabel}: {match.requester?.full_name || copy.memberFallback}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleApprovalDecision(match, 'approved')}
-                        className="px-3 py-2 rounded-lg bg-[#C5A059] text-[#0A0A0A] text-xs font-bold hover:bg-[#D4C4B5] transition-colors"
-                      >
-                        {copy.approve}
-                      </button>
-                      <button
-                        onClick={() => handleApprovalDecision(match, 'rejected')}
-                        className="px-3 py-2 rounded-lg border border-red-500/30 text-red-400 text-xs font-bold hover:bg-red-500/10 transition-colors"
-                      >
-                        {copy.reject}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            {[0, 1].map((i) => (
-              <div key={i} className="h-56 rounded-2xl bg-[#1A1A1A] border border-[#C5A059]/10 animate-pulse" />
             ))}
           </div>
-        ) : (
-          <div className="space-y-12">
-            <div id="puppy-available" className="scroll-mt-24">
-              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6">
-                <div>
-                  <h4 className="text-2xl font-['Playfair_Display'] text-[#F5F5F0]">{copy.availableTitle}</h4>
-                  <p className="text-sm text-[#B8B8B8]/60">{copy.availableSubtitle}</p>
-                </div>
-              </div>
-              {availableMatches.length === 0 ? (
-                <div className="rounded-2xl bg-[#1A1A1A] border border-dashed border-[#C5A059]/20 p-8 text-center text-[#B8B8B8]/60">
-                  {copy.noAvailableMatches}
-                </div>
-              ) : (
-                renderMatchCards(availableMatches)
-              )}
-            </div>
+        </div>
+      )}
 
-            <div id="puppy-coming" className="scroll-mt-24">
-              <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-6">
-                <div>
-                  <h4 className="text-2xl font-['Playfair_Display'] text-[#F5F5F0]">{copy.title}</h4>
-                  <p className="text-sm text-[#B8B8B8]/60">{copy.subtitle}</p>
-                </div>
-              </div>
-              {comingMatches.length === 0 ? (
-                <div className="rounded-2xl bg-[#1A1A1A] border border-dashed border-[#C5A059]/20 p-8 text-center text-[#B8B8B8]/60">
-                  {copy.noMatches}
-                </div>
-              ) : (
-                renderMatchCards(comingMatches)
-              )}
-            </div>
+      {/* Available Puppies */}
+      <div id="puppy-available" className="scroll-mt-24">
+        <div className="flex justify-between items-end mb-8">
+          <div>
+            <h2 className="text-3xl font-black text-[#0d0c22] mb-2">{copy.availableTitle}</h2>
+            <p className="text-gray-500">{copy.availableSubtitle}</p>
           </div>
+          {/* Action Button? */}
+        </div>
+
+        {loading ? (
+          <div className="text-center py-10 text-gray-400">Loading...</div>
+        ) : availableMatches.length === 0 ? (
+          <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-gray-200">
+            <span className="text-4xl opacity-50 block mb-4">🐶</span>
+            <p className="text-gray-500 font-medium">{copy.noAvailableMatches}</p>
+          </div>
+        ) : (
+          renderMatchCards(availableMatches)
         )}
       </div>
 
+      {/* Upcoming Matches */}
+      <div id="puppy-coming" className="scroll-mt-24">
+        <div className="flex justify-between items-end mb-8">
+          <div>
+            <h2 className="text-3xl font-black text-[#0d0c22] mb-2">{copy.title}</h2>
+            <p className="text-gray-500">{copy.subtitle}</p>
+          </div>
+          <button
+            onClick={handleOpenRegister}
+            className="px-6 py-3 bg-[#ea4c89] text-white rounded-xl text-sm font-bold shadow-lg shadow-pink-200 hover:bg-pink-600 hover:-translate-y-0.5 transition-all"
+          >
+            + {copy.registerMatch}
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-10 text-gray-400">Loading...</div>
+        ) : comingMatches.length === 0 ? (
+          <div className="bg-white rounded-2xl p-10 text-center border border-dashed border-gray-200">
+            <span className="text-4xl opacity-50 block mb-4">🧬</span>
+            <p className="text-gray-500 font-medium">{copy.noMatches}</p>
+          </div>
+        ) : (
+          renderMatchCards(comingMatches)
+        )}
+      </div>
+
+      {/* MODALS */}
+      {/* Reservation Dialog */}
       <Dialog open={!!reserveMatch} onOpenChange={(open) => !open && setReserveMatch(null)}>
-        <DialogContent className="max-w-md" aria-describedby="reserve-description">
+        <DialogContent className="sm:max-w-md bg-white border-none rounded-2xl shadow-xl">
           <DialogHeader>
-            <DialogTitle>{copy.reserve}</DialogTitle>
-            <DialogDescription id="reserve-description">
-              {reserveMatch?.sire?.name} × {reserveMatch?.dam?.name}
+            <DialogTitle className="text-xl font-bold text-[#0d0c22]">{copy.reserve}</DialogTitle>
+            <DialogDescription className="text-gray-500">
+              Join the queue for {reserveMatch?.sire?.name} x {reserveMatch?.dam?.name}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs font-bold text-foreground/60">{copy.contactLabel}</label>
-              <input
-                value={reserveContact}
-                onChange={(e) => setReserveContact(e.target.value)}
-                className="w-full mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm"
-                placeholder="Phone or Line"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-foreground/60">{copy.noteLabel}</label>
-              <textarea
-                value={reserveNote}
-                onChange={(e) => setReserveNote(e.target.value)}
-                className="w-full mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm min-h-[90px]"
-              />
-            </div>
-            {reserveStatus === 'error' && (
-              <p className="text-xs text-red-500">
-                Please provide your contact info.
-              </p>
-            )}
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => setReserveMatch(null)}
-                className="px-3 py-2 rounded-lg text-xs font-bold text-foreground/60"
-              >
-                {copy.cancel}
-              </button>
-              <button
-                onClick={handleReserve}
-                className="px-3 py-2 rounded-lg bg-[#2C2C2C] text-white text-xs font-bold"
-                disabled={reserveStatus === 'saving'}
-              >
-                {reserveStatus === 'saving' ? '...' : copy.submit}
+
+          {!user ? (
+            <div className="text-center py-6">
+              <p className="text-orange-500 font-medium mb-4">{copy.loginFirst}</p>
+              <button onClick={() => onRequireAuth?.()} className="px-6 py-2 bg-[#0d0c22] text-white rounded-lg font-bold">
+                Login
               </button>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div>
+                <label className="block text-sm font-bold text-[#0d0c22] mb-1">{copy.contactLabel}</label>
+                <input
+                  type="text"
+                  value={reserveContact}
+                  onChange={(e) => setReserveContact(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#ea4c89] outline-none transition-all"
+                  placeholder="e.g. 081-xxx-xxxx"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-[#0d0c22] mb-1">{copy.noteLabel}</label>
+                <textarea
+                  value={reserveNote}
+                  onChange={(e) => setReserveNote(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#ea4c89] outline-none transition-all h-24 resize-none"
+                  placeholder="Prefer male/female?"
+                />
+              </div>
+
+              {reserveStatus === 'error' && <p className="text-red-500 text-sm font-bold">Failed to submit. Please check fields.</p>}
+              {reserveStatus === 'success' && <p className="text-green-500 text-sm font-bold">Success! Added to queue.</p>}
+
+              <div className="flex gap-3 mt-4">
+                <button onClick={() => setReserveMatch(null)} className="flex-1 py-3 text-gray-500 font-bold hover:bg-gray-50 rounded-xl transition-colors">
+                  {copy.cancel}
+                </button>
+                <button
+                  onClick={handleReserve}
+                  disabled={reserveStatus === 'saving' || reserveStatus === 'success'}
+                  className="flex-1 py-3 bg-[#0d0c22] text-white font-bold rounded-xl hover:bg-gray-900 transition-colors disabled:opacity-50"
+                >
+                  {reserveStatus === 'saving' ? 'Saving...' : copy.submit}
+                </button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showRegister} onOpenChange={(open) => !open && setShowRegister(false)}>
-        <DialogContent className="max-w-md" aria-describedby="register-match-description">
+      {/* Registration Dialog */}
+      <Dialog open={showRegister} onOpenChange={setShowRegister}>
+        <DialogContent className="sm:max-w-lg bg-white border-none rounded-2xl shadow-xl overflow-hidden">
           <DialogHeader>
-            <DialogTitle>{copy.registerTitle}</DialogTitle>
-            <DialogDescription id="register-match-description">
-              Add your breeding pair to the system.
-            </DialogDescription>
+            <DialogTitle className="text-xl font-bold text-[#0d0c22]">{copy.registerTitle}</DialogTitle>
+            <DialogDescription className="text-gray-500">Record a new breeding match.</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            {registerError && (
-              <p className="text-xs text-red-500">{registerError}</p>
-            )}
-            <div className="grid grid-cols-2 gap-3">
+
+          {registerError && (
+            <div className="bg-red-50 text-red-500 p-3 rounded-lg text-sm font-bold mb-2 icon-error">
+              {registerError}
+            </div>
+          )}
+          {registerNotice && (
+            <div className="bg-green-50 text-green-600 p-3 rounded-lg text-sm font-bold mb-2">
+              {registerNotice}
+            </div>
+          )}
+
+          <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-xs font-bold text-foreground/60">{copy.sireLabel}</label>
+                <label className="block text-sm font-bold text-[#0d0c22] mb-1">{copy.sireLabel}</label>
                 <select
                   value={matchForm.sireId}
-                  onChange={(e) => setMatchForm((prev) => ({ ...prev, sireId: e.target.value }))}
-                  className="w-full mt-1 rounded-lg border border-gray-200 px-2 py-2 text-sm"
+                  onChange={(e) => setMatchForm({ ...matchForm, sireId: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:border-[#ea4c89] outline-none"
                 >
-                  <option value="">Select sire</option>
-                  {sireOptions.map((pet) => (
-                    <option key={pet.id} value={pet.id}>
-                      {pet.name}{pet.owner_id === user?.id ? ' (mine)' : ''}
-                    </option>
+                  <option value="">Select Sire</option>
+                  {sireOptions.map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.breed})</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="text-xs font-bold text-foreground/60">{copy.damLabel}</label>
+                <label className="block text-sm font-bold text-[#0d0c22] mb-1">{copy.damLabel}</label>
                 <select
                   value={matchForm.damId}
-                  onChange={(e) => setMatchForm((prev) => ({ ...prev, damId: e.target.value }))}
-                  className="w-full mt-1 rounded-lg border border-gray-200 px-2 py-2 text-sm"
+                  onChange={(e) => setMatchForm({ ...matchForm, damId: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:border-[#ea4c89] outline-none"
                 >
-                  <option value="">Select dam</option>
-                  {userPets.filter(pet => pet.gender?.toLowerCase() === 'female').map((pet) => (
-                    <option key={pet.id} value={pet.id}>{pet.name}</option>
+                  <option value="">Select Dam</option>
+                  {userPets.filter(p => p.gender === 'female' || p.gender === 'Female').map(p => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.breed})</option>
                   ))}
                 </select>
               </div>
             </div>
+
             <div>
-              <label className="text-xs font-bold text-foreground/60">{copy.matchDateLabel}</label>
+              <label className="block text-sm font-bold text-[#0d0c22] mb-1">{copy.matchDateLabel}</label>
               <input
                 type="date"
                 value={matchForm.matchDate}
-                onChange={(e) => setMatchForm((prev) => ({ ...prev, matchDate: e.target.value }))}
-                className="w-full mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                onChange={(e) => setMatchForm({ ...matchForm, matchDate: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:border-[#ea4c89] outline-none"
               />
             </div>
+
             <div>
-              <label className="text-xs font-bold text-foreground/60">{copy.statusLabel}</label>
-              <select
-                value={matchForm.status}
-                onChange={(e) => setMatchForm((prev) => ({ ...prev, status: e.target.value as MatchStatus }))}
-                className="w-full mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm"
-              >
-                <option value="planned">{statusConfig.planned.label}</option>
-                <option value="mated">{statusConfig.mated.label}</option>
-                <option value="confirmed">{statusConfig.confirmed.label}</option>
-              </select>
+              <label className="block text-sm font-bold text-[#0d0c22] mb-1">{copy.statusLabel}</label>
+              <div className="flex flex-wrap gap-2">
+                {(['planned', 'mated', 'confirmed', 'born'] as MatchStatus[]).map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setMatchForm({ ...matchForm, status: s })}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${matchForm.status === s ? 'bg-[#ea4c89] text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                  >
+                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
+
             <div>
-              <label className="text-xs font-bold text-foreground/60">{copy.descriptionLabel}</label>
+              <label className="block text-sm font-bold text-[#0d0c22] mb-1">{copy.descriptionLabel}</label>
               <textarea
                 value={matchForm.description}
-                onChange={(e) => setMatchForm((prev) => ({ ...prev, description: e.target.value }))}
-                className="w-full mt-1 rounded-lg border border-gray-200 px-3 py-2 text-sm min-h-[80px]"
+                onChange={(e) => setMatchForm({ ...matchForm, description: e.target.value })}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white focus:border-[#ea4c89] outline-none h-20 resize-none"
+                placeholder="Optional notes..."
               />
             </div>
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => setShowRegister(false)}
-                className="px-3 py-2 rounded-lg text-xs font-bold text-foreground/60"
-              >
-                {copy.cancel}
-              </button>
+
+            <div className="pt-2">
               <button
                 onClick={handleRegisterMatch}
-                className="px-3 py-2 rounded-lg bg-[#2C2C2C] text-white text-xs font-bold"
                 disabled={registerLoading}
+                className="w-full py-3 bg-[#0d0c22] text-white font-bold rounded-xl hover:bg-gray-900 transition-all shadow-lg"
               >
-                {registerLoading ? '...' : copy.save}
+                {registerLoading ? 'Saving...' : copy.save}
               </button>
             </div>
           </div>
+
         </DialogContent>
       </Dialog>
-    </section>
+
+      {/* Litter Registration Modal */}
+      {selectedLitterMatch && (
+        <LitterRegistrationModal
+          open={litterModalOpen}
+          onOpenChange={setLitterModalOpen}
+          matchId={selectedLitterMatch.id}
+          sireId={selectedLitterMatch.sire_id}
+          damId={selectedLitterMatch.dam_id}
+          damName={selectedLitterMatch.dam?.name}
+        />
+      )}
+    </div>
   );
 };
 

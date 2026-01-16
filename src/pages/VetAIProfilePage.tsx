@@ -82,6 +82,7 @@ const VetAIProfilePage: React.FC = () => {
   }, [user, pet]);
 
   const canEdit = Boolean(user && (isAdmin || isOwner));
+  const todayLabel = useMemo(() => new Date().toLocaleDateString(), []);
 
   useEffect(() => {
     let isMounted = true;
@@ -551,6 +552,78 @@ const VetAIProfilePage: React.FC = () => {
                 placeholder="Other observations, vet recommendations, lifestyle notes"
                 disabled={!canEdit}
               />
+            </div>
+
+            <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="rounded-2xl border border-[#E6DED2] bg-white/80 p-6 shadow-sm">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold">Daily Health Knowledge</h3>
+                    <p className="text-sm text-[#6B6B6B] mt-1">
+                      Seasonal risks, vaccine reminders, and prevention tips.
+                    </p>
+                  </div>
+                  <span className="text-xs text-[#A4835C]">Updated {todayLabel}</span>
+                </div>
+                <div className="mt-4 grid gap-3 text-sm text-[#2B2B2B]">
+                  <div className="rounded-xl border border-[#EFE8DC] bg-[#FCFAF6] px-4 py-3">
+                    Seasonal watchlist: heatstroke, ticks/fleas, dehydration.
+                  </div>
+                  <div className="rounded-xl border border-[#EFE8DC] bg-[#FCFAF6] px-4 py-3">
+                    Vaccine cadence: core boosters, annual checkups.
+                  </div>
+                  <div className="rounded-xl border border-[#EFE8DC] bg-[#FCFAF6] px-4 py-3">
+                    Nutrition notes: weight control, hydration, supplements.
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-[#E6DED2] bg-white/80 p-5 shadow-sm">
+                  <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-[#A4835C]">Consult Dr. Jeab</h4>
+                  <p className="text-sm text-[#6B6B6B] mt-2">
+                    Ask questions and follow daily vet tips.
+                  </p>
+                  <a
+                    href="https://www.facebook.com/MorJeabChaengwattana/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-flex items-center text-sm font-semibold text-[#A4835C] hover:text-[#8E6B47]"
+                  >
+                    Open Facebook
+                  </a>
+                </div>
+
+                <div className="rounded-2xl border border-[#E6DED2] bg-white/80 p-5 shadow-sm">
+                  <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-[#A4835C]">Partner Products</h4>
+                  <p className="text-sm text-[#6B6B6B] mt-2">
+                    Nutrition and pet food promotions.
+                  </p>
+                  <a
+                    href="https://www.facebook.com/Oliverpetfoodthailand"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-flex items-center text-sm font-semibold text-[#A4835C] hover:text-[#8E6B47]"
+                  >
+                    Oliver Pet Food
+                  </a>
+                </div>
+
+                <div className="rounded-2xl border border-[#E6DED2] bg-white/80 p-5 shadow-sm">
+                  <h4 className="text-sm font-semibold uppercase tracking-[0.2em] text-[#A4835C]">Pet Medications</h4>
+                  <p className="text-sm text-[#6B6B6B] mt-2">
+                    Flea and tick prevention guidance.
+                  </p>
+                  <a
+                    href="https://nexgardforpets.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-flex items-center text-sm font-semibold text-[#A4835C] hover:text-[#8E6B47]"
+                  >
+                    NexGard
+                  </a>
+                </div>
+              </div>
             </div>
           </>
         )}

@@ -44,7 +44,7 @@ const CTASection: React.FC<CTASectionProps> = ({ onGetStarted }) => {
 
                     {/* Description */}
                     <p className="zen-body-lg text-white/70 max-w-2xl mx-auto mb-12 leading-relaxed animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-                        Join thousands of breeders worldwide who trust Petdegree to manage their breeding programs, track pedigrees, and connect with fellow enthusiasts.
+                        Join thousands of breeders worldwide who trust Eibpo to manage their breeding programs, track pedigrees, and connect with fellow enthusiasts.
                     </p>
 
                     {/* CTA Buttons */}

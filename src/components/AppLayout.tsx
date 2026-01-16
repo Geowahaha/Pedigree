@@ -45,6 +45,7 @@ const AppLayout: React.FC = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [petDetailsModalOpen, setPetDetailsModalOpen] = useState(false);
+  const [petDetailsFocus, setPetDetailsFocus] = useState<'comments' | 'edit' | null>(null);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [breederProfileOpen, setBreederProfileOpen] = useState(false);
@@ -238,8 +239,9 @@ const AppLayout: React.FC = () => {
     setPedigreeModalOpen(true);
   };
 
-  const handleViewPetDetails = (pet: Pet) => {
+  const handleViewPetDetails = (pet: Pet, focus?: 'comments' | 'edit' | null) => {
     setSelectedPet(pet);
+    setPetDetailsFocus(focus || null);
     setPetDetailsModalOpen(true);
   };
 
@@ -391,9 +393,13 @@ const AppLayout: React.FC = () => {
 
       <PetDetailsModal
         isOpen={petDetailsModalOpen}
-        onClose={() => setPetDetailsModalOpen(false)}
+        onClose={() => {
+          setPetDetailsModalOpen(false);
+          setPetDetailsFocus(null);
+        }}
         pet={selectedPet}
         onViewPedigree={handleViewPedigree}
+        initialSection={petDetailsFocus}
       />
       <AdminPanel
         isOpen={adminPanelOpen}

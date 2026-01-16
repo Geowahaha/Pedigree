@@ -103,3 +103,29 @@ export async function uploadPetDocument(file: File): Promise<string> {
         throw error;
     }
 }
+
+/**
+ * Uploads an ownership evidence file to the 'ownership-evidence' bucket.
+ * Returns the storage path for signed URL generation.
+ */
+export async function uploadOwnershipEvidence(file: File): Promise<string> {
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('ownership-evidence')
+            .upload(filePath, file, {
+                cacheControl: '3600',
+                upsert: false
+            });
+
+        if (uploadError) throw uploadError;
+
+        return filePath;
+    } catch (error) {
+        console.error('Error uploading ownership evidence:', error);
+        throw error;
+    }
+}

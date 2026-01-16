@@ -6,7 +6,7 @@ const TestimonialsSection: React.FC = () => {
             name: 'Sarah Johnson',
             role: 'Golden Retriever Breeder',
             image: 'https://i.pravatar.cc/150?img=1',
-            content: 'Petdegree has transformed how I manage my breeding program. The digital pedigree system is incredibly Professional and easy to use. My clients love the transparency!',
+            content: 'Eibpo has transformed how I manage my breeding program. The digital pedigree system is incredibly Professional and easy to use. My clients love the transparency!',
             rating: 5,
             location: 'California, USA'
         },
@@ -46,7 +46,7 @@ const TestimonialsSection: React.FC = () => {
                         Loved by Breeders Worldwide
                     </h2>
                     <p className="text-lg text-foreground/60 max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-                        Join thousands of professional breeders who trust Petdegree to manage their breeding programs.
+                        Join thousands of professional breeders who trust Eibpo to manage their breeding programs.
                     </p>
                 </div>
 

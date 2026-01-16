@@ -86,77 +86,79 @@ const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ onAddToCart, on
   ];
 
   return (
-    <section id="marketplace" className="py-20 lg:py-28 bg-gradient-to-b from-background to-muted/30 relative">
-      <div className="zen-container px-4 sm:px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="text-center mb-14">
-          <span className="inline-block px-5 py-2 rounded-2xl bg-primary/10 text-primary text-sm font-semibold mb-5 animate-in fade-in zoom-in duration-500">
-            Curated Marketplace
-          </span>
-          <h2 className="zen-h1 text-3xl sm:text-4xl lg:text-5xl text-foreground mb-5">
-            Premium Pet Products
-          </h2>
-          <p className="zen-body-lg text-foreground/50 max-w-2xl mx-auto">
-            Discover handpicked products from verified sellers. Quality nutrition, toys, and accessories for your beloved companions.
-          </p>
-        </div>
+    <div className="max-w-[1800px] mx-auto">
+      {/* Header */}
+      <div className="mb-10 text-center">
+        <h2 className="font-['Playfair_Display'] text-4xl font-bold text-[#0d0c22] mb-3">
+          Marketplace
+        </h2>
+        <p className="text-gray-500 max-w-2xl mx-auto text-lg">
+          Discover handpicked products from verified sellers. Quality nutrition, toys, and accessories for your beloved companions.
+        </p>
+      </div>
 
-        {/* Category Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setCategory(cat.id as typeof category)}
-              className={`p-5 lg:p-6 rounded-2xl border transition-all duration-500 flex flex-col items-center gap-3 ${category === cat.id
-                ? 'bg-foreground border-foreground text-background shadow-2xl scale-[1.02]'
-                : 'bg-white/70 backdrop-blur-sm border-foreground/5 text-foreground hover:border-primary/20 hover:shadow-lg hover:-translate-y-1'
-                }`}
-            >
-              <div className={`p-3.5 rounded-2xl transition-all duration-300 ${category === cat.id ? 'bg-white/20' : 'bg-primary/10 text-primary'}`}>
-                {cat.icon}
-              </div>
-              <span className="font-semibold text-sm lg:text-base">{cat.label}</span>
-            </button>
-          ))}
-        </div>
+      {/* Category Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setCategory(cat.id as typeof category)}
+            className={`p-5 lg:p-6 rounded-2xl border transition-all duration-300 flex flex-col items-center gap-3 ${category === cat.id
+              ? 'bg-[#ea4c89] border-[#ea4c89] text-white shadow-lg shadow-[#ea4c89]/30 transform scale-105'
+              : 'bg-white border-gray-100 text-gray-500 hover:border-[#ea4c89]/30 hover:text-[#0d0c22] hover:shadow-lg hover:-translate-y-1'
+              }`}
+          >
+            <div className={`p-3.5 rounded-2xl transition-all duration-300 ${category === cat.id ? 'bg-white/20 text-white' : 'bg-gray-50 text-gray-400 group-hover:text-[#ea4c89]'}`}>
+              {cat.icon}
+            </div>
+            <span className="font-bold text-sm lg:text-base">{cat.label}</span>
+          </button>
+        ))}
+      </div>
 
-        {/* Filters Bar */}
-        <div className="bg-muted/30 backdrop-blur-md rounded-3xl p-4 lg:p-6 mb-8 border border-white/50 shadow-sm">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col lg:flex-row gap-4 items-center">
-              {/* Pet Type Filter */}
-              <div className="flex gap-2">
-                {['all', 'dog', 'cat'].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setPetType(type as typeof petType)}
-                    className={`px-4 py-3 rounded-xl text-sm font-bold transition-all ${petType === type
-                      ? 'bg-primary text-white shadow-md'
-                      : 'bg-white/80 text-foreground/70 hover:bg-primary/10'
-                      }`}
-                  >
-                    {type === 'all' ? 'All Pets' : type === 'dog' ? 'Dogs' : 'Cats'}
-                  </button>
-                ))}
-              </div>
+      {/* Filters Bar */}
+      <div className="bg-white rounded-3xl p-6 lg:p-8 mb-8 border border-gray-100 shadow-sm">
+        <div className="flex flex-col gap-6">
+          <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+            {/* Pet Type Filter */}
+            <div className="flex gap-2">
+              {['all', 'dog', 'cat'].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setPetType(type as typeof petType)}
+                  className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all border ${petType === type
+                    ? 'bg-[#0d0c22] text-white border-[#0d0c22] shadow-md'
+                    : 'bg-white text-gray-500 border-gray-200 hover:border-[#0d0c22] hover:text-[#0d0c22]'
+                    }`}
+                >
+                  {type === 'all' ? 'All Pets' : type === 'dog' ? 'Dogs' : 'Cats'}
+                </button>
+              ))}
+            </div>
 
+            <div className="flex gap-4 items-center w-full lg:w-auto">
               {/* Sort */}
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                className="px-4 py-3 rounded-xl border border-primary/20 focus:border-primary outline-none text-foreground bg-white/80 text-sm font-medium"
-              >
-                <option value="featured">Featured</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="rating">Highest Rated</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="appearance-none px-6 py-2.5 pr-10 rounded-full border border-gray-200 focus:border-[#ea4c89] outline-none text-[#0d0c22] bg-white text-sm font-bold cursor-pointer hover:border-gray-300 transition-colors"
+                >
+                  <option value="featured">Featured</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                  <option value="rating">Highest Rated</option>
+                </select>
+                <div className="absolute right-4 top-1/2 transform -translate-y-1/2 pointer-events-none text-gray-400">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                </div>
+              </div>
 
               <button
                 onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-                className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${showFavoritesOnly
-                  ? 'bg-pink-500 text-white shadow-md'
-                  : 'bg-white/80 text-foreground/70 hover:bg-pink-50'
+                className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all flex items-center gap-2 border ${showFavoritesOnly
+                  ? 'bg-red-50 text-red-500 border-red-200 shadow-sm'
+                  : 'bg-white text-gray-500 border-gray-200 hover:border-red-200 hover:text-red-500'
                   }`}
               >
                 <svg className="w-5 h-5" fill={showFavoritesOnly ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
@@ -165,77 +167,95 @@ const MarketplaceSection: React.FC<MarketplaceSectionProps> = ({ onAddToCart, on
                 Favorites {favorites.length > 0 && `(${favorites.length})`}
               </button>
             </div>
+          </div>
 
-            {/* Price Range Filter */}
-            <div className="flex flex-col lg:flex-row gap-4 pt-2 border-t border-primary/10">
-              <div className="flex-1">
-                <label className="text-sm font-bold text-foreground/70 mb-2 block">
-                  Price Range: ฿{priceRange[0]} - ฿{priceRange[1]}
-                </label>
-                <div className="flex gap-4 items-center">
-                  <input
-                    type="range"
-                    min="0"
-                    max="5000"
-                    step="100"
-                    value={priceRange[0]}
-                    onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
-                    className="flex-1"
-                  />
-                  <input
-                    type="range"
-                    min="0"
-                    max="5000"
-                    step="100"
-                    value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                    className="flex-1"
-                  />
-                </div>
+          {/* Price Range Filter */}
+          <div className="flex flex-col lg:flex-row gap-4 pt-6 border-t border-gray-100">
+            <div className="flex-1">
+              <div className="flex justify-between items-center mb-4">
+                <label className="text-sm font-bold text-[#0d0c22]">Price Range</label>
+                <span className="text-sm font-medium text-[#ea4c89] bg-[#ea4c89]/10 px-3 py-1 rounded-full">
+                  ฿{priceRange[0].toLocaleString()} - ฿{priceRange[1].toLocaleString()}
+                </span>
+              </div>
+              <div className="flex gap-4 items-center">
+                <input
+                  type="range"
+                  min="0"
+                  max="5000"
+                  step="100"
+                  value={priceRange[0]}
+                  onChange={(e) => setPriceRange([parseInt(e.target.value), priceRange[1]])}
+                  className="flex-1 h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-[#ea4c89]"
+                />
+                <input
+                  type="range"
+                  min="0"
+                  max="5000"
+                  step="100"
+                  value={priceRange[1]}
+                  onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+                  className="flex-1 h-2 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-[#ea4c89]"
+                />
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Results Count */}
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-[#2C2C2C]/60">
-            Showing <span className="font-semibold text-[#2C2C2C]">{filteredProducts.length}</span> products
-          </p>
-        </div>
-
-        {/* Products Grid */}
-        {filteredProducts.length === 0 ? (
-          <div className="bg-[#F5F1E8] rounded-2xl p-12 text-center">
-            <svg className="w-16 h-16 mx-auto text-[#8B9D83]/30 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-            <h3 className="text-xl font-semibold text-[#2C2C2C] mb-2">No products found</h3>
-            <p className="text-[#2C2C2C]/60">Try adjusting your filters</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((product) => (
-              <div key={product.id} className="relative">
-                <button
-                  onClick={() => toggleFavorite(product.id)}
-                  className="absolute top-4 right-4 z-10 p-2 bg-white rounded-full shadow-lg hover:scale-110 transition-transform"
-                >
-                  <svg className="w-5 h-5" fill={favorites.includes(product.id) ? '#ec4899' : 'none'} stroke={favorites.includes(product.id) ? '#ec4899' : 'currentColor'} viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                </button>
-                <ProductCard
-                  product={product}
-                  onAddToCart={onAddToCart}
-                  onQuickView={onQuickView}
-                />
-              </div>
-            ))}
-          </div>
+      {/* Results Count */}
+      <div className="mb-6 flex items-center justify-between text-sm text-gray-500 font-medium px-2">
+        <span>Showing {filteredProducts.length} results</span>
+        {searchQuery && (
+          <button onClick={() => setSearchQuery('')} className="text-[#ea4c89] hover:text-[#d63f7a]">
+            Clear Search
+          </button>
         )}
       </div>
-    </section>
+
+      {/* Product Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filteredProducts.map(product => (
+          <div key={product.id} className="relative group">
+            <button
+              onClick={() => toggleFavorite(product.id)}
+              className="absolute top-4 right-4 z-10 p-2 bg-white rounded-full shadow-lg hover:scale-110 transition-transform border border-gray-100 text-gray-400 hover:text-red-500"
+            >
+              <svg className="w-5 h-5" fill={favorites.includes(product.id) ? '#ef4444' : 'none'} stroke={favorites.includes(product.id) ? '#ef4444' : 'currentColor'} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
+            </button>
+            <ProductCard
+              product={product}
+              onAddToCart={onAddToCart}
+              onQuickView={onQuickView}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {filteredProducts.length === 0 && (
+        <div className="text-center py-20 bg-white rounded-3xl border border-dashed border-gray-200">
+          <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
+            <span className="text-4xl opacity-50">🛍️</span>
+          </div>
+          <h3 className="text-xl font-bold text-[#0d0c22] mb-2">No products found</h3>
+          <p className="text-gray-500">Try adjusting your filters or search terms</p>
+          <button
+            onClick={() => {
+              setCategory('all');
+              setPetType('all');
+              setSearchQuery('');
+              setPriceRange([0, 5000]);
+            }}
+            className="mt-6 px-8 py-3 bg-[#ea4c89] text-white rounded-xl font-bold shadow-lg shadow-[#ea4c89]/20 hover:bg-[#d63f7a] transition-all"
+          >
+            Reset Filters
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 
