@@ -989,7 +989,7 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
       {/* MODALS */}
       {/* Reservation Dialog */}
       <Dialog open={!!reserveMatch} onOpenChange={(open) => !open && setReserveMatch(null)}>
-        <DialogContent className="sm:max-w-md bg-white border-none rounded-2xl shadow-xl">
+        <DialogContent className="sm:max-w-md bg-white border-none sm:rounded-2xl shadow-xl">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0d0c22]">{copy.reserve}</DialogTitle>
             <DialogDescription className="text-gray-500">
@@ -1048,7 +1048,7 @@ const PuppyComingSoonSection: React.FC<PuppyComingSoonSectionProps> = ({ onRequi
 
       {/* Registration Dialog */}
       <Dialog open={showRegister} onOpenChange={setShowRegister}>
-        <DialogContent className="sm:max-w-lg bg-white border-none rounded-2xl shadow-xl overflow-hidden">
+        <DialogContent className="sm:max-w-lg bg-white border-none sm:rounded-2xl shadow-xl overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#0d0c22]">{copy.registerTitle}</DialogTitle>
             <DialogDescription className="text-gray-500">Record a new breeding match.</DialogDescription>

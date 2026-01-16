@@ -12,6 +12,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Pet, Product, products } from '@/data/petData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -60,6 +61,8 @@ interface CartItem {
 }
 
 type ActiveView = 'home' | 'search' | 'products' | 'puppies' | 'breeding' | 'messages' | 'notifications' | 'chat' | 'myspace' | 'favorites';
+type MobileCategoryKey = 'all' | 'dogs' | 'cats' | 'horses' | 'cattle' | 'exotic' | 'available';
+type MobileTabKey = 'all' | 'dogs' | 'cats' | 'puppy-available' | 'puppy-soon' | 'horses' | 'cattle' | 'exotic';
 
 interface SearchSuggestion {
     id: string;
@@ -126,9 +129,12 @@ const LazyModalFallback = () => (
 const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const { user, savedCart, syncCart } = useAuth();
     const { language, setLanguage } = useLanguage();
+    const navigate = useNavigate();
 
     // State
     const [activeView, setActiveView] = useState<ActiveView>('home');
+    const [activeCategory, setActiveCategory] = useState<MobileCategoryKey>('all');
+    const [activeMobileTab, setActiveMobileTab] = useState<MobileTabKey>('all');
     const [cart, setCart] = useState<CartItem[]>([]);
     const [breedingMatchPet, setBreedingMatchPet] = useState<Pet | null>(null);
     const [allPets, setAllPets] = useState<Pet[]>([]);
@@ -153,6 +159,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const [favorites, setFavorites] = useState<string[]>([]);
     const [puppyFocus, setPuppyFocus] = useState<'available' | 'coming' | null>(null);
     const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+    const [mobileCreateOpen, setMobileCreateOpen] = useState(false);
 
 
     // Chat state
@@ -206,6 +213,8 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     // Refs
     const searchInputRef = useRef<HTMLInputElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
+    const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+    const touchStartTimeRef = useRef<number>(0);
 
     // Convert DB Pet
     const convertDbPet = (dbPet: DbPet): Pet => {
@@ -272,6 +281,16 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             external_link: externalLink,
             description: descriptionText,
         };
+    };
+
+    const applyCategoryFilter = (pets: Pet[], category: MobileCategoryKey): Pet[] => {
+        if (category === 'all') return pets;
+        if (category === 'available') return pets.filter((pet) => pet.available);
+        if (category === 'dogs') return pets.filter((pet) => (pet.type || 'dog') === 'dog');
+        if (category === 'cats') return pets.filter((pet) => pet.type === 'cat');
+        if (category === 'horses') return pets.filter((pet) => pet.type === 'horse');
+        if (category === 'cattle') return pets.filter((pet) => (pet as any).type === 'cattle');
+        return pets.filter((pet) => pet.type === 'exotic');
     };
 
     const formatRelativeTime = (value?: string | null) => {
@@ -993,13 +1012,38 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
         }
     }, []);
 
+    useEffect(() => {
+        if (isSearchMode) return;
+        const next = applyCategoryFilter(allPets, activeCategory);
+        setFilteredPets(next);
+    }, [allPets, activeCategory, isSearchMode]);
+
+    useEffect(() => {
+        if (activeView === 'puppies') {
+            setActiveMobileTab(puppyFocus === 'coming' ? 'puppy-soon' : 'puppy-available');
+            return;
+        }
+        if (activeView === 'home') {
+            const map: Record<MobileCategoryKey, MobileTabKey> = {
+                all: 'all',
+                dogs: 'dogs',
+                cats: 'cats',
+                horses: 'horses',
+                cattle: 'cattle',
+                exotic: 'exotic',
+                available: 'puppy-available',
+            };
+            setActiveMobileTab(map[activeCategory] || 'all');
+        }
+    }, [activeView, activeCategory, puppyFocus]);
+
     // Handlers
     const handleRegisterClick = () => {
         if (!user) {
             setAuthModalOpen(true);
-        } else {
-            setRegisterModalOpen(true);
+            return;
         }
+        setAddCardModalOpen(true);
     };
 
     const handleViewPetDetails = (pet: Pet, focus?: 'comments' | 'edit' | null) => {
@@ -1283,6 +1327,71 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
         setFilteredPets(allPets);
     };
 
+    const mobileTabs: Array<{
+        key: MobileTabKey;
+        label: string;
+        view: ActiveView;
+        category?: MobileCategoryKey;
+        puppyFocus?: 'available' | 'coming';
+    }> = [
+        { key: 'all', label: 'All', view: 'home', category: 'all' },
+        { key: 'dogs', label: 'Dogs', view: 'home', category: 'dogs' },
+        { key: 'cats', label: 'Cats', view: 'home', category: 'cats' },
+        { key: 'puppy-available', label: 'Puppy Available', view: 'puppies', puppyFocus: 'available' },
+        { key: 'puppy-soon', label: 'Puppy Soon', view: 'puppies', puppyFocus: 'coming' },
+        { key: 'horses', label: 'Horses', view: 'home', category: 'horses' },
+        { key: 'cattle', label: 'Cattle', view: 'home', category: 'cattle' },
+        { key: 'exotic', label: 'Exotic', view: 'home', category: 'exotic' },
+    ];
+
+    const handleMobileTabSelect = (tabKey: MobileTabKey) => {
+        const tab = mobileTabs.find((item) => item.key === tabKey);
+        if (!tab) return;
+
+        setActiveMobileTab(tab.key);
+        if (tab.view === 'puppies') {
+            setActiveView('puppies');
+            setPuppyFocus(tab.puppyFocus || null);
+        } else {
+            setActiveView('home');
+            setPuppyFocus(null);
+            setActiveCategory(tab.category || 'all');
+        }
+
+        if (isSearchMode) {
+            exitSearchMode();
+        }
+    };
+
+    const handleContentTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
+        if (isImmersiveSearch) return;
+        touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        touchStartTimeRef.current = Date.now();
+    };
+
+    const handleContentTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
+        if (!touchStartRef.current) return;
+        if (isImmersiveSearch) return;
+
+        const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
+        const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
+        const dt = Date.now() - touchStartTimeRef.current;
+        touchStartRef.current = null;
+
+        if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) || dt > 800) return;
+        if (activeView !== 'home' && activeView !== 'puppies') return;
+
+        const currentIndex = mobileTabs.findIndex((item) => item.key === activeMobileTab);
+        if (currentIndex === -1) return;
+        const nextIndex = dx < 0
+            ? Math.min(currentIndex + 1, mobileTabs.length - 1)
+            : Math.max(currentIndex - 1, 0);
+        if (nextIndex === currentIndex) return;
+        handleMobileTabSelect(mobileTabs[nextIndex].key);
+    };
+
     // Toggle like
     const handleLike = async (petId: string) => {
         if (!user) {
@@ -1341,6 +1450,9 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                                     onLikeClick={() => handleLike(pet.id)}
                                                     onCommentClick={() => handleViewPetDetails(pet, 'comments')}
                                                     onEditClick={() => handleViewPetDetails(pet, 'edit')}
+                                                    onMatchClick={() => setBreedingMatchPet(pet)}
+                                                    onVetClick={() => navigate(`/vet-profile/${pet.id}`)}
+                                                    onMagicCardClick={() => setAddCardModalOpen(true)}
                                                 />
                                             ))}
                                         </div>
@@ -1634,7 +1746,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                         */}
 
                         {/* Masonry Grid - Click Opens Pinterest Modal */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
                             {visiblePets.map((pet) => (
                                 <ExpandablePetCard
                                     key={pet.id}
@@ -1654,6 +1766,9 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                     onLikeClick={() => handleAddToFavorites(pet.id)}
                                     onCommentClick={() => handleViewPetDetails(pet, 'comments')}
                                     onEditClick={() => handleViewPetDetails(pet, 'edit')}
+                                    onMatchClick={() => setBreedingMatchPet(pet)}
+                                    onVetClick={() => navigate(`/vet-profile/${pet.id}`)}
+                                    onMagicCardClick={() => setAddCardModalOpen(true)}
                                 />
                             ))}
                         </div>
@@ -1780,8 +1895,8 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                         </div>
                     </div>
                     <SidebarIcon
-                        icon={<RegisterIcon />}
-                        label={language === 'th' ? 'ลงทะเบียน' : 'Register'}
+                        icon={<MagicCardIcon />}
+                        label="Magic Card"
                         highlight
                         onClick={handleRegisterClick}
                     />
@@ -1987,29 +2102,13 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
                         <div className="px-4 pb-3">
                             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                                <button
-                                    onClick={() => setActiveView('home')}
-                                    className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activeView === 'home' ? 'bg-[#0d0c22] text-white' : 'bg-white text-gray-500 border border-gray-100'}`}
-                                >
-                                    All
-                                </button>
-                                {['Dogs', 'Cats', 'Male', 'Female', 'Verified', 'Pedigree'].map(filter => (
+                                {mobileTabs.map((tab) => (
                                     <button
-                                        key={filter}
-                                        className="px-4 py-1.5 rounded-full text-xs font-bold bg-white text-gray-500 border border-gray-100 whitespace-nowrap"
+                                        key={tab.key}
+                                        onClick={() => handleMobileTabSelect(tab.key)}
+                                        className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activeMobileTab === tab.key ? 'bg-[#0d0c22] text-white' : 'bg-white text-gray-500 border border-gray-100'}`}
                                     >
-                                        {filter}
-                                    </button>
-                                ))}
-                                {getSearchSuggestions().filter(s => s.type === 'popular').slice(0, 2).map(s => (
-                                    <button
-                                        key={s.id}
-                                        onClick={() => {
-                                            if (s.action) s.action();
-                                        }}
-                                        className="px-4 py-1.5 rounded-full text-xs font-bold bg-white text-gray-500 border border-gray-100 whitespace-nowrap"
-                                    >
-                                        {s.text}
+                                        {tab.label}
                                     </button>
                                 ))}
                             </div>
@@ -2081,7 +2180,12 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                     </header>
 
                     {/* Scrollable Content */}
-                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto w-full px-4 md:px-8 py-4 md:py-6 pb-24 md:pb-32">
+                    <div
+                        ref={chatContainerRef}
+                        className="flex-1 overflow-y-auto w-full px-4 md:px-8 py-4 md:py-6 pb-24 md:pb-32"
+                        onTouchStart={handleContentTouchStart}
+                        onTouchEnd={handleContentTouchEnd}
+                    >
                         <div className="max-w-[1800px] mx-auto">
                             {renderMainContent()}
                         </div>
@@ -2139,7 +2243,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                 className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#ea4c89] to-[#ff8fab] flex items-center justify-center text-white shadow-lg shadow-[#ea4c89]/30 hover:scale-110 transition-transform flex-shrink-0"
                                 title="Create Magic Card"
                             >
-                                <span className="text-lg">✨</span>
+                                <MagicCardIcon />
                             </button>
 
                             {/* Smart Search Input */}
@@ -2206,7 +2310,13 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                     <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-gray-100 backdrop-blur-md md:hidden">
                         <div className="flex items-center justify-between px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
                             <button
-                                onClick={() => { setActiveView('home'); exitSearchMode(); }}
+                                onClick={() => {
+                                    setActiveView('home');
+                                    setActiveCategory('all');
+                                    setActiveMobileTab('all');
+                                    setPuppyFocus(null);
+                                    exitSearchMode();
+                                }}
                                 className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${activeView === 'home' && !isSearchMode ? 'text-[#ea4c89] bg-[#ea4c89]/10' : 'text-gray-400 hover:text-[#0d0c22]'}`}
                                 aria-label="Home"
                             >
@@ -2215,6 +2325,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                             <button
                                 onClick={() => {
                                     setActiveView('home');
+                                    setActiveMobileTab('all');
                                     exitSearchMode();
                                     setTimeout(() => searchInputRef.current?.focus(), 0);
                                 }}
@@ -2224,11 +2335,11 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                 <SearchIconNav />
                             </button>
                             <button
-                                onClick={handleRegisterClick}
+                                onClick={() => setAddCardModalOpen(true)}
                                 className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#ea4c89] text-white shadow-lg shadow-[#ea4c89]/30"
                                 aria-label="Create"
                             >
-                                <RegisterIcon />
+                                <MagicCardIcon />
                             </button>
                             <button
                                 onClick={handleMessageShortcut}
@@ -2418,7 +2529,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
             {/* Boost Confirmation Modal */}
             <Dialog open={!!boostConfirmPet} onOpenChange={(open) => !open && setBoostConfirmPet(null)}>
-                <DialogContent className="bg-[#111111] border border-[#C5A059] text-white rounded-3xl">
+            <DialogContent className="bg-[#111111] border-0 sm:border sm:border-[#C5A059] text-white sm:rounded-3xl">
                     <DialogHeader>
                         <DialogTitle className="text-[#C5A059] flex items-center gap-2">
                             🚀 Boost Listing
@@ -2786,6 +2897,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                     isOpen={addCardModalOpen}
                     onClose={() => setAddCardModalOpen(false)}
                     onAdd={handleAddExternalCard}
+                    onRegisterPet={() => setRegisterModalOpen(true)}
                 />
             </Suspense>
         </div >
@@ -2822,7 +2934,12 @@ const SidebarIcon: React.FC<{
 // ============ ICONS ============
 const HomeIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
 const SearchIconNav = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>;
-const RegisterIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4v16m8-8H4" /></svg>;
+const MagicCardIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <rect x="4" y="6" width="16" height="12" rx="2" strokeWidth={1.5} />
+        <path d="M12 8l.6 1.4 1.5.1-1.1.9.4 1.4-1.4-.8-1.4.8.4-1.4-1.1-.9 1.5-.1L12 8z" fill="currentColor" stroke="none" />
+    </svg>
+);
 const PuppyIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const ShopIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>;
 const SettingsIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;

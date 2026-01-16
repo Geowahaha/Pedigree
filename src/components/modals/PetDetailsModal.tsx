@@ -409,12 +409,12 @@ const PetDetailsModal: React.FC<PetDetailsModalProps> = ({ isOpen, onClose, pet,
   const resolvedOwnerName = resolveOwnerName(pet);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-stretch md:items-center justify-center p-0 md:p-4">
       {/* Backdrop - Clean Light */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal - Pinterest Light Theme */}
-      <div className={`bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${isMaximized ? 'fixed inset-0 z-[60] w-full h-full rounded-none border-0' : 'relative w-full max-w-4xl max-h-[90vh] rounded-[2rem]'}`}>
+      <div className={`bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${isMaximized ? 'fixed inset-0 z-[60] w-full h-full rounded-none border-0' : 'relative w-full sm:max-w-4xl sm:max-h-[90vh] sm:rounded-[2rem]'}`}>
 
         {/* ================= HERO IMAGE SECTION ================= */}
         <div

@@ -157,7 +157,7 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
     if (view === 'send') {
         return (
             <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-                <DialogContent className="max-w-md p-6 bg-[#0A0A0A] rounded-3xl border border-[#C5A059]/30 text-[#F5F5F0]">
+                <DialogContent className="sm:max-w-md p-6 bg-[#0A0A0A] sm:rounded-3xl border-0 sm:border sm:border-[#C5A059]/30 text-[#F5F5F0]">
                     <DialogHeader>
                         <DialogTitle className="text-center text-[#C5A059]">Secure Transfer</DialogTitle>
                         <DialogDescription className="text-center text-xs text-[#B8B8B8]">
@@ -206,7 +206,7 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
     if (view === 'receive') {
         return (
             <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-                <DialogContent className="max-w-md p-6 bg-[#0A0A0A] rounded-3xl border border-[#C5A059]/30 text-[#F5F5F0]">
+                <DialogContent className="sm:max-w-md p-6 bg-[#0A0A0A] sm:rounded-3xl border-0 sm:border sm:border-[#C5A059]/30 text-[#F5F5F0]">
                     <DialogHeader>
                         <DialogTitle className="text-center text-[#C5A059]">Receive TRD</DialogTitle>
                         <DialogDescription className="text-center text-xs text-[#B8B8B8]">Simply share your registered Email.</DialogDescription>
@@ -224,7 +224,7 @@ const WalletModal: React.FC<WalletModalProps> = ({ isOpen, onClose }) => {
     // ---- Main View ----
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-md p-0 overflow-hidden bg-[#0A0A0A] rounded-3xl border border-[#C5A059]/30 shadow-2xl text-[#F5F5F0]">
+            <DialogContent className="sm:max-w-md p-0 overflow-hidden bg-[#0A0A0A] sm:rounded-3xl border-0 sm:border sm:border-[#C5A059]/30 shadow-2xl text-[#F5F5F0]">
                 {/* Fixed: Added Title/Desc for accessibility even in Main View (hidden if needed, but DialogHeader handles it) */}
                 <DialogHeader className="sr-only">
                     <DialogTitle>My Wallet</DialogTitle>

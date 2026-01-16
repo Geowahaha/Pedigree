@@ -288,7 +288,7 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-md bg-[#1A1A1A] rounded-2xl p-0 overflow-hidden border border-[#C5A059]/20">
+            <DialogContent className="sm:max-w-md bg-[#1A1A1A] sm:rounded-2xl p-0 overflow-hidden border-0 sm:border sm:border-[#C5A059]/20">
                 {/* Header */}
                 <div className="p-6 bg-[#0D0D0D] border-b border-[#C5A059]/10">
                     <DialogHeader>

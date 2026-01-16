@@ -1144,7 +1144,7 @@ const WorkspaceLayout: React.FC = () => {
                 </header>
 
                 {/* Workspace Content Area */}
-                <div className="flex-1 overflow-y-auto pb-36">
+                <div className="flex-1 overflow-y-auto pb-24 md:pb-36">
                     {/* Welcome Header */}
                     {workspaceView === 'idle' && (
                         <div className="text-center py-16 px-6">
@@ -1164,7 +1164,7 @@ const WorkspaceLayout: React.FC = () => {
                 </div>
 
                 {/* ===== FIXED BOTTOM SEARCH BOX - Luxury Style ===== */}
-                <div className="fixed bottom-0 left-14 right-0 p-4 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/95 to-transparent pointer-events-none">
+                <div className="hidden md:block fixed bottom-0 left-0 md:left-14 right-0 p-4 bg-gradient-to-t from-[#0A0A0A] via-[#0A0A0A]/95 to-transparent pointer-events-none">
                     <form onSubmit={handleSearch} className="max-w-3xl mx-auto pointer-events-auto">
                         <div className="relative bg-[#1A1A1A] border border-[#C5A059]/20 hover:border-[#C5A059]/40 transition-all duration-300 shadow-2xl">
                             {/* Input Row */}
@@ -1214,6 +1214,53 @@ const WorkspaceLayout: React.FC = () => {
                     </form>
                 </div>
             </main>
+
+            <nav className="fixed bottom-0 left-0 right-0 md:hidden z-40 bg-[#0A0A0A]/95 border-t border-[#C5A059]/10 safe-area-bottom">
+                <div className="flex items-center justify-around px-4 py-2">
+                    <button
+                        type="button"
+                        onClick={() => transitionToView('idle')}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${workspaceView === 'idle' ? 'bg-[#C5A059] text-[#0A0A0A]' : 'text-[#B8B8B8]'}`}
+                    >
+                        <HomeIcon />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => transitionToView('breeding')}
+                        className={`w-12 h-12 rounded-full flex items-center justify-center transition-all ${workspaceView === 'breeding' ? 'bg-[#C5A059] text-[#0A0A0A]' : 'text-[#B8B8B8]'}`}
+                    >
+                        <SearchIcon />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleRegisterClick}
+                        className="w-12 h-12 rounded-full flex items-center justify-center bg-[#EA4C89] text-white shadow-lg"
+                    >
+                        <PlusIcon />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setCartModalOpen(true)}
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-[#B8B8B8]"
+                    >
+                        <CartIconWithBadge count={cartCount} />
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (user) {
+                                setCurrentBreederId(user.id);
+                                setBreederProfileOpen(true);
+                            } else {
+                                setAuthModalOpen(true);
+                            }
+                        }}
+                        className="w-12 h-12 rounded-full flex items-center justify-center text-[#B8B8B8]"
+                    >
+                        {user ? <UserAvatar name={user.profile?.full_name || user.email} /> : <UserIcon />}
+                    </button>
+                </div>
+            </nav>
 
             {/* ===== MODALS (Preserved) ===== */}
             {dashboardOpen && (

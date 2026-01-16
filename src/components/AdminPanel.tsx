@@ -1272,7 +1272,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent
-                className={`${aiExpanded ? 'max-w-[95vw] w-[95vw] h-[95vh]' : 'max-w-6xl h-[90vh]'} max-h-[95vh] flex flex-col p-0 gap-0 bg-[#0A0A0A] border-[#C5A059]/20`}
+                className={`${aiExpanded ? 'sm:max-w-[95vw] sm:w-[95vw] sm:h-[95vh]' : 'sm:max-w-6xl sm:h-[90vh]'} sm:max-h-[95vh] flex flex-col p-0 gap-0 bg-[#0A0A0A] border-[#C5A059]/20`}
             >
                 <div className="p-4 md:p-6 border-b border-[#C5A059]/20 bg-[#0D0D0D] flex justify-between items-center sticky top-0 z-20">
                     <div className="flex items-center gap-3">
@@ -2887,7 +2887,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     />
 
                     <Dialog open={matchModalOpen} onOpenChange={handleMatchModalChange}>
-                        <DialogContent className="max-w-xl">
+                        <DialogContent className="sm:max-w-xl">
                             <DialogHeader>
                                 <DialogTitle>Add Breeding Match</DialogTitle>
                             </DialogHeader>
@@ -2997,7 +2997,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
                     {/* Add New User Modal */}
                     <Dialog open={showAddUserModal} onOpenChange={setShowAddUserModal}>
-                        <DialogContent className="max-w-md">
+                        <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle>Add New User</DialogTitle>
                                 <DialogDescription>

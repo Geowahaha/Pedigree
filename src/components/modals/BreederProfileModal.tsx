@@ -216,7 +216,7 @@ const BreederProfileModal: React.FC<BreederProfileModalProps> = ({ isOpen, onClo
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent
-                className={`p-0 overflow-hidden bg-[#1A1A1A] border border-[#C5A059]/20 shadow-2xl flex flex-col transition-all duration-300 ${isMaximized ? 'w-screen h-screen max-w-none rounded-none border-0' : 'max-w-4xl h-[90vh] rounded-2xl'}`}
+                className={`p-0 overflow-hidden bg-[#1A1A1A] border-0 sm:border sm:border-[#C5A059]/20 shadow-2xl flex flex-col transition-all duration-300 ${isMaximized ? 'w-screen h-screen max-w-none rounded-none border-0' : 'sm:max-w-4xl sm:h-[90vh] sm:rounded-2xl'}`}
                 aria-describedby="profile-description"
             >
                 <DialogTitle className="sr-only">Breeder Profile</DialogTitle>

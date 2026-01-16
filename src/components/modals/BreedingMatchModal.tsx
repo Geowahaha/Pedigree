@@ -209,7 +209,7 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-4xl p-0 bg-white border border-gray-100 text-black overflow-hidden max-h-[85vh] flex flex-col rounded-[2rem] shadow-2xl">
+            <DialogContent className="sm:max-w-4xl p-0 bg-white border-0 sm:border sm:border-gray-100 text-black overflow-hidden sm:max-h-[85vh] flex flex-col sm:rounded-[2rem] shadow-2xl">
                 <div className="p-6 border-b border-gray-100 bg-white sticky top-0 z-10">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-3 text-black font-bold text-2xl">

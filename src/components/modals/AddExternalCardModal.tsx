@@ -7,9 +7,10 @@ interface AddExternalCardModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAdd: (data: { link: string; caption: string; mediaType: 'image' | 'video'; autoPostFb?: boolean }) => void;
+    onRegisterPet?: () => void;
 }
 
-export const AddExternalCardModal: React.FC<AddExternalCardModalProps> = ({ isOpen, onClose, onAdd }) => {
+export const AddExternalCardModal: React.FC<AddExternalCardModalProps> = ({ isOpen, onClose, onAdd, onRegisterPet }) => {
     const [mode, setMode] = useState<'link' | 'upload'>('link');
     const [link, setLink] = useState('');
     const [caption, setCaption] = useState('');
@@ -94,10 +95,10 @@ export const AddExternalCardModal: React.FC<AddExternalCardModalProps> = ({ isOp
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) resetForm(); onClose(); }}>
-            <DialogContent className="bg-[#1A1A1A] border border-[#C5A059] text-[#F5F5F0] max-w-md rounded-2xl">
+            <DialogContent className="bg-[#1A1A1A] border-0 sm:border sm:border-[#C5A059] text-[#F5F5F0] sm:max-w-md sm:rounded-2xl">
                 <DialogHeader>
                     <DialogTitle className="text-[#C5A059] flex items-center gap-2">
-                        ✨ Create Magic Card
+                        Create Magic Card
                     </DialogTitle>
                     <DialogDescription className="text-xs text-[#B8B8B8]">
                         Share a link or upload your own moments.
@@ -110,13 +111,13 @@ export const AddExternalCardModal: React.FC<AddExternalCardModalProps> = ({ isOp
                         className={`flex-1 pb-2 text-sm font-bold ${mode === 'link' ? 'text-[#C5A059] border-b-2 border-[#C5A059]' : 'text-gray-500'}`}
                         onClick={() => setMode('link')}
                     >
-                        🔗 Link
+                        Link
                     </button>
                     <button
                         className={`flex-1 pb-2 text-sm font-bold ${mode === 'upload' ? 'text-[#C5A059] border-b-2 border-[#C5A059]' : 'text-gray-500'}`}
                         onClick={() => setMode('upload')}
                     >
-                        ☁️ Upload
+                        Upload
                     </button>
                 </div>
 
@@ -218,11 +219,24 @@ export const AddExternalCardModal: React.FC<AddExternalCardModalProps> = ({ isOp
                         className="w-full py-3 bg-[#C5A059] text-black font-bold rounded-xl hover:bg-[#D4C4B5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {uploading ? (
-                            <><span>⏳</span> Uploading...</>
+                            <>Uploading...</>
                         ) : (
-                            <><span>✨</span> Make Magic</>
+                            <>Make Magic</>
                         )}
                     </button>
+                    {onRegisterPet && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                resetForm();
+                                onClose();
+                                onRegisterPet();
+                            }}
+                            className="w-full py-3 border border-[#C5A059]/40 text-[#F5F5F0] font-semibold rounded-xl hover:border-[#C5A059] hover:text-white transition-colors"
+                        >
+                            Register Pet Instead
+                        </button>
+                    )}
                 </form>
             </DialogContent >
         </Dialog >

@@ -115,7 +115,7 @@ export const LitterRegistrationModal: React.FC<LitterRegistrationModalProps> = (
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-white border-none shadow-2xl rounded-[32px]">
+            <DialogContent className="sm:max-w-3xl sm:max-h-[80vh] overflow-y-auto bg-white border-none shadow-2xl sm:rounded-[32px]">
                 <DialogHeader>
                     <DialogTitle className="text-2xl font-black text-[#0d0c22]">Register Litter</DialogTitle>
                     <DialogDescription className="text-gray-500">

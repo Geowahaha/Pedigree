@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pet } from '@/data/petData';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,6 +8,7 @@ import { getPublicPets, Pet as DbPet } from '@/lib/database';
 import { hasClaimedPet } from '@/lib/ownership';
 import type { OwnershipClaim } from '@/lib/ownership';
 import { ClaimOwnershipModal } from '@/components/modals/ClaimOwnershipModal';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
 interface ExpandablePetCardProps {
@@ -23,6 +24,9 @@ interface ExpandablePetCardProps {
     onUpdateParents?: (sireId: string | null, damId: string | null) => void;
     onCommentClick?: () => void;
     onEditClick?: () => void;
+    onMatchClick?: () => void;
+    onVetClick?: () => void;
+    onMagicCardClick?: () => void;
 }
 
 export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
@@ -38,6 +42,9 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
     onUpdateParents,
     onCommentClick,
     onEditClick,
+    onMatchClick,
+    onVetClick,
+    onMagicCardClick,
 }) => {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -53,6 +60,8 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
     const [claimModalOpen, setClaimModalOpen] = useState(false);
     const [claimStatus, setClaimStatus] = useState<OwnershipClaim | null>(null);
     const [claimStatusLoading, setClaimStatusLoading] = useState(false);
+    const lastTapRef = useRef<number>(0);
+    const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const isVideo = pet.media_type === 'video';
     const ownershipStatus = pet.ownership_status ?? (pet.owner_id ? 'verified' : undefined);
@@ -235,24 +244,58 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
         navigate(`/profile/${pet.owner_id}`);
     };
 
+    const handleCardTap = () => {
+        const isTouch = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+        if (!isTouch) {
+            onToggle();
+            return;
+        }
+
+        const now = Date.now();
+        const lastTap = lastTapRef.current;
+
+        if (tapTimeoutRef.current) {
+            clearTimeout(tapTimeoutRef.current);
+            tapTimeoutRef.current = null;
+        }
+
+        if (now - lastTap < 260) {
+            lastTapRef.current = 0;
+            onPedigreeClick();
+            return;
+        }
+
+        lastTapRef.current = now;
+        tapTimeoutRef.current = setTimeout(() => {
+            onToggle();
+            tapTimeoutRef.current = null;
+        }, 240);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
+        };
+    }, []);
+
 
     return (
         <div
-            className={`relative cursor-pointer break-inside-avoid transition-all duration-300 ${isExpanded ? 'col-span-2 row-span-2 z-50' : 'mb-8'
+            className={`relative group cursor-pointer break-inside-avoid transition-all duration-300 ${isExpanded ? 'col-span-2 row-span-2 z-50' : 'mb-4 md:mb-8'
                 }`}
             onMouseEnter={() => setShowActions(true)}
             onMouseLeave={() => setShowActions(false)}
-            onClick={onToggle}
+            onClick={handleCardTap}
         >
             {/* Card Container */}
             <div
-                className={`relative rounded-[28px] overflow-hidden bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-all duration-500 ${isExpanded
+                className={`relative rounded-[24px] overflow-hidden bg-white shadow-[0_2px_12px_rgba(0,0,0,0.04)] transition-all duration-500 ${isExpanded
                     ? 'h-[700px] shadow-[0_20px_60px_rgba(0,0,0,0.2)]'
-                    : 'h-80 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)]'
+                    : 'h-auto hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)]'
                     } border border-gray-100`}
             >
                 {/* Media Content */}
-                <div className={`w-full ${isExpanded ? 'h-[300px]' : 'h-full'} relative bg-black`}>
+                <div className={`w-full ${isExpanded ? 'h-[300px]' : 'aspect-[4/5] md:aspect-[3/4]'} relative bg-black`}>
                     {isVideo && pet.video_url ? (
                         <video
                             src={pet.video_url}
@@ -353,30 +396,69 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
                             </button>
                         </div>
                     </div>
-
-                    {/* Info Overlay (Normal State) */}
                     {!isExpanded && (
                         <>
-                            <div className={`absolute bottom-0 left-0 right-0 p-4 transform transition-transform duration-300 ${showActions ? 'translate-y-0' : 'translate-y-2 opacity-0'}`}>
-                                <h3 className="text-white font-bold text-lg leading-tight truncate drop-shadow-md">{pet.name}</h3>
-                                <p className="text-white/80 text-xs truncate drop-shadow-md">{pet.breed}</p>
-                                {(sirePet?.name || damPet?.name) && (
-                                    <p className="text-white/70 text-[10px] mt-1 drop-shadow-md">
-                                        ลูกของ {sirePet?.name || '?'} + {damPet?.name || '?'}
-                                    </p>
-                                )}
+                            <div className="absolute bottom-3 right-3 z-30" onClick={(e) => e.stopPropagation()}>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
+                                            className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-sm text-gray-700 shadow-md flex items-center justify-center hover:bg-white transition-colors"
+                                            aria-label="Open menu"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01" />
+                                            </svg>
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" sideOffset={6} className="w-52">
+                                        <DropdownMenuItem onClick={() => onPedigreeClick()}>
+                                            View Pedigree
+                                        </DropdownMenuItem>
+                                        {onVetClick && (
+                                            <DropdownMenuItem onClick={() => onVetClick()}>
+                                                Vet AI Profile
+                                            </DropdownMenuItem>
+                                        )}
+                                        {onMatchClick && (
+                                            <DropdownMenuItem onClick={() => onMatchClick()}>
+                                                Match AI
+                                            </DropdownMenuItem>
+                                        )}
+                                        {isOwner && onEditClick && (
+                                            <DropdownMenuItem onClick={() => onEditClick()}>
+                                                Edit Pet
+                                            </DropdownMenuItem>
+                                        )}
+                                        {onMagicCardClick && (
+                                            <>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onClick={() => onMagicCardClick()}>
+                                                    Add Magic Card
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </div>
 
-                            {/* Quick Actions */}
-                            <QuickActions
-                                isLiked={isLiked}
-                                onLike={() => onLikeClick()}
-                                onShare={() => { }}
-                                onAddToCollection={() => { }}
-                            />
+                            <div className="hidden md:block">
+                                <QuickActions
+                                    isLiked={isLiked}
+                                    onLike={() => onLikeClick()}
+                                    onShare={() => { }}
+                                    onAddToCollection={() => { }}
+                                />
+                            </div>
                         </>
                     )}
                 </div>
+
+                {!isExpanded && (
+                    <div className="px-3 pt-3 pb-4">
+                        <p className="text-sm font-bold text-[#0d0c22] truncate">{pet.name}</p>
+                        <p className="text-[11px] text-gray-500 truncate">{pet.breed}</p>
+                    </div>
+                )}
 
                 {/* Expanded Content */}
                 {isExpanded && (

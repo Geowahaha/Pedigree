@@ -147,7 +147,7 @@ Powered by Eibpo
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[10000] flex items-stretch md:items-center justify-center p-0 md:p-4 animate-in fade-in duration-300">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
 
@@ -162,10 +162,10 @@ Powered by Eibpo
       )}
 
       {/* Modal Content */}
-      <div className="relative bg-[#1A1A1A] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden border border-[#C5A059]/20">
+      <div className="relative bg-[#1A1A1A] rounded-none md:rounded-2xl shadow-2xl w-full h-full md:h-auto max-w-none md:max-w-6xl max-h-full md:max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden border-0 md:border md:border-[#C5A059]/20">
 
         {/* Header */}
-        <div className="flex-none flex items-center justify-between p-6 border-b border-[#C5A059]/20 bg-[#0D0D0D]">
+        <div className="flex-none flex items-center justify-between p-4 md:p-6 border-b border-[#C5A059]/20 bg-[#0D0D0D]">
           <div>
             <h2 className="text-2xl font-['Playfair_Display'] font-bold text-[#F5F5F0]">Family Tree</h2>
             <p className="text-sm text-[#B8B8B8] mt-1">
@@ -183,7 +183,7 @@ Powered by Eibpo
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#1A1A1A]">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#1A1A1A]">
 
           {/* Pet Info Card */}
           <div className="bg-[#0D0D0D] rounded-xl p-6 mb-6 border border-[#C5A059]/10">
