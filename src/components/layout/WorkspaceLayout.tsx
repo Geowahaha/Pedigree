@@ -37,6 +37,7 @@ import SearchSection from '../SearchSection';
 import MarketplaceSection from '../MarketplaceSection';
 import PuppyComingSoonSection from '../PuppyComingSoonSection';
 import { EibpoMark } from '@/components/branding/EibpoLogo';
+import LanguageToggle from '@/components/LanguageToggle';
 
 // AI Brain integration - import the 'think' function
 import { think as aiThink } from '@/lib/ai/petdegreeBrain';
@@ -68,6 +69,8 @@ interface AIMessage {
     actions?: Array<{ label: string; action: () => void }>;
     timestamp: Date;
 }
+
+const ADMIN_ALLOWLIST = new Set(['geowahaha@gmail.com', 'truesaveus@hotmail.com']);
 
 // ============ CSS KEYFRAMES (Inline Styles) ============
 const shakeKeyframes = `
@@ -607,6 +610,7 @@ const AIResponseView: React.FC<{
 const WorkspaceLayout: React.FC = () => {
     const { user, savedCart, syncCart } = useAuth();
     const { language, setLanguage } = useLanguage();
+    const isAdminUser = Boolean(user && (user.profile?.role === 'admin' || ADMIN_ALLOWLIST.has(user.email)));
 
     // ========== STATE ==========
     const [workspaceView, setWorkspaceView] = useState<WorkspaceView>('idle');
@@ -1076,6 +1080,14 @@ const WorkspaceLayout: React.FC = () => {
                     tooltip={language === 'th' ? 'ตะกร้า' : 'Cart'}
                     onClick={() => setCartModalOpen(true)}
                 />
+                {isAdminUser && (
+                    <SidebarIconButton
+                        icon={<AdminIcon />}
+                        active={adminPanelOpen}
+                        tooltip="Admin Panel"
+                        onClick={() => setAdminPanelOpen(true)}
+                    />
+                )}
                 <SidebarIconButton
                     icon={user ? <UserAvatar name={user.profile?.full_name || user.email} /> : <UserIcon />}
                     tooltip={user ? user.profile?.full_name || user.email : (language === 'th' ? 'เข้าสู่ระบบ' : 'Sign In')}
@@ -1103,14 +1115,7 @@ const WorkspaceLayout: React.FC = () => {
                     </div>
 
                     <div className="absolute right-6 flex items-center gap-3">
-                        <select
-                            value={language}
-                            onChange={(e) => setLanguage(e.target.value as any)}
-                            className="bg-transparent text-sm text-white/60 border-none focus:ring-0 cursor-pointer hover:text-white transition-colors"
-                        >
-                            <option value="en" className="bg-[#2D2D2D]">EN</option>
-                            <option value="th" className="bg-[#2D2D2D]">TH</option>
-                        </select>
+                        <LanguageToggle compact />
                     </div>
                 </header>
 
@@ -1213,6 +1218,12 @@ const SearchIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24
 const ClockIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const ShopIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>;
 const UserIcon = () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>;
+const AdminIcon = () => (
+    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4l7 3v5c0 4.418-3 6.5-7 8-4-1.5-7-3.582-7-8V7l7-3z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.5 12l1.75 1.75L14.5 10.5" />
+    </svg>
+);
 
 const CartIconWithBadge: React.FC<{ count: number }> = ({ count }) => (
     <div className="relative">

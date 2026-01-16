@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import PinterestLayout from '@/components/layout/PinterestLayout';
+import { trackRecentlyViewedPet } from '@/components/ui/WelcomeToast';
+
 
 interface Pet {
     id: string;
@@ -39,6 +41,8 @@ const PetDetailsPage = () => {
 
                 if (data) {
                     setPet(data);
+                    // Track this pet view for personalized recommendations
+                    trackRecentlyViewedPet(data.id);
                 } else {
                     navigate('/');
                 }

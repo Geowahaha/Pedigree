@@ -33,6 +33,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 // import { SmartFilterBar } from '../ui/SmartFilterBar'; // DISABLED - circular dependency
 import { ThemeSwitcher } from '../ui/ThemeSwitcher';
 import { EibpoMark } from '@/components/branding/EibpoLogo';
+import LanguageToggle from '@/components/LanguageToggle';
 
 const PetRegistrationModal = lazy(() => import('../PetRegistrationModal'));
 const PedigreeModal = lazy(() => import('../modals/PedigreeModal'));
@@ -1888,15 +1889,8 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                         </button>
                                     )}
 
-                                    {/* Language Selector */}
-                                    <select
-                                        value={language}
-                                        onChange={(e) => setLanguage(e.target.value as any)}
-                                        className="bg-gray-50 text-[#0d0c22] font-bold text-xs rounded-full px-3 py-2 border border-gray-200 focus:ring-0 cursor-pointer hover:border-gray-300 transition-colors"
-                                    >
-                                        <option value="en">EN</option>
-                                        <option value="th">TH</option>
-                                    </select>
+                                    {/* Language Toggle - Smooth Animated */}
+                                    <LanguageToggle compact />
                                 </div>
                             </div>
 
@@ -2539,24 +2533,24 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                 <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
                 <ProductModal isOpen={productModalOpen} onClose={() => setProductModalOpen(false)} product={selectedProduct} onAddToCart={(p, q) => addToCart(p, q)} />
                 {/* Enhanced Pinterest-Style Pet Modal v2 */}
-            <EnhancedPinterestModal
-                isOpen={petDetailsModalOpen}
-                onClose={() => {
-                    setPetDetailsModalOpen(false);
-                    setPetDetailsFocus(null);
-                }}
-                pet={selectedPet!}
-                onViewPedigree={handleViewPedigree}
-                onFindMate={(pet) => {
-                    setPetDetailsModalOpen(false);
-                    setPetDetailsFocus(null);
-                    setBreedingMatchPet(pet);
-                }}
-                isOwner={selectedPet?.owner_id === user?.id}
-                currentUserId={user?.id}
-                canManageHealthProfile={Boolean(user && (user.profile?.role === 'admin' || selectedPet?.owner_id === user.id))}
-                initialSection={petDetailsFocus}
-            />
+                <EnhancedPinterestModal
+                    isOpen={petDetailsModalOpen}
+                    onClose={() => {
+                        setPetDetailsModalOpen(false);
+                        setPetDetailsFocus(null);
+                    }}
+                    pet={selectedPet!}
+                    onViewPedigree={handleViewPedigree}
+                    onFindMate={(pet) => {
+                        setPetDetailsModalOpen(false);
+                        setPetDetailsFocus(null);
+                        setBreedingMatchPet(pet);
+                    }}
+                    isOwner={selectedPet?.owner_id === user?.id}
+                    currentUserId={user?.id}
+                    canManageHealthProfile={Boolean(user && (user.profile?.role === 'admin' || selectedPet?.owner_id === user.id))}
+                    initialSection={petDetailsFocus}
+                />
                 <BreedingMatchModal
                     isOpen={!!breedingMatchPet}
                     onClose={() => setBreedingMatchPet(null)}

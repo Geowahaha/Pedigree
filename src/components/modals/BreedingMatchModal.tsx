@@ -26,6 +26,12 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
         const label = type.charAt(0).toUpperCase() + type.slice(1);
         return level ? `${label} (${level})` : label;
     };
+    const getAgeYears = (birthDate?: string) => {
+        if (!birthDate) return undefined;
+        const dob = new Date(birthDate);
+        if (Number.isNaN(dob.getTime())) return undefined;
+        return new Date().getFullYear() - dob.getFullYear();
+    };
 
     useEffect(() => {
         if (isOpen && sourcePet) {
@@ -52,11 +58,12 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
             // Detect if source is male (handling 'Male', 'male', 'M', 'Boy', etc.)
             const sGender = sourcePet.gender?.toLowerCase().trim() || '';
             const isMale = sGender === 'male' || sGender === 'm' || sGender === 'boy';
-            const targetGender = isMale ? 'female' : 'male';
+            const isFemale = sGender === 'female' || sGender === 'f' || sGender === 'girl';
+            const targetGender = isMale ? 'female' : isFemale ? 'male' : null;
 
             // 2. Fuzzy Breed Matching
             // Remove common suffixes to broaden search (e.g. "Thai Ridgeback Dog" -> "Thai Ridgeback")
-            const fuzzyBreed = sourcePet.breed
+            const fuzzyBreed = (sourcePet.breed || '')
                 .replace(/\s+(Dog|Cat|Puppy|Kitten)$/i, '') // Remove species suffix
                 .replace(/s$/i, '') // Remove plural 's' just in case
                 .trim();
@@ -64,25 +71,48 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
             console.log(`SmartMatch: Looking for ${targetGender} like '${fuzzyBreed}'`);
 
             // 3. Query with Broadened Constraints
-            const { data: potentialMatches, error } = await supabase
+            let query = supabase
                 .from('pets')
-                .select('*, owner:profiles!owner_id(full_name, email)')
-                // Match breed loosely: contains the core breed name
-                .ilike('breed', `%${fuzzyBreed}%`)
-                // Match gender loosely
-                .ilike('gender', targetGender)
+                .select('id,name,breed,gender,type,birthday,color,location,owner_id,image_url,verified,mother_id,father_id,owner:profiles!owner_id(full_name, email)')
+                .neq('id', sourcePet.id)
                 .neq('owner_id', sourcePet.owner_id || '')
                 .eq('is_public', true)
-                .limit(50); // Increased limit for better analysis pool
+                .limit(50);
+
+            if (fuzzyBreed) {
+                query = query.ilike('breed', `%${fuzzyBreed}%`);
+            }
+            if (targetGender) {
+                query = query.ilike('gender', targetGender);
+            }
+
+            let { data: potentialMatches, error } = await query;
 
             if (error) throw error;
 
             if (!potentialMatches || potentialMatches.length === 0) {
-                // FALLBACK: If fuzzy strict match failed, try VERY loose match (just species/type if available, or random same-species?)
-                // For now, let's strictly return empty but log it.
-                // Could potentially check for "all breeds" if generic 'Mixed' or allow cross-breeding
-                setMatches([]);
-                return;
+                let fallbackQuery = supabase
+                    .from('pets')
+                    .select('id,name,breed,gender,type,birthday,color,location,owner_id,image_url,verified,mother_id,father_id,owner:profiles!owner_id(full_name, email)')
+                    .neq('id', sourcePet.id)
+                    .neq('owner_id', sourcePet.owner_id || '')
+                    .eq('is_public', true)
+                    .limit(50);
+
+                if (sourcePet.type) {
+                    fallbackQuery = fallbackQuery.eq('type', sourcePet.type);
+                }
+                if (targetGender) {
+                    fallbackQuery = fallbackQuery.ilike('gender', targetGender);
+                }
+
+                const fallback = await fallbackQuery;
+                potentialMatches = fallback.data || [];
+                if (fallback.error) throw fallback.error;
+                if (potentialMatches.length === 0) {
+                    setMatches([]);
+                    return;
+                }
             }
 
             // RELATIONSHIP ANALYSIS ENGINE 🧬
@@ -91,6 +121,7 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
             // Analyze Relationships
             const analyzedMatches = potentialMatches.map(match => {
                 const matchResult = calculateCompatibilityScore(sourcePet, match as unknown as Pet);
+                const matchAge = getAgeYears((match as any).birthday);
                 return {
                     ...match,
                     id: match.id,
@@ -98,6 +129,7 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
                     image: match.image_url,
                     owner_id: match.owner_id,
                     owner: match.owner,
+                    age: matchAge ?? (match as any).age,
                     matchResult // Attach full analysis
                 };
             });
@@ -274,6 +306,30 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
                                                             {consText && (
                                                                 <p className="text-rose-700">Cons: {consText}</p>
                                                             )}
+                                                            {breeding.summary && (
+                                                                <p className="text-gray-500">{breeding.summary}</p>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                                {(() => {
+                                                    const breakdown = (match as any).matchResult?.breakdown;
+                                                    if (!breakdown) return null;
+                                                    return (
+                                                        <div className="space-y-2 text-xs">
+                                                            <div className="flex justify-between text-gray-500">
+                                                                <span>Genetic safety</span>
+                                                                <span className="font-semibold text-gray-800">{Math.round(breakdown.genetic_risk)}%</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-gray-500">
+                                                                <span>Health readiness</span>
+                                                                <span className="font-semibold text-gray-800">{Math.round(breakdown.health_score)}%</span>
+                                                            </div>
+                                                            <div className="flex justify-between text-gray-500">
+                                                                <span>Breed match</span>
+                                                                <span className="font-semibold text-gray-800">{Math.round(breakdown.breed_score)}%</span>
+                                                            </div>
                                                         </div>
                                                     );
                                                 })()}

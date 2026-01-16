@@ -226,6 +226,38 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
         p.name && p.name.trim() !== ''
     );
 
+    const resolveBirthDateValue = (value?: string | null) => {
+        if (!value) return null;
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return null;
+        return parsed;
+    };
+
+    const getParentAgeWarning = (parent?: Pet | null, label?: string) => {
+        if (!parent) return null;
+        if (!editForm.birthDate) {
+            return `${label} selected. Add the pet birth date to validate lineage.`;
+        }
+        const parentBirth = (parent as any).birthDate || (parent as any).birth_date || (parent as any).birthday;
+        const parentDate = resolveBirthDateValue(parentBirth);
+        if (!parentDate) {
+            return `${label} birth date is missing.`;
+        }
+        const childDate = resolveBirthDateValue(editForm.birthDate);
+        if (!childDate) return null;
+        const diffDays = (childDate.getTime() - parentDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (diffDays < 0) {
+            return `${label} birth date is after the child.`;
+        }
+        if (diffDays < 365) {
+            return `${label} should be at least 1 year older than the child.`;
+        }
+        return null;
+    };
+
+    const sireAgeWarning = getParentAgeWarning(sirePet, 'Sire');
+    const damAgeWarning = getParentAgeWarning(damPet, 'Dam');
+
     const handleSaveFullEdit = async () => {
         try {
             const trimmedVideoUrl = editForm.videoUrl.trim();
@@ -1046,6 +1078,9 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                 <p className="text-[10px] text-gray-400 mt-1">
                                                     {malePets.length} male {editForm.breed} available
                                                 </p>
+                                                {sireAgeWarning && (
+                                                    <p className="text-[11px] text-amber-600 mt-1">{sireAgeWarning}</p>
+                                                )}
                                             </div>
 
                                             <div>
@@ -1068,6 +1103,9 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                 <p className="text-[10px] text-gray-400 mt-1">
                                                     {femalePets.length} female {editForm.breed} available
                                                 </p>
+                                                {damAgeWarning && (
+                                                    <p className="text-[11px] text-amber-600 mt-1">{damAgeWarning}</p>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

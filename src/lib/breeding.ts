@@ -39,15 +39,17 @@ const getParentIdSet = (pet: Pet) => {
 };
 
 const getAgeYears = (birthDate?: string) => {
-    if (!birthDate) return 0;
+    if (!birthDate) return null;
     const dob = new Date(birthDate);
-    if (Number.isNaN(dob.getTime())) return 0;
-    return new Date().getFullYear() - dob.getFullYear();
+    if (Number.isNaN(dob.getTime())) return null;
+    const years = new Date().getFullYear() - dob.getFullYear();
+    if (years < 0) return null;
+    return years;
 };
 
 const getHealthCertified = (pet: Pet) => {
     const legacyValue = (pet as any).health_certified;
-    return Boolean(pet.healthCertified ?? legacyValue);
+    return Boolean(pet.healthCertified ?? legacyValue ?? (pet as any).verified);
 };
 
 export function calculateCompatibilityScore(source: Pet, target: Pet): MatchResult {
@@ -168,13 +170,17 @@ export function calculateCompatibilityScore(source: Pet, target: Pet): MatchResu
     const targetBreed = normalizeValue(target.breed);
     if (sourceBreed && sourceBreed === targetBreed) {
         breedScore = 100;
+        pros.push('Consistent breed traits.');
     } else if (sourceBreed && targetBreed && (sourceBreed.includes(targetBreed) || targetBreed.includes(sourceBreed))) {
         breedScore = 70;
+        pros.push('Close breed lineage. Predictable traits.');
     } else {
         // Cross-breeding penalty/feature
         breedScore = 20;
         if (sourceBreed && targetBreed) {
             warnings.push('Cross-breeding will produce mixed breed offspring.');
+            pros.push('Hybrid vigor possible.');
+            cons.push('Traits may be less predictable.');
         }
     }
 
@@ -193,11 +199,14 @@ export function calculateCompatibilityScore(source: Pet, target: Pet): MatchResu
     let colorScore = 90;
 
     // 7. Age Score (Prime breeding years: 2-6)
-    const age1 = getAgeYears(source.birthDate || (source as any).birth_date);
-    const age2 = getAgeYears(target.birthDate || (target as any).birth_date);
+    const age1 = getAgeYears(source.birthDate || (source as any).birth_date || (source as any).birthday);
+    const age2 = getAgeYears(target.birthDate || (target as any).birth_date || (target as any).birthday);
 
     let ageScore = 80;
-    if (age1 >= 2 && age1 <= 6 && age2 >= 2 && age2 <= 6) {
+    if (age1 === null || age2 === null) {
+        ageScore = 70;
+        warnings.push('Birth date missing or invalid. Age-based checks are limited.');
+    } else if (age1 >= 2 && age1 <= 6 && age2 >= 2 && age2 <= 6) {
         ageScore = 100;
     } else if (age1 < 1 || age2 < 1) {
         ageScore = 0;

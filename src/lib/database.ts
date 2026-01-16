@@ -114,6 +114,114 @@ function generateRegistrationNumber(breed: string): string {
   return `${prefix}-${year}-${random}`;
 }
 
+const MIN_PARENT_AGE_YEARS = 1;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const normalizeText = (value?: string | null) => (value || '').trim().replace(/\s+/g, ' ');
+const hasValue = (value?: string | null) => normalizeText(value).length > 0;
+
+const parseDateValue = (value?: string | null) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+};
+
+async function checkPetDuplicates(params: {
+  registrationNumber?: string | null;
+  name?: string | null;
+  ownerId?: string | null;
+  excludeId?: string | null;
+}) {
+  const registrationNumber = normalizeText(params.registrationNumber);
+  const name = normalizeText(params.name);
+  const duplicates = { registration: [] as any[], name: [] as any[] };
+
+  if (hasValue(registrationNumber)) {
+    let query = supabase
+      .from('pets')
+      .select('id, name, registration_number, owner_id')
+      .ilike('registration_number', registrationNumber);
+    if (params.excludeId) query = query.neq('id', params.excludeId);
+    const { data } = await query.limit(5);
+    if (data && data.length) duplicates.registration = data;
+  }
+
+  if (hasValue(name) && params.ownerId) {
+    let query = supabase
+      .from('pets')
+      .select('id, name, owner_id')
+      .eq('owner_id', params.ownerId)
+      .ilike('name', name);
+    if (params.excludeId) query = query.neq('id', params.excludeId);
+    const { data } = await query.limit(5);
+    if (data && data.length) duplicates.name = data;
+  }
+
+  return duplicates;
+}
+
+async function notifyDuplicate(params: {
+  ownerId?: string | null;
+  title: string;
+  message: string;
+  referenceId?: string;
+  userMessage?: string;
+}) {
+  await createNotification({
+    type: 'verification_request',
+    title: params.title,
+    message: params.message,
+    reference_id: params.referenceId
+  });
+
+  if (params.ownerId && params.userMessage) {
+    await createUserNotification({
+      user_id: params.ownerId,
+      type: 'verification',
+      title: params.title,
+      message: params.userMessage,
+      payload: { reference_id: params.referenceId }
+    });
+  }
+}
+
+async function validateParentAges(params: {
+  childBirthDate?: string | null;
+  fatherId?: string | null;
+  motherId?: string | null;
+}) {
+  const childDate = parseDateValue(params.childBirthDate);
+  if (!childDate) return;
+
+  const parentIds = [params.fatherId, params.motherId].filter(Boolean) as string[];
+  if (parentIds.length === 0) return;
+
+  const { data, error } = await supabase
+    .from('pets')
+    .select('id, name, birthday, birth_date')
+    .in('id', parentIds);
+
+  if (error) throw error;
+  if (!data) return;
+
+  for (const parent of data) {
+    const parentDate = parseDateValue(parent.birthday || parent.birth_date);
+    if (!parentDate) continue;
+
+    const diffDays = (childDate.getTime() - parentDate.getTime()) / MS_PER_DAY;
+    const label = parent.id === params.fatherId ? 'Sire' : 'Dam';
+    const parentName = parent.name ? ` (${parent.name})` : '';
+
+    if (diffDays < 0) {
+      throw new Error(`${label}${parentName} birth date cannot be after the child birth date.`);
+    }
+    if (diffDays < MIN_PARENT_AGE_YEARS * 365) {
+      throw new Error(`${label}${parentName} must be at least ${MIN_PARENT_AGE_YEARS} year older than the child.`);
+    }
+  }
+}
+
 // Helper to map DB pet to Interface (keeping backward compat)
 // Helper to map DB pet to Interface (keeping backward compat)
 // Helper to map DB pet to Interface (keeping backward compat)
@@ -236,8 +344,64 @@ export async function createPet(petData: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 
-  // Use provided Reg No or generate new one
-  const registration_number = petData.registration_number || generateRegistrationNumber(petData.breed);
+  const ownerId = petData.owner_id || user.id;
+  const regProvided = hasValue(petData.registration_number);
+  let registration_number = regProvided
+    ? normalizeText(petData.registration_number)
+    : generateRegistrationNumber(petData.breed);
+
+  if (!regProvided) {
+    let attempts = 0;
+    while (attempts < 3) {
+      const regDupes = await checkPetDuplicates({
+        registrationNumber: registration_number
+      });
+      if (regDupes.registration.length === 0) break;
+      registration_number = generateRegistrationNumber(petData.breed);
+      attempts += 1;
+    }
+  }
+
+  const duplicates = await checkPetDuplicates({
+    registrationNumber: registration_number,
+    name: petData.name,
+    ownerId,
+  });
+
+  if (duplicates.registration.length > 0) {
+    await notifyDuplicate({
+      ownerId,
+      title: 'Duplicate registration detected',
+      message: `Registration number already exists: ${registration_number}`,
+      referenceId: duplicates.registration[0].id,
+      userMessage: `Registration number ${registration_number} is already in use. Please verify or use a different number.`
+    });
+    throw new Error(`Registration number already exists: ${registration_number}`);
+  }
+
+  if (duplicates.name.length > 0) {
+    await notifyDuplicate({
+      ownerId,
+      title: 'Duplicate pet name detected',
+      message: `Owner already has a pet named "${petData.name}".`,
+      referenceId: duplicates.name[0].id,
+      userMessage: `You already have a pet named "${petData.name}". Please use a unique name.`
+    });
+    throw new Error(`Duplicate pet name. Please use a unique name for your pets.`);
+  }
+
+  if (petData.birth_date) {
+    const childDate = parseDateValue(petData.birth_date);
+    if (childDate && childDate.getTime() > Date.now()) {
+      throw new Error('Birth date cannot be in the future.');
+    }
+  }
+
+  await validateParentAges({
+    childBirthDate: petData.birth_date,
+    fatherId: petData.father_id,
+    motherId: petData.mother_id
+  });
 
   // APPEND External Link to Description since column does not exist
   // APPEND Metadata to Description since columns do not exist
@@ -261,8 +425,8 @@ export async function createPet(petData: {
   const { data: pet, error } = await supabase
     .from('pets')
     .insert({
-      owner_id: petData.owner_id || user.id,
-      name: petData.name,
+      owner_id: ownerId,
+      name: normalizeText(petData.name),
       type: petData.type,
       breed: petData.breed,
       gender: petData.gender,
@@ -379,8 +543,34 @@ export async function updatePet(petId: string, updates: Partial<Pet>) {
   const metaUpdateProvided = ['media_type', 'video_url', 'source', 'external_link'].some(
     (key) => updates[key as keyof Pet] !== undefined
   );
+  const duplicateCheckNeeded = updates.registration_number !== undefined || updates.name !== undefined || updates.owner_id !== undefined;
+  const parentCheckNeeded = updates.birth_date !== undefined || updates.mother_id !== undefined || updates.father_id !== undefined;
+  const needsExisting = metaUpdateProvided || duplicateCheckNeeded || parentCheckNeeded;
+  let existingRecord: any = null;
+
+  if (needsExisting) {
+    const { data, error } = await supabase
+      .from('pets')
+      .select('id, name, registration_number, owner_id, birthday, mother_id, father_id, description')
+      .eq('id', petId)
+      .single();
+    if (error) throw error;
+    existingRecord = data;
+  }
+
+  if (updates.name !== undefined) {
+    payload.name = normalizeText(updates.name);
+  }
+  if (updates.registration_number !== undefined) {
+    const normalizedReg = normalizeText(updates.registration_number);
+    payload.registration_number = normalizedReg || null;
+  }
 
   if (updates.birth_date) {
+    const childDate = parseDateValue(updates.birth_date);
+    if (childDate && childDate.getTime() > Date.now()) {
+      throw new Error('Birth date cannot be in the future.');
+    }
     payload.birthday = updates.birth_date;
     delete payload.birth_date;
   }
@@ -390,18 +580,56 @@ export async function updatePet(petId: string, updates: Partial<Pet>) {
     delete payload.health_certified;
   }
 
+  if (duplicateCheckNeeded) {
+    const ownerId = updates.owner_id ?? existingRecord?.owner_id ?? null;
+    const name = updates.name ?? existingRecord?.name ?? null;
+    const registrationNumber = updates.registration_number ?? existingRecord?.registration_number ?? null;
+    const duplicates = await checkPetDuplicates({
+      registrationNumber,
+      name,
+      ownerId,
+      excludeId: petId
+    });
+
+    if (duplicates.registration.length > 0) {
+      await notifyDuplicate({
+        ownerId,
+        title: 'Duplicate registration detected',
+        message: `Registration number already exists: ${registrationNumber}`,
+        referenceId: duplicates.registration[0].id,
+        userMessage: `Registration number ${registrationNumber} is already in use. Please verify or use a different number.`
+      });
+      throw new Error(`Registration number already exists: ${registrationNumber}`);
+    }
+
+    if (duplicates.name.length > 0) {
+      await notifyDuplicate({
+        ownerId,
+        title: 'Duplicate pet name detected',
+        message: `Owner already has a pet named "${name}".`,
+        referenceId: duplicates.name[0].id,
+        userMessage: `You already have a pet named "${name}". Please use a unique name.`
+      });
+      throw new Error('Duplicate pet name. Please use a unique name for your pets.');
+    }
+  }
+
+  if (parentCheckNeeded) {
+    const childBirthDate = updates.birth_date ?? existingRecord?.birthday ?? null;
+    const fatherId = updates.father_id ?? existingRecord?.father_id ?? null;
+    const motherId = updates.mother_id ?? existingRecord?.mother_id ?? null;
+    await validateParentAges({
+      childBirthDate,
+      fatherId,
+      motherId
+    });
+  }
+
   if (metaUpdateProvided) {
     let baseDescription = updates.description;
 
     if (baseDescription === undefined) {
-      const { data, error } = await supabase
-        .from('pets')
-        .select('description')
-        .eq('id', petId)
-        .single();
-      if (!error) {
-        baseDescription = data?.description ?? '';
-      }
+      baseDescription = existingRecord?.description ?? '';
     }
 
     let descriptionText = typeof baseDescription === 'string' ? baseDescription : '';
@@ -539,6 +767,19 @@ export async function getPedigreeTree(petId: string): Promise<{
 
 // Update pedigree relationship
 export async function updatePedigree(petId: string, sireId?: string, damId?: string) {
+  const { data: child, error: childError } = await supabase
+    .from('pets')
+    .select('birthday')
+    .eq('id', petId)
+    .single();
+  if (childError) throw childError;
+
+  await validateParentAges({
+    childBirthDate: child?.birthday ?? null,
+    fatherId: sireId,
+    motherId: damId
+  });
+
   const { error } = await supabase
     .from('pets')
     .update({
@@ -1283,6 +1524,3 @@ export async function deletePetStory(id: string) {
 
   if (error) throw error;
 }
-
-
-

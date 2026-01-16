@@ -180,6 +180,40 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
         setFormData(prev => ({ ...prev, ...update }));
     };
 
+    const resolveBirthDateValue = (value?: string | null) => {
+        if (!value) return null;
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return null;
+        return parsed;
+    };
+
+    const getParentAgeWarning = (parent: any, label: string) => {
+        if (!parent) return null;
+        if (!formData.birthDate) {
+            return `${label} selected. Add the pet birth date to validate lineage.`;
+        }
+        const parentBirth = parent.birth_date || parent.birthday || parent.birthDate;
+        const parentDate = resolveBirthDateValue(parentBirth);
+        if (!parentDate) {
+            return `${label} birth date is missing.`;
+        }
+        const childDate = resolveBirthDateValue(formData.birthDate);
+        if (!childDate) return null;
+        const diffDays = (childDate.getTime() - parentDate.getTime()) / (1000 * 60 * 60 * 24);
+        if (diffDays < 0) {
+            return `${label} birth date is after the child.`;
+        }
+        if (diffDays < 365) {
+            return `${label} should be at least 1 year older than the child.`;
+        }
+        return null;
+    };
+
+    const selectedSire = availablePets.find(p => p.id === formData.sireId);
+    const selectedDam = availablePets.find(p => p.id === formData.damId);
+    const sireAgeWarning = getParentAgeWarning(selectedSire, 'Sire');
+    const damAgeWarning = getParentAgeWarning(selectedDam, 'Dam');
+
     const handleSubmit = async () => {
         if (!formData.name || !formData.breed) {
             alert("Please fill in Name and Breed.");
@@ -514,6 +548,9 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            {sireAgeWarning && (
+                                                <p className="text-[11px] text-[#D9A441] mt-1">{sireAgeWarning}</p>
+                                            )}
                                         </div>
                                         <div className="space-y-1">
                                             <Label className="text-xs text-[#B8B8B8]/60">Dam (Mother)</Label>
@@ -530,6 +567,9 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
                                                     ))}
                                                 </SelectContent>
                                             </Select>
+                                            {damAgeWarning && (
+                                                <p className="text-[11px] text-[#D9A441] mt-1">{damAgeWarning}</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

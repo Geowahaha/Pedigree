@@ -5,6 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { getUserNotifications, markUserNotifRead, UserNotification } from '@/lib/database';
 import { supabase } from '@/lib/supabase';
 import { EibpoMark } from '@/components/branding/EibpoLogo';
+import LanguageToggle from '@/components/LanguageToggle';
 
 interface HeaderProps {
   cartCount: number;
@@ -94,8 +95,8 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
-          ? 'bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#C5A059]/20'
-          : 'bg-transparent border-b border-transparent'
+        ? 'bg-[#0A0A0A]/95 backdrop-blur-xl border-b border-[#C5A059]/20'
+        : 'bg-transparent border-b border-transparent'
         }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -130,8 +131,8 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
                 key={item.id}
                 onClick={() => scrollToSection(item.id)}
                 className={`relative px-5 py-2 text-xs tracking-[0.15em] uppercase font-medium transition-all duration-300 ${activeSection === item.id
-                    ? 'text-[#C5A059]'
-                    : 'text-[#B8B8B8] hover:text-[#F5F5F0]'
+                  ? 'text-[#C5A059]'
+                  : 'text-[#B8B8B8] hover:text-[#F5F5F0]'
                   }`}
               >
                 {item.label}
@@ -144,16 +145,9 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
             ))}
           </nav>
 
-          {/* Language Selector */}
+          {/* Language Toggle - Smooth Animated */}
           <div className="hidden md:flex items-center mr-4">
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as any)}
-              className="bg-transparent text-[10px] tracking-[0.1em] uppercase font-medium text-[#B8B8B8] border-none focus:ring-0 cursor-pointer hover:text-[#C5A059] transition-colors"
-            >
-              <option value="en" className="bg-[#1A1A1A] text-[#F5F5F0]">EN</option>
-              <option value="th" className="bg-[#1A1A1A] text-[#F5F5F0]">TH</option>
-            </select>
+            <LanguageToggle compact />
           </div>
 
           {/* Right Actions */}
@@ -351,13 +345,21 @@ const Header: React.FC<HeaderProps> = ({ cartCount, onCartClick, activeSection, 
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
                   className={`px-4 py-3 text-left text-xs tracking-[0.1em] uppercase transition-all ${activeSection === item.id
-                      ? 'text-[#C5A059] border-l-2 border-[#C5A059] bg-[#C5A059]/5'
-                      : 'text-[#B8B8B8] hover:text-[#F5F5F0] border-l-2 border-transparent'
+                    ? 'text-[#C5A059] border-l-2 border-[#C5A059] bg-[#C5A059]/5'
+                    : 'text-[#B8B8B8] hover:text-[#F5F5F0] border-l-2 border-transparent'
                     }`}
                 >
                   {item.label}
                 </button>
               ))}
+
+              {/* Mobile Language Toggle */}
+              <div className="px-4 py-3 flex items-center justify-between border-t border-[#C5A059]/10 mt-2">
+                <span className="text-[10px] tracking-[0.15em] uppercase text-[#B8B8B8]">
+                  {language === 'en' ? 'Language' : 'ภาษา'}
+                </span>
+                <LanguageToggle />
+              </div>
 
               {/* Mobile User Section */}
               {user ? (

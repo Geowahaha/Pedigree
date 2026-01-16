@@ -37,6 +37,7 @@ import CTASection from '../CTASection';
 import ChatManager from '../ChatManager';
 import { AIChatOverlay } from '../ai/AIChatOverlay';
 import PuppyComingSoonSection from '../PuppyComingSoonSection';
+import LanguageToggle from '@/components/LanguageToggle';
 
 interface CartItem {
     product: Product;
@@ -360,15 +361,8 @@ const EibpoLayout: React.FC = () => {
 
                     {/* Right Actions */}
                     <div className="flex items-center gap-3 ml-auto">
-                        {/* Language Selector */}
-                        <select
-                            value={language}
-                            onChange={(e) => setLanguage(e.target.value as any)}
-                            className="bg-transparent text-sm font-medium text-foreground/70 border-none focus:ring-0 cursor-pointer hover:text-foreground transition-colors"
-                        >
-                            <option value="en">EN</option>
-                            <option value="th">TH</option>
-                        </select>
+                        {/* Language Toggle - Smooth Animated */}
+                        <LanguageToggle compact />
 
                         {/* Cart */}
                         <button

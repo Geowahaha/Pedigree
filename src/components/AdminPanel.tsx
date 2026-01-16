@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import PetRegistrationModal from './PetRegistrationModal';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { getPublicPets, createPet, updatePet, deletePet, getAdminNotifications, getUsers, deleteUser, markNotificationAsRead, createUserNotification, AdminNotification, Pet as DbPet } from '@/lib/database';
+import { getPublicPets, createPet, updatePet, deletePet, getAdminNotifications, getUsers, deleteUser, markNotificationAsRead, createNotification, createUserNotification, AdminNotification, Pet as DbPet } from '@/lib/database';
 import { getOwnershipClaims, approveOwnershipClaim, rejectOwnershipClaim } from '@/lib/ownership';
 import type { OwnershipClaim } from '@/lib/ownership';
 import { supabase } from '@/lib/supabase';
@@ -97,11 +97,19 @@ type QueryPoolItem = {
     context_pet_name?: string | null;
 };
 
+type DuplicateGroup = {
+    type: 'registration' | 'name';
+    key: string;
+    ownerId?: string | null;
+    ownerLabel?: string | null;
+    items: Pet[];
+};
+
 const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const { t } = useTranslation();
     const fallbackPetImage = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIj48cmVjdCB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiM5Y2EzYWYiPlBldDwvdGV4dD48L3N2Zz4=';
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState<'pets' | 'verifications' | 'ownership' | 'puppy' | 'users' | 'notifications' | 'moderation' | 'ai'>('pets');
+    const [activeTab, setActiveTab] = useState<'pets' | 'verifications' | 'ownership' | 'puppy' | 'users' | 'notifications' | 'moderation' | 'ai' | 'duplicates'>('pets');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [editingPet, setEditingPet] = useState<Pet | null>(null);
     const [isCreating, setIsCreating] = useState(false);
@@ -128,6 +136,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const [faqEntries, setFaqEntries] = useState<FaqEntryAdmin[]>([]);
     const [queryPool, setQueryPool] = useState<QueryPoolItem[]>([]);
     const [showAllQueries, setShowAllQueries] = useState(false);
+    const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
+    const [duplicateFilter, setDuplicateFilter] = useState<'all' | 'registration' | 'name'>('all');
+    const [duplicateScanAt, setDuplicateScanAt] = useState<string | null>(null);
+    const [duplicateLoading, setDuplicateLoading] = useState(false);
     const [faqForm, setFaqForm] = useState({
         id: '',
         status: 'draft' as 'draft' | 'approved' | 'archived',
@@ -216,6 +228,12 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
             setAiExpanded(false);
         }
     }, [activeTab, aiExpanded]);
+
+    useEffect(() => {
+        if (activeTab === 'duplicates') {
+            scanDuplicatePets();
+        }
+    }, [activeTab, petList.length]);
 
     const refreshData = async () => {
         setLoading(true);
@@ -536,6 +554,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         return found?.full_name || found?.email || formatShortId(userId);
     };
 
+    const normalizePetKey = (value?: string | null) => (value || '').trim().toLowerCase();
+
     const normalizeGender = (value?: string | null) => (value || '').trim().toLowerCase();
     const isMalePet = (pet?: Pick<Pet, 'gender'> | null) => {
         const gender = normalizeGender(pet?.gender);
@@ -547,6 +567,123 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     };
 
     const getPetById = (petId?: string | null) => petList.find(pet => pet.id === petId);
+
+    const scanDuplicatePets = async () => {
+        setDuplicateLoading(true);
+        try {
+            const regMap = new Map<string, Pet[]>();
+            const nameMap = new Map<string, DuplicateGroup>();
+
+            petList.forEach((pet) => {
+                const regKey = normalizePetKey(pet.registrationNumber || null);
+                if (regKey) {
+                    const list = regMap.get(regKey) || [];
+                    list.push(pet);
+                    regMap.set(regKey, list);
+                }
+
+                const nameKey = normalizePetKey(pet.name || null);
+                if (nameKey && pet.owner_id) {
+                    const ownerLabel = getUserLabel(pet.owner_id);
+                    const mapKey = `${pet.owner_id}:${nameKey}`;
+                    if (!nameMap.has(mapKey)) {
+                        nameMap.set(mapKey, {
+                            type: 'name',
+                            key: nameKey,
+                            ownerId: pet.owner_id,
+                            ownerLabel,
+                            items: []
+                        });
+                    }
+                    const group = nameMap.get(mapKey);
+                    if (group) group.items.push(pet);
+                }
+            });
+
+            const groups: DuplicateGroup[] = [];
+
+            regMap.forEach((items, key) => {
+                if (items.length > 1) {
+                    groups.push({
+                        type: 'registration',
+                        key,
+                        items
+                    });
+                }
+            });
+
+            nameMap.forEach((group) => {
+                if (group.items.length > 1) {
+                    groups.push(group);
+                }
+            });
+
+            groups.sort((a, b) => b.items.length - a.items.length);
+            setDuplicateGroups(groups);
+            setDuplicateScanAt(new Date().toISOString());
+        } finally {
+            setDuplicateLoading(false);
+        }
+    };
+
+    const handleNotifyDuplicates = async () => {
+        if (duplicateGroups.length === 0) return;
+        setDuplicateLoading(true);
+        try {
+            const ownerMap = new Map<string, { registrations: Set<string>; names: Set<string> }>();
+
+            duplicateGroups.forEach((group) => {
+                group.items.forEach((pet) => {
+                    if (!pet.owner_id) return;
+                    if (!ownerMap.has(pet.owner_id)) {
+                        ownerMap.set(pet.owner_id, { registrations: new Set(), names: new Set() });
+                    }
+                    const entry = ownerMap.get(pet.owner_id);
+                    if (!entry) return;
+                    if (group.type === 'registration') {
+                        entry.registrations.add(group.key);
+                    } else {
+                        entry.names.add(group.key);
+                    }
+                });
+            });
+
+            for (const [ownerId, entry] of ownerMap.entries()) {
+                const registrationList = Array.from(entry.registrations).slice(0, 3).join(', ');
+                const nameList = Array.from(entry.names).slice(0, 3).join(', ');
+                const details: string[] = [];
+                if (registrationList) details.push(`Registration duplicates: ${registrationList}`);
+                if (nameList) details.push(`Name duplicates: ${nameList}`);
+
+                await createUserNotification({
+                    user_id: ownerId,
+                    type: 'verification',
+                    title: 'Duplicate pets detected',
+                    message: details.join(' | ') || 'Duplicate pets detected in your account.'
+                });
+            }
+
+            await createNotification({
+                type: 'verification_request',
+                title: 'Duplicate pets detected',
+                message: `Found ${duplicateGroups.length} duplicate groups across ${ownerMap.size} owners.`
+            });
+
+            alert('Notifications sent to owners.');
+        } catch (error) {
+            console.error(error);
+            alert('Failed to send duplicate notifications.');
+        } finally {
+            setDuplicateLoading(false);
+        }
+    };
+
+    const handleOpenDuplicatePet = (pet: Pet) => {
+        setIsCreating(false);
+        setEditingPet(pet);
+        setActiveTab('pets');
+        setMobileMenuOpen(false);
+    };
 
     const getPetLabel = (petId?: string | null) => {
         const pet = getPetById(petId);
@@ -597,6 +734,13 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         : faqEntries.filter(entry => entry.status === faqFilter);
     const sireOptions = petList.filter(isMalePet);
     const damOptions = petList.filter(isFemalePet);
+    const duplicateCounts = {
+        registration: duplicateGroups.filter(group => group.type === 'registration').length,
+        name: duplicateGroups.filter(group => group.type === 'name').length
+    };
+    const filteredDuplicateGroups = duplicateFilter === 'all'
+        ? duplicateGroups
+        : duplicateGroups.filter(group => group.type === duplicateFilter);
 
     const reservationsByMatch = React.useMemo(() => {
         const grouped: Record<string, BreedingReservationAdmin[]> = {};
@@ -1199,6 +1343,21 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                         </Button>
                                         <Button
                                             variant="ghost"
+                                            onClick={() => { setActiveTab('duplicates'); setMobileMenuOpen(false); }}
+                                            className={`w-full justify-start gap-3 ${activeTab === 'duplicates' ? 'bg-primary/10 text-primary' : 'text-gray-600'}`}
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m-8 4h8m-8 4h5M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z" />
+                                            </svg>
+                                            Duplicate Audit
+                                            {duplicateGroups.length > 0 && (
+                                                <span className="ml-auto bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs">
+                                                    {duplicateGroups.length}
+                                                </span>
+                                            )}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
                                             onClick={() => { setActiveTab('notifications'); setMobileMenuOpen(false); }}
                                             className={`w-full justify-start gap-3 ${activeTab === 'notifications' ? 'bg-primary/10 text-primary' : 'text-gray-600'}`}
                                         >
@@ -1315,6 +1474,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                 {(faqDraftCount > 0 || aiQueueCount > 0) && (
                                     <span className="ml-auto bg-amber-100 text-amber-700 py-0.5 px-2 rounded-full text-xs">
                                         {faqDraftCount || aiQueueCount}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('duplicates')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 font-medium rounded-lg transition-colors ${activeTab === 'duplicates' ? 'bg-[#C5A059]/10 text-[#C5A059]' : 'text-[#B8B8B8] hover:bg-[#1A1A1A]'}`}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h8m-8 4h8m-8 4h5M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1z" />
+                                </svg>
+                                Duplicate Audit
+                                {duplicateGroups.length > 0 && (
+                                    <span className="ml-auto bg-red-100 text-red-600 py-0.5 px-2 rounded-full text-xs">
+                                        {duplicateGroups.length}
                                     </span>
                                 )}
                             </button>
@@ -2517,6 +2690,104 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                         </div>
                                     </TabsContent>
                                 </Tabs>
+                            </div>
+                        ) : activeTab === 'duplicates' ? (
+                            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                                    <div>
+                                        <h2 className="text-xl font-bold">Duplicate Audit</h2>
+                                        <p className="text-xs text-gray-500">Scan for duplicate registration numbers and owner pet names.</p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button variant="outline" onClick={scanDuplicatePets} disabled={duplicateLoading}>
+                                            {duplicateLoading ? 'Scanning...' : 'Scan now'}
+                                        </Button>
+                                        <Button
+                                            className="bg-[#C5A059] text-[#0A0A0A] hover:bg-[#D4C4B5]"
+                                            onClick={handleNotifyDuplicates}
+                                            disabled={duplicateGroups.length === 0 || duplicateLoading}
+                                        >
+                                            Notify owners
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 text-xs text-gray-600 mb-4">
+                                    <span className="px-2 py-1 rounded-full bg-white border">
+                                        Registrations: {duplicateCounts.registration}
+                                    </span>
+                                    <span className="px-2 py-1 rounded-full bg-white border">
+                                        Names: {duplicateCounts.name}
+                                    </span>
+                                    {duplicateScanAt && (
+                                        <span className="px-2 py-1 rounded-full bg-white border">
+                                            Last scan: {new Date(duplicateScanAt).toLocaleString()}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 mb-6">
+                                    {['all', 'registration', 'name'].map(value => (
+                                        <Button
+                                            key={value}
+                                            size="sm"
+                                            variant={duplicateFilter === value ? 'default' : 'outline'}
+                                            className={duplicateFilter === value ? 'bg-black text-white' : ''}
+                                            onClick={() => setDuplicateFilter(value as 'all' | 'registration' | 'name')}
+                                        >
+                                            {value === 'all' ? 'All duplicates' : value === 'registration' ? 'Registration duplicates' : 'Name duplicates'}
+                                        </Button>
+                                    ))}
+                                </div>
+
+                                {filteredDuplicateGroups.length === 0 ? (
+                                    <div className="bg-white rounded-xl border p-6 text-center text-gray-500">
+                                        No duplicates found. Keep up the good data hygiene.
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {filteredDuplicateGroups.map((group, index) => (
+                                            <div key={`${group.type}-${group.key}-${index}`} className="bg-white rounded-xl border shadow-sm p-4">
+                                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                                    <div>
+                                                        <div className="text-sm font-semibold text-gray-900">
+                                                            {group.type === 'registration' ? 'Duplicate registration number' : 'Duplicate name for owner'}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            {group.type === 'registration'
+                                                                ? `Registration: ${group.key.toUpperCase()}`
+                                                                : `Name: ${group.key} | Owner: ${group.ownerLabel || 'Unknown'}`}
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-xs text-gray-500">{group.items.length} records</span>
+                                                </div>
+
+                                                <div className="mt-3 space-y-2">
+                                                    {group.items.map(item => (
+                                                        <div key={item.id} className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 rounded-lg border border-gray-100 bg-gray-50">
+                                                            <div className="flex items-center gap-3">
+                                                                <img
+                                                                    src={item.image || fallbackPetImage}
+                                                                    alt={item.name}
+                                                                    className="w-12 h-12 rounded-lg object-cover"
+                                                                />
+                                                                <div>
+                                                                    <div className="font-semibold text-gray-900">{item.name || 'Unnamed'}</div>
+                                                                    <div className="text-xs text-gray-500">
+                                                                        Reg: {item.registrationNumber || 'None'} | Owner: {item.owner || getUserLabel(item.owner_id)}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <Button size="sm" variant="outline" onClick={() => handleOpenDuplicatePet(item)}>
+                                                                View in Admin
+                                                            </Button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         ) : activeTab === 'notifications' ? (
                             /* 5. NOTIFICATIONS TAB */
