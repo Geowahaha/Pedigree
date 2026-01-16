@@ -761,7 +761,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         breed: '',
         type: 'dog',
         gender: 'male',
-        birthDate: new Date().toISOString().split('T')[0],
+        birthDate: '',
         image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=500&auto=format&fit=crop',
         color: '',
         location: 'Bangkok, Thailand',
@@ -785,7 +785,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     breed: pet.breed,
                     type: pet.type as 'dog' | 'cat',
                     gender: pet.gender,
-                    birth_date: pet.birthDate || new Date().toISOString(),
+                    birth_date: pet.birthDate || null,
                     image_url: pet.image,
                     color: pet.color,
                     health_certified: pet.healthCertified,
@@ -811,6 +811,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                 // Wait, I can search for it immediately.
                 alert(`Created new pet: ${pet.name}`);
 
+                if (!pet.birthDate && ownerId) {
+                    await createUserNotification({
+                        user_id: ownerId,
+                        type: 'verification',
+                        title: 'Birth date missing',
+                        message: `Please update the birth date for ${pet.name}.`
+                    });
+                }
+
                 // Attempt Auto-Index for specific pet creation
                 setTimeout(async () => {
                     try {
@@ -829,7 +838,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     breed: pet.breed,
                     type: pet.type as 'dog' | 'cat',
                     gender: pet.gender,
-                    birth_date: pet.birthDate,
+                    birth_date: pet.birthDate || null,
                     image_url: pet.image,
                     color: pet.color,
                     registration_number: pet.registrationNumber,
@@ -840,6 +849,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                     ...(ownerId ? { owner_id: ownerId } : {})
                 });
                 alert(`Updated pet: ${pet.name}`);
+
+                if (!pet.birthDate && ownerId) {
+                    await createUserNotification({
+                        user_id: ownerId,
+                        type: 'verification',
+                        title: 'Birth date missing',
+                        message: `Please update the birth date for ${pet.name}.`
+                    });
+                }
 
                 // --- AUTO-INDEX FOR AI ---
                 // Fire and forget (don't block UI)

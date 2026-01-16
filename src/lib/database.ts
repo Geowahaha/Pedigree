@@ -199,7 +199,7 @@ async function validateParentAges(params: {
 
   const { data, error } = await supabase
     .from('pets')
-    .select('id, name, birthday, birth_date')
+    .select('id, name, birthday')
     .in('id', parentIds);
 
   if (error) throw error;
@@ -325,7 +325,7 @@ export async function createPet(petData: {
   type: 'dog' | 'cat';
   breed: string;
   gender: 'male' | 'female';
-  birth_date: string;
+  birth_date?: string | null;
   color?: string;
   registration_number?: string; // Allow custom Reg No
   health_certified?: boolean;
@@ -390,15 +390,17 @@ export async function createPet(petData: {
     throw new Error(`Duplicate pet name. Please use a unique name for your pets.`);
   }
 
-  if (petData.birth_date) {
-    const childDate = parseDateValue(petData.birth_date);
+  const normalizedBirthDate = hasValue(petData.birth_date) ? petData.birth_date : null;
+
+  if (normalizedBirthDate) {
+    const childDate = parseDateValue(normalizedBirthDate);
     if (childDate && childDate.getTime() > Date.now()) {
       throw new Error('Birth date cannot be in the future.');
     }
   }
 
   await validateParentAges({
-    childBirthDate: petData.birth_date,
+    childBirthDate: normalizedBirthDate,
     fatherId: petData.father_id,
     motherId: petData.mother_id
   });
@@ -430,7 +432,7 @@ export async function createPet(petData: {
       type: petData.type,
       breed: petData.breed,
       gender: petData.gender,
-      birthday: petData.birth_date,
+      birthday: normalizedBirthDate,
       color: petData.color || null,
       registration_number,
       location: petData.location || null,
@@ -566,14 +568,17 @@ export async function updatePet(petId: string, updates: Partial<Pet>) {
     payload.registration_number = normalizedReg || null;
   }
 
-  if (updates.birth_date) {
-    const childDate = parseDateValue(updates.birth_date);
-    if (childDate && childDate.getTime() > Date.now()) {
-      throw new Error('Birth date cannot be in the future.');
+  if (updates.birth_date !== undefined) {
+    const normalizedBirthDate = hasValue(updates.birth_date) ? updates.birth_date : null;
+    if (normalizedBirthDate) {
+      const childDate = parseDateValue(normalizedBirthDate);
+      if (childDate && childDate.getTime() > Date.now()) {
+        throw new Error('Birth date cannot be in the future.');
+      }
     }
-    payload.birthday = updates.birth_date;
-    delete payload.birth_date;
+    payload.birthday = normalizedBirthDate;
   }
+  delete payload.birth_date;
 
   if (updates.health_certified !== undefined) {
     payload.verified = updates.health_certified;
