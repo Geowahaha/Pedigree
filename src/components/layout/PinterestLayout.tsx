@@ -1298,7 +1298,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
         // Search Mode - ChatGPT style (Light Theme)
         if (isSearchMode) {
             return (
-                <div className="p-6">
+                <div className="p-4 md:p-6">
                     <button
                         onClick={exitSearchMode}
                         className="mb-8 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors"
@@ -1369,7 +1369,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
         switch (activeView) {
             case 'products':
                 return (
-                    <div className="p-6">
+                    <div className="p-4 md:p-6">
                         <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Back
@@ -1380,7 +1380,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
             case 'puppies':
                 return (
-                    <div className="p-6">
+                    <div className="p-4 md:p-6">
                         <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Back
@@ -1395,7 +1395,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
             case 'breeding':
                 return (
-                    <div className="p-6">
+                    <div className="p-4 md:p-6">
                         <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Back
@@ -1406,7 +1406,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
             case 'notifications':
                 return (
-                    <div className="p-6">
+                    <div className="p-4 md:p-6">
                         <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Back
@@ -1417,7 +1417,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
             case 'favorites':
                 return (
-                    <div className="p-6">
+                    <div className="p-4 md:p-6">
                         <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             {language === 'th' ? 'กลับ' : 'Back'}
@@ -1462,7 +1462,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
             case 'myspace':
                 return (
-                    <div className="p-6">
+                    <div className="p-4 md:p-6">
                         <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             {language === 'th' ? 'กลับ' : 'Back'}
@@ -1687,7 +1687,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             </div>
 
             {/* ===== LEFT SIDEBAR - Clean White ===== */}
-            <aside className="w-16 md:w-20 fixed left-0 top-0 bottom-0 z-50 flex flex-col items-center py-6 bg-white border-r border-gray-100 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+            <aside className="hidden md:flex w-16 lg:w-20 fixed left-0 top-0 bottom-0 z-50 flex flex-col items-center py-6 bg-white border-r border-gray-100 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
                 {/* Logo - Eibpo */}
                 <div className="mb-8">
                     <div className="w-10 h-10 rounded-xl bg-[#0d0c22] flex items-center justify-center shadow-lg shadow-black/20 cursor-pointer hover:scale-105 transition-transform">
@@ -1858,9 +1858,166 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
             {/* ===== MAIN CONTENT (Fades out when searching) ===== */}
             < div className={`transition-all duration-700 ease-in-out transform ${isImmersiveSearch ? 'opacity-0 scale-95 filter blur-lg pointer-events-none' : 'opacity-100 scale-100'}`}>
-                <main className="flex-1 ml-16 md:ml-20 flex flex-col min-h-screen bg-[#F9F8FD]">
+                <main className="flex-1 ml-0 md:ml-16 lg:ml-20 flex flex-col min-h-screen bg-[#F9F8FD]">
+                    {/* Mobile Header - Pinterest Style */}
+                    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 md:hidden">
+                        <div className="px-4 pt-3 pb-2">
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={() => { setActiveView('home'); exitSearchMode(); }}
+                                    className="w-9 h-9 rounded-xl bg-[#0d0c22] flex items-center justify-center shadow-md"
+                                    aria-label="Home"
+                                >
+                                    <EibpoMark className="w-5 h-5 text-white" />
+                                </button>
+
+                                <div className="flex-1 relative">
+                                    <input
+                                        ref={searchInputRef}
+                                        type="text"
+                                        value={searchQuery}
+                                        onFocus={() => {
+                                            if (searchQuery.trim().length > 0) setShowSearchSuggestions(true);
+                                        }}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setSearchQuery(value);
+                                            setShowSearchSuggestions(value.trim().length > 0);
+                                        }}
+                                        onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                handleSearch(e as any);
+                                                setShowSearchSuggestions(false);
+                                            }
+                                        }}
+                                        placeholder={language === 'th' ? 'ค้นหาหรือถาม AI...' : 'Search or ask AI...'}
+                                        className="w-full h-10 rounded-full bg-gray-100 px-4 pr-10 text-sm font-medium text-[#0d0c22] placeholder:text-gray-400 focus:ring-2 focus:ring-[#ea4c89]/30 focus:outline-none"
+                                    />
+                                    {isAiTyping && (
+                                        <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                                            <div className="flex gap-1">
+                                                <div className="w-1.5 h-1.5 bg-[#ea4c89] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                                <div className="w-1.5 h-1.5 bg-[#ea4c89] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                                <div className="w-1.5 h-1.5 bg-[#ea4c89] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            if (searchQuery.trim()) handleSearch({ preventDefault: () => { } } as any);
+                                        }}
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full text-[#ea4c89] hover:bg-white transition-colors"
+                                        aria-label="Search"
+                                    >
+                                        <SearchIconNav />
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    {user && (user.email === 'geowahaha@gmail.com' || user.email === 'truesaveus@hotmail.com' || user.profile?.is_admin) && (
+                                        <button
+                                            onClick={() => setAdminPanelOpen(true)}
+                                            className="w-9 h-9 rounded-full bg-gray-900 text-yellow-400 flex items-center justify-center shadow-md"
+                                            aria-label="Admin"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.350 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            </svg>
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            if (user) {
+                                                setCurrentBreederId(user.id);
+                                                setBreederProfileOpen(true);
+                                            } else {
+                                                setAuthModalOpen(true);
+                                            }
+                                        }}
+                                        className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shadow-sm border border-gray-200"
+                                        aria-label="Profile"
+                                    >
+                                        {user ? <UserAvatar name={user.profile?.full_name || user.email} /> : <UserIcon />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {showSearchSuggestions && searchQuery.trim().length > 0 && (
+                            <div className="px-4 pb-2">
+                                <div className="bg-white border border-gray-100 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.12)] overflow-hidden">
+                                    <div className="p-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <p className="text-[10px] text-[#ea4c89] font-bold uppercase tracking-wider">
+                                                {language === 'th' ? 'แนะนำสำหรับคุณ' : 'Suggested'}
+                                            </p>
+                                            <button
+                                                onClick={() => setShowSearchSuggestions(false)}
+                                                className="text-gray-300 hover:text-gray-500"
+                                                aria-label="Close"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                            </button>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {getSearchSuggestions().slice(0, 4).map((s) => (
+                                                <button
+                                                    key={s.id}
+                                                    onMouseDown={(e) => {
+                                                        e.preventDefault();
+                                                        setShowSearchSuggestions(false);
+                                                        if (s.action) s.action();
+                                                    }}
+                                                    className="flex items-center gap-3 px-3 py-2 bg-gray-50 border border-gray-100 hover:border-[#ea4c89]/50 hover:bg-white rounded-xl transition-all text-left"
+                                                >
+                                                    <span className="text-base bg-white w-8 h-8 flex items-center justify-center rounded-lg shadow-sm">
+                                                        {s.type === 'recent' ? 'R' : s.type === 'popular' ? 'P' : 'T'}
+                                                    </span>
+                                                    <span className="text-sm font-medium text-gray-600">{s.text}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="px-4 pb-3">
+                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                                <button
+                                    onClick={() => setActiveView('home')}
+                                    className={`px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${activeView === 'home' ? 'bg-[#0d0c22] text-white' : 'bg-white text-gray-500 border border-gray-100'}`}
+                                >
+                                    All
+                                </button>
+                                {['Dogs', 'Cats', 'Male', 'Female', 'Verified', 'Pedigree'].map(filter => (
+                                    <button
+                                        key={filter}
+                                        className="px-4 py-1.5 rounded-full text-xs font-bold bg-white text-gray-500 border border-gray-100 whitespace-nowrap"
+                                    >
+                                        {filter}
+                                    </button>
+                                ))}
+                                {getSearchSuggestions().filter(s => s.type === 'popular').slice(0, 2).map(s => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => {
+                                            if (s.action) s.action();
+                                        }}
+                                        className="px-4 py-1.5 rounded-full text-xs font-bold bg-white text-gray-500 border border-gray-100 whitespace-nowrap"
+                                    >
+                                        {s.text}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </header>
+
                     {/* Top Sticky Header - White */}
-                    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-100 transition-all duration-300">
+                    <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-100 transition-all duration-300 hidden md:block">
                         <div className="max-w-[1800px] mx-auto px-6 py-4">
                             <div className="flex items-center justify-between gap-4">
                                 {/* Title/Spacer */}
@@ -1924,7 +2081,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                     </header>
 
                     {/* Scrollable Content */}
-                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto w-full px-4 md:px-8 py-6 pb-32">
+                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto w-full px-4 md:px-8 py-4 md:py-6 pb-24 md:pb-32">
                         <div className="max-w-[1800px] mx-auto">
                             {renderMainContent()}
                         </div>
@@ -1935,7 +2092,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             {/* Fixed Bottom Smart Bar (Moved outside main wrapper to fix 'fixed' positioning) */}
             {
                 !isImmersiveSearch && (
-                    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-2xl z-40 animate-slide-up flex flex-col justify-end">
+                    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-2xl z-40 animate-slide-up hidden md:flex flex-col justify-end">
 
                         {/* Smart Suggestions Popup - White Theme */}
                         {showSearchSuggestions && (
@@ -2038,6 +2195,62 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                     </svg>
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                )
+            }
+
+            {/* Mobile Bottom Navigation */}
+            {
+                !isImmersiveSearch && (
+                    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-gray-100 backdrop-blur-md md:hidden">
+                        <div className="flex items-center justify-between px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+                            <button
+                                onClick={() => { setActiveView('home'); exitSearchMode(); }}
+                                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${activeView === 'home' && !isSearchMode ? 'text-[#ea4c89] bg-[#ea4c89]/10' : 'text-gray-400 hover:text-[#0d0c22]'}`}
+                                aria-label="Home"
+                            >
+                                <HomeIcon />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setActiveView('home');
+                                    exitSearchMode();
+                                    setTimeout(() => searchInputRef.current?.focus(), 0);
+                                }}
+                                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${isSearchMode ? 'text-[#ea4c89] bg-[#ea4c89]/10' : 'text-gray-400 hover:text-[#0d0c22]'}`}
+                                aria-label="Search"
+                            >
+                                <SearchIconNav />
+                            </button>
+                            <button
+                                onClick={handleRegisterClick}
+                                className="w-12 h-12 rounded-2xl flex items-center justify-center bg-[#ea4c89] text-white shadow-lg shadow-[#ea4c89]/30"
+                                aria-label="Create"
+                            >
+                                <RegisterIcon />
+                            </button>
+                            <button
+                                onClick={handleMessageShortcut}
+                                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${messagePanelOpen ? 'text-[#ea4c89] bg-[#ea4c89]/10' : 'text-gray-400 hover:text-[#0d0c22]'}`}
+                                aria-label="Messages"
+                            >
+                                <MessageIcon count={unreadChatCount} />
+                            </button>
+                            <button
+                                onClick={() => {
+                                    if (user) {
+                                        setCurrentBreederId(user.id);
+                                        setBreederProfileOpen(true);
+                                    } else {
+                                        setAuthModalOpen(true);
+                                    }
+                                }}
+                                className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${breederProfileOpen ? 'text-[#ea4c89] bg-[#ea4c89]/10' : 'text-gray-400 hover:text-[#0d0c22]'}`}
+                                aria-label="Profile"
+                            >
+                                {user ? <UserAvatar name={user.profile?.full_name || user.email} /> : <UserIcon />}
+                            </button>
                         </div>
                     </div>
                 )
@@ -2241,7 +2454,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                 messagePanelOpen && (
                     <div className="fixed inset-0 z-[70]" onClick={closePanels}>
                         <div
-                            className="absolute left-20 top-6 bottom-6 w-[360px] bg-[#111111] border border-[#C5A059]/15 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+                            className="absolute left-4 right-4 top-4 bottom-4 md:left-20 md:right-auto md:top-6 md:bottom-6 md:w-[360px] bg-[#111111] border border-[#C5A059]/15 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="p-4 border-b border-[#C5A059]/15 flex items-center justify-between">
@@ -2374,7 +2587,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                 notificationPanelOpen && (
                     <div className="fixed inset-0 z-[70]" onClick={closePanels}>
                         <div
-                            className="absolute left-20 top-6 bottom-6 w-[360px] bg-[#111111] border border-[#C5A059]/15 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+                            className="absolute left-4 right-4 top-4 bottom-4 md:left-20 md:right-auto md:top-6 md:bottom-6 md:w-[360px] bg-[#111111] border border-[#C5A059]/15 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
                             onClick={(e) => e.stopPropagation()}
                         >
                             <div className="p-4 border-b border-[#C5A059]/15 flex items-center justify-between">
