@@ -17,6 +17,7 @@ import type { PetPhoto } from '@/lib/database';
 import { uploadPetImage } from '@/lib/storage';
 import { hasClaimedPet } from '@/lib/ownership';
 import type { OwnershipClaim } from '@/lib/ownership';
+import { getPetComments, postPetComment, deletePetComment, type PetComment } from '@/lib/social_features';
 import { ClaimOwnershipModal } from '@/components/modals/ClaimOwnershipModal';
 import data from '@emoji-mart/data'
 import Picker from '@emoji-mart/react'
@@ -84,6 +85,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
     });
 
     const [comments, setComments] = useState<Comment[]>([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
     const [commentText, setCommentText] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showStickerPicker, setShowStickerPicker] = useState(false);
@@ -117,6 +119,39 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
             });
         }
     }, [pet]);
+
+    // LOAD COMMENTS FROM DB when pet changes (persist by pet_id)
+    const loadComments = async () => {
+        if (!pet?.id) return;
+        setCommentsLoading(true);
+        try {
+            const dbComments = await getPetComments(pet.id);
+            const mappedComments: Comment[] = dbComments.map((c: PetComment) => ({
+                id: c.id,
+                user_id: c.user_id,
+                user_name: c.user?.full_name || 'Anonymous',
+                user_avatar: c.user?.avatar_url,
+                content: c.content,
+                created_at: c.created_at,
+            }));
+            setComments(mappedComments);
+        } catch (err) {
+            console.error('Failed to load comments:', err);
+            setComments([]);
+        } finally {
+            setCommentsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        // Reset UI state when viewing a different pet
+        setCommentText('');
+        setCommentImages([]);
+        setShowEmojiPicker(false);
+        setShowStickerPicker(false);
+        // Load comments from DB for this pet
+        loadComments();
+    }, [pet?.id]);
 
     // Fetch ALL pets from database
     useEffect(() => {
@@ -306,15 +341,21 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
         }
     };
 
+    // Helper: Get share URL using registration number if available, fallback to id
+    const getShareUrl = () => {
+        const slug = pet.registrationNumber || (pet as any).registration_number || pet.id;
+        return `${window.location.origin}/pet/${encodeURIComponent(slug)}`;
+    };
+
     const handleCopyLink = () => {
-        const url = `${window.location.origin}/pet/${pet.id}`;
+        const url = getShareUrl();
         navigator.clipboard.writeText(url);
         setCopiedLink(true);
         setTimeout(() => setCopiedLink(false), 2000);
     };
 
     const handleShare = (platform: string) => {
-        const url = `${window.location.origin}/pet/${pet.id}`;
+        const url = getShareUrl();
         const text = `Check out ${pet.name} - ${pet.breed}`;
 
         const shareUrls: Record<string, string> = {
@@ -408,21 +449,24 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
         setShowMoreMenu(false);
     };
 
-    const handleAddComment = () => {
+    const handleAddComment = async () => {
         if (!commentText.trim() && commentImages.length === 0) return;
+        if (!currentUserId) {
+            alert('Please sign in to comment');
+            return;
+        }
 
-        const newComment: Comment = {
-            id: Date.now().toString(),
-            user_id: currentUserId || 'anonymous',
-            user_name: 'Current User',
-            content: commentText,
-            images: commentImages,
-            created_at: new Date().toISOString(),
-        };
-
-        setComments([newComment, ...comments]);
-        setCommentText('');
-        setCommentImages([]);
+        try {
+            // Save to DB
+            await postPetComment(pet.id, commentText.trim());
+            // Refresh comments from DB
+            await loadComments();
+            setCommentText('');
+            setCommentImages([]);
+        } catch (err) {
+            console.error('Failed to post comment:', err);
+            alert('Failed to post comment. Please try again.');
+        }
     };
 
     const handleSubmitReport = async () => {
@@ -653,7 +697,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                         <div className="flex items-center gap-2 mb-4">
                                             <input
                                                 type="text"
-                                                value={`${window.location.origin}/pet/${pet.id}`}
+                                                value={getShareUrl()}
                                                 readOnly
                                                 className="flex-1 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs"
                                             />
@@ -767,14 +811,29 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                             )}
                         </div>
 
-                        {/* Owner Info */}
-                        <div className="flex items-center gap-3 pb-6 border-b border-gray-100">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-500" />
-                            <div>
-                                <p className="font-semibold text-gray-900">{pet.owner || 'Unknown Owner'}</p>
-                                <p className="text-sm text-gray-500">{pet.location || 'Location'}</p>
+                        {/* Owner Info - Clickable to navigate to profile */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (pet.owner_id) {
+                                    onClose();
+                                    navigate(`/profile/${pet.owner_id}`);
+                                }
+                            }}
+                            disabled={!pet.owner_id}
+                            className={`flex items-center gap-3 pb-6 border-b border-gray-100 w-full text-left transition-colors rounded-lg p-2 -m-2 ${pet.owner_id ? 'hover:bg-gray-50 cursor-pointer' : 'cursor-default'}`}
+                        >
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                                <p className={`font-semibold text-gray-900 truncate ${pet.owner_id ? 'group-hover:text-[#ea4c89]' : ''}`}>{pet.owner || 'Unknown Owner'}</p>
+                                <p className="text-sm text-gray-500 truncate">{pet.location || 'Location'}</p>
                             </div>
-                        </div>
+                            {pet.owner_id && (
+                                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                        </button>
 
                         {/* Ownership Status */}
                         {ownershipStatus && (

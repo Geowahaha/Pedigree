@@ -160,6 +160,9 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const [puppyFocus, setPuppyFocus] = useState<'available' | 'coming' | null>(null);
     const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
     const [mobileCreateOpen, setMobileCreateOpen] = useState(false);
+    // Mobile header scroll detection - hide on scroll down, show on scroll up
+    const [showMobileHeader, setShowMobileHeader] = useState(true);
+    const lastScrollTopRef = useRef(0);
 
 
     // Chat state
@@ -215,6 +218,38 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const touchStartRef = useRef<{ x: number; y: number } | null>(null);
     const touchStartTimeRef = useRef<number>(0);
+
+    // Mobile header scroll detection - show on scroll up, hide on scroll down
+    useEffect(() => {
+        const container = chatContainerRef.current;
+        if (!container) return;
+
+        const handleScroll = () => {
+            const currentScrollTop = container.scrollTop;
+            const delta = currentScrollTop - lastScrollTopRef.current;
+
+            // Only trigger if scroll delta is significant (>10px)
+            if (Math.abs(delta) > 10) {
+                if (delta > 0 && currentScrollTop > 100) {
+                    // Scrolling down & not at top - hide header
+                    setShowMobileHeader(false);
+                } else if (delta < 0) {
+                    // Scrolling up - show header
+                    setShowMobileHeader(true);
+                }
+            }
+
+            // Always show header at top
+            if (currentScrollTop < 50) {
+                setShowMobileHeader(true);
+            }
+
+            lastScrollTopRef.current = currentScrollTop;
+        };
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, []);
 
     // Convert DB Pet
     const convertDbPet = (dbPet: DbPet): Pet => {
@@ -1203,16 +1238,17 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
         setActiveChats(prev => prev.filter(c => c.roomId !== roomId));
     };
 
-    // Smart Search - Execute immediately
+    // Smart Search - Filter home grid inline (PM requirement: stay on home page)
+    const [activeSearchQuery, setActiveSearchQuery] = useState('');
+
     const executeSmartSearch = async (query: string) => {
         if (!query.trim()) return;
 
         setShowSearchSuggestions(false);
-        setIsSearchMode(true);
+        setActiveSearchQuery(query); // Track active search for "Clear Search" UI
         setSearchQuery('');
+        setActiveView('home'); // Stay on home page
 
-        // Add user message
-        setChatHistory(prev => [...prev, { role: 'user', text: query }]);
         setIsAiTyping(true);
 
         try {
@@ -1223,11 +1259,16 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                 searchResults = dbResults.map(convertDbPet);
             } catch (err) {
                 console.error('DB search failed, falling back to local:', err);
-                searchResults = allPets.filter(pet =>
-                    pet.name.toLowerCase().includes(query.toLowerCase()) ||
-                    pet.breed.toLowerCase().includes(query.toLowerCase()) ||
-                    pet.location?.toLowerCase().includes(query.toLowerCase())
-                );
+                // Comprehensive local search: name, breed, registration_number, owner, location
+                const q = query.toLowerCase();
+                searchResults = allPets.filter(pet => {
+                    const name = (pet.name || '').toLowerCase();
+                    const breed = (pet.breed || '').toLowerCase();
+                    const regNum = (pet.registrationNumber || (pet as any).registration_number || '').toLowerCase();
+                    const owner = (pet.owner || '').toLowerCase();
+                    const location = (pet.location || '').toLowerCase();
+                    return name.includes(q) || breed.includes(q) || regNum.includes(q) || owner.includes(q) || location.includes(q);
+                });
             }
 
             // Get AI response
@@ -1302,15 +1343,21 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             setIsAiTyping(false);
         }
 
-        // Scroll to bottom after content is rendered
+        // Scroll to top to see results
         setTimeout(() => {
             if (chatContainerRef.current) {
                 chatContainerRef.current.scrollTo({
-                    top: chatContainerRef.current.scrollHeight,
+                    top: 0,
                     behavior: 'smooth'
                 });
             }
         }, 300);
+    };
+
+    // Clear search and restore full home feed
+    const clearSearch = () => {
+        setActiveSearchQuery('');
+        setFilteredPets(allPets);
     };
 
     // Handle form submit
@@ -1334,15 +1381,15 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
         category?: MobileCategoryKey;
         puppyFocus?: 'available' | 'coming';
     }> = [
-        { key: 'all', label: 'All', view: 'home', category: 'all' },
-        { key: 'dogs', label: 'Dogs', view: 'home', category: 'dogs' },
-        { key: 'cats', label: 'Cats', view: 'home', category: 'cats' },
-        { key: 'puppy-available', label: 'Puppy Available', view: 'puppies', puppyFocus: 'available' },
-        { key: 'puppy-soon', label: 'Puppy Soon', view: 'puppies', puppyFocus: 'coming' },
-        { key: 'horses', label: 'Horses', view: 'home', category: 'horses' },
-        { key: 'cattle', label: 'Cattle', view: 'home', category: 'cattle' },
-        { key: 'exotic', label: 'Exotic', view: 'home', category: 'exotic' },
-    ];
+            { key: 'all', label: 'All', view: 'home', category: 'all' },
+            { key: 'dogs', label: 'Dogs', view: 'home', category: 'dogs' },
+            { key: 'cats', label: 'Cats', view: 'home', category: 'cats' },
+            { key: 'puppy-available', label: 'Puppy Available', view: 'puppies', puppyFocus: 'available' },
+            { key: 'puppy-soon', label: 'Puppy Soon', view: 'puppies', puppyFocus: 'coming' },
+            { key: 'horses', label: 'Horses', view: 'home', category: 'horses' },
+            { key: 'cattle', label: 'Cattle', view: 'home', category: 'cattle' },
+            { key: 'exotic', label: 'Exotic', view: 'home', category: 'exotic' },
+        ];
 
     const handleMobileTabSelect = (tabKey: MobileTabKey) => {
         const tab = mobileTabs.find((item) => item.key === tabKey);
@@ -1737,7 +1784,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             default:
                 // Home - Pinterest-style masonry grid
                 return (
-                    <div className="p-4 md:p-6">
+                    <div className="p-0 md:p-6">
                         {/* Smart Filter Bar - TEMPORARILY DISABLED
                         <SmartFilterBar
                             allPets={allPets}
@@ -1745,8 +1792,31 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                         />
                         */}
 
+                        {/* Search Results Header - inline on home page */}
+                        {activeSearchQuery && (
+                            <div className="flex items-center justify-between mb-[clamp(8px,2vw,16px)] p-[clamp(10px,2vw,16px)] bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[#ea4c89]">🔍</span>
+                                    <span className="text-sm text-gray-600">
+                                        {language === 'th' ? 'ผลการค้นหา:' : 'Results for:'}
+                                    </span>
+                                    <span className="text-sm font-bold text-[#0d0c22]">"{activeSearchQuery}"</span>
+                                    <span className="text-xs text-gray-400">({filteredPets.length} found)</span>
+                                </div>
+                                <button
+                                    onClick={clearSearch}
+                                    className="px-4 py-1.5 text-sm font-semibold text-[#ea4c89] bg-[#ea4c89]/10 rounded-full hover:bg-[#ea4c89]/20 transition-colors flex items-center gap-1"
+                                >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    {language === 'th' ? 'เคลียร์' : 'Clear'}
+                                </button>
+                            </div>
+                        )}
+
                         {/* Masonry Grid - Click Opens Pinterest Modal */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(8px,2vw,12px)] sm:gap-4 md:gap-6">
                             {visiblePets.map((pet) => (
                                 <ExpandablePetCard
                                     key={pet.id}
@@ -1793,7 +1863,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const seenNotificationItems = notificationItems.filter(item => item.is_read);
 
     return (
-        <div className="flex min-h-screen w-full bg-[#f9f8fd] font-sans text-[#0d0c22] overflow-hidden selection:bg-[#ea4c89]/20">
+        <div className="flex min-h-[100dvh] w-full bg-[#f9f8fd] font-sans text-[#0d0c22] overflow-hidden selection:bg-[#ea4c89]/20">
             {/* Ambient Background - Subtle Gradient Mesh */}
             <div className="fixed inset-0 pointer-events-none z-0 opacity-40">
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-200 rounded-full blur-[120px] mix-blend-multiply filter animate-blob"></div>
@@ -1973,10 +2043,10 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
             {/* ===== MAIN CONTENT (Fades out when searching) ===== */}
             < div className={`transition-all duration-700 ease-in-out transform ${isImmersiveSearch ? 'opacity-0 scale-95 filter blur-lg pointer-events-none' : 'opacity-100 scale-100'}`}>
-                <main className="flex-1 ml-0 md:ml-16 lg:ml-20 flex flex-col min-h-screen bg-[#F9F8FD]">
-                    {/* Mobile Header - Pinterest Style */}
-                    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 md:hidden">
-                        <div className="px-4 pt-3 pb-2">
+                <main className="flex-1 ml-0 md:ml-16 lg:ml-20 flex flex-col min-h-[100dvh] bg-[#F9F8FD]">
+                    {/* Mobile Header - Pinterest Style - Hide on scroll down, show on scroll up */}
+                    <header className={`sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 md:hidden transition-transform duration-300 ${showMobileHeader ? 'translate-y-0' : '-translate-y-full'}`}>
+                        <div className="px-[clamp(10px,3vw,16px)] pt-[max(0.75rem,env(safe-area-inset-top))] pb-[clamp(6px,2vw,10px)]">
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={() => { setActiveView('home'); exitSearchMode(); }}
@@ -2062,7 +2132,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                         </div>
 
                         {showSearchSuggestions && searchQuery.trim().length > 0 && (
-                            <div className="px-4 pb-2">
+                            <div className="px-[clamp(10px,3vw,16px)] pb-[clamp(6px,2vw,10px)]">
                                 <div className="bg-white border border-gray-100 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.12)] overflow-hidden">
                                     <div className="p-3">
                                         <div className="flex items-center justify-between mb-2">
@@ -2100,7 +2170,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                             </div>
                         )}
 
-                        <div className="px-4 pb-3">
+                        <div className="px-[clamp(10px,3vw,16px)] pb-[clamp(6px,2vw,12px)]">
                             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                                 {mobileTabs.map((tab) => (
                                     <button
@@ -2182,7 +2252,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                     {/* Scrollable Content */}
                     <div
                         ref={chatContainerRef}
-                        className="flex-1 overflow-y-auto w-full px-4 md:px-8 py-4 md:py-6 pb-24 md:pb-32"
+                        className="flex-1 overflow-y-auto w-full px-[clamp(8px,3vw,16px)] sm:px-[clamp(12px,2.5vw,20px)] md:px-[clamp(16px,2vw,32px)] py-[clamp(10px,2.5vw,20px)] md:py-[clamp(16px,2vw,24px)] pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-32"
                         onTouchStart={handleContentTouchStart}
                         onTouchEnd={handleContentTouchEnd}
                     >
@@ -2308,7 +2378,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             {
                 !isImmersiveSearch && (
                     <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 border-t border-gray-100 backdrop-blur-md md:hidden">
-                        <div className="flex items-center justify-between px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+                        <div className="flex items-center justify-between px-[clamp(12px,3vw,20px)] pt-[clamp(6px,2vw,10px)] pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
                             <button
                                 onClick={() => {
                                     setActiveView('home');
@@ -2529,7 +2599,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
             {/* Boost Confirmation Modal */}
             <Dialog open={!!boostConfirmPet} onOpenChange={(open) => !open && setBoostConfirmPet(null)}>
-            <DialogContent className="bg-[#111111] border-0 sm:border sm:border-[#C5A059] text-white sm:rounded-3xl">
+                <DialogContent className="bg-[#111111] border-0 sm:border sm:border-[#C5A059] text-white sm:rounded-3xl">
                     <DialogHeader>
                         <DialogTitle className="text-[#C5A059] flex items-center gap-2">
                             🚀 Boost Listing

@@ -120,7 +120,9 @@ Powered by Eibpo
 
   const handleShareProfile = async () => {
     const baseUrl = window.location.origin;
-    const profileUrl = `${baseUrl}/pedigree/${pet.id}`;
+    // Use registration number if available, fallback to id
+    const slug = resolvedRegistrationNumber || pet.id;
+    const profileUrl = `${baseUrl}/pet/${encodeURIComponent(slug)}`;
     const shareText = `Check out ${pet.name}'s pedigree - ${pet.breed} from ${pet.location}`;
 
     if (navigator.share) {
