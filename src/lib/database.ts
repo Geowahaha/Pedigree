@@ -246,24 +246,32 @@ export function mapPet(pet: any): Pet {
   }
 
   // Extract Metadata from Description (Hack for missing columns)
-  // Extract Metadata from Description (Hack for missing columns)
+  // SECURITY FIX: Never expose raw JSON metadata to UI
   const desc = pet.description || '';
   let meta: any = {};
-  let descriptionText: string | null = pet.description ?? null;
+  let descriptionText: string | null = null; // Start null, only set if human-readable text exists
 
   // Try JSON first (New format)
   if (desc.trim().startsWith('{')) {
     try {
       const parsed = JSON.parse(desc);
       meta = parsed;
-      if (typeof parsed.description === 'string') {
-        descriptionText = parsed.description;
+      // Only use human-readable description text, never raw JSON
+      if (typeof parsed.description === 'string' && parsed.description.trim()) {
+        descriptionText = parsed.description.trim();
       }
-      // If description was wrapped in the JSON, use it as the main description text if needed, 
-      // but mapPet returns the full description string usually. 
-      // We will extract metadata fields for the Pet object properties.
-      meta = parsed;
-    } catch (e) { /* ignore */ }
+      // descriptionText stays null if no readable text - this is intentional
+    } catch (e) {
+      // JSON parse failed - check if it looks like internal metadata and sanitize
+      if (desc.includes('"media_type"') || desc.includes('"external_link"') || desc.includes('"source"')) {
+        descriptionText = null; // Clear leaked metadata
+      } else {
+        descriptionText = desc; // Keep as-is if not metadata JSON
+      }
+    }
+  } else {
+    // Not JSON - use as plain text description
+    descriptionText = desc.trim() || null;
   }
 
   // Fallback to Regex (Old format)

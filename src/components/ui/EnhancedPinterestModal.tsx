@@ -19,6 +19,7 @@ import { hasClaimedPet } from '@/lib/ownership';
 import type { OwnershipClaim } from '@/lib/ownership';
 import { getPetComments, postPetComment, deletePetComment, type PetComment } from '@/lib/social_features';
 import { ClaimOwnershipModal } from '@/components/modals/ClaimOwnershipModal';
+import { useLanguage } from '@/contexts/LanguageContext';
 import data from '@emoji-mart/data'
 import Picker from '@emoji-mart/react'
 
@@ -55,6 +56,9 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
     canManageHealthProfile = false,
 }) => {
     const navigate = useNavigate();
+    const { language } = useLanguage();
+    const isThai = language === 'th';
+    const t = (en: string, th: string) => (isThai ? th : en);
     // State
     const [allPets, setAllPets] = useState<Pet[]>([]);
     const [loading, setLoading] = useState(false);
@@ -269,23 +273,28 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
     };
 
     const getParentAgeWarning = (parent?: Pet | null, label?: string) => {
+        const labelText = isThai
+            ? (label === 'Sire' ? 'พ่อพันธุ์' : label === 'Dam' ? 'แม่พันธุ์' : (label || ''))
+            : (label || '');
         if (!parent) return null;
         if (!editForm.birthDate) {
-            return `${label} selected. Add the pet birth date to validate lineage.`;
+            return isThai
+                ? `${labelText} ถูกเลือกแล้ว กรุณาเพิ่มวันเกิดเพื่อยืนยันสายเลือด`
+                : `${label} selected. Add the pet birth date to validate lineage.`;
         }
         const parentBirth = (parent as any).birthDate || (parent as any).birth_date || (parent as any).birthday;
         const parentDate = resolveBirthDateValue(parentBirth);
         if (!parentDate) {
-            return `${label} birth date is missing.`;
+            return isThai ? `${labelText} ไม่มีวันเกิด` : `${label} birth date is missing.`;
         }
         const childDate = resolveBirthDateValue(editForm.birthDate);
         if (!childDate) return null;
         const diffDays = (childDate.getTime() - parentDate.getTime()) / (1000 * 60 * 60 * 24);
         if (diffDays < 0) {
-            return `${label} birth date is after the child.`;
+            return isThai ? `${labelText} มีวันเกิดหลังลูก` : `${label} birth date is after the child.`;
         }
         if (diffDays < 365) {
-            return `${label} should be at least 1 year older than the child.`;
+            return isThai ? `${labelText} ควรอายุมากกว่าอย่างน้อย 1 ปี` : `${label} should be at least 1 year older than the child.`;
         }
         return null;
     };
@@ -334,10 +343,10 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
             });
 
             setIsEditingFull(false);
-            alert('✅ Pet updated successfully!');
+            alert(t('Pet updated successfully!', 'อัปเดตข้อมูลสัตว์เลี้ยงสำเร็จ!'));
         } catch (error) {
             console.error('Error updating pet:', error);
-            alert('❌ Failed to update pet information');
+            alert(t('Failed to update pet information', 'อัปเดตข้อมูลสัตว์เลี้ยงไม่สำเร็จ'));
         }
     };
 
@@ -391,7 +400,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
             setEditForm(prev => ({ ...prev, imageUrl: publicUrl }));
         } catch (error) {
             console.error('Failed to upload image:', error);
-            alert('Failed to upload image.');
+            alert(t('Failed to upload image.', 'อัปโหลดรูปภาพไม่สำเร็จ'));
         } finally {
             setImageUploading(false);
             event.target.value = '';
@@ -421,7 +430,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
             await loadGallery();
         } catch (error) {
             console.error('Failed to upload gallery photos:', error);
-            alert('Failed to upload gallery photos.');
+            alert(t('Failed to upload gallery photos.', 'อัปโหลดรูปแกลเลอรีไม่สำเร็จ'));
         } finally {
             setGalleryUploading(false);
             event.target.value = '';
@@ -429,13 +438,13 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
     };
 
     const handleGalleryDelete = async (photoId: string) => {
-        if (!confirm('Remove this photo from the gallery?')) return;
+        if (!confirm(t('Remove this photo from the gallery?', 'ลบรูปนี้ออกจากแกลเลอรีหรือไม่?'))) return;
         try {
             await deletePetPhoto(photoId);
             setGalleryPhotos(prev => prev.filter(photo => photo.id !== photoId));
         } catch (error) {
             console.error('Failed to delete gallery photo:', error);
-            alert('Failed to delete gallery photo.');
+            alert(t('Failed to delete gallery photo.', 'ลบรูปแกลเลอรีไม่สำเร็จ'));
         }
     };
 
@@ -452,7 +461,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
     const handleAddComment = async () => {
         if (!commentText.trim() && commentImages.length === 0) return;
         if (!currentUserId) {
-            alert('Please sign in to comment');
+            alert(t('Please sign in to comment', 'กรุณาเข้าสู่ระบบเพื่อแสดงความคิดเห็น'));
             return;
         }
 
@@ -465,13 +474,13 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
             setCommentImages([]);
         } catch (err) {
             console.error('Failed to post comment:', err);
-            alert('Failed to post comment. Please try again.');
+            alert(t('Failed to post comment. Please try again.', 'โพสต์ความคิดเห็นไม่สำเร็จ กรุณาลองใหม่'));
         }
     };
 
     const handleSubmitReport = async () => {
         if (!reportReason) {
-            alert('Please select a reason for reporting');
+            alert(t('Please select a reason for reporting', 'กรุณาเลือกเหตุผลในการรายงาน'));
             return;
         }
 
@@ -487,7 +496,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
             });
 
             // For now, just show success message
-            alert('✅ Thank you for your report. We will review it shortly.');
+            alert(t('Thank you for your report. We will review it shortly.', 'ขอบคุณสำหรับการรายงาน เราจะตรวจสอบโดยเร็ว'));
 
             // Reset form
             setShowReportModal(false);
@@ -495,7 +504,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
             setReportDetails('');
         } catch (error) {
             console.error('Error submitting report:', error);
-            alert('❌ Failed to submit report. Please try again.');
+            alert(t('Failed to submit report. Please try again.', 'ส่งรายงานไม่สำเร็จ กรุณาลองใหม่'));
         }
     };
 
@@ -533,12 +542,12 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
     const ownershipStatus = pet.ownership_status ?? (pet.owner_id ? 'verified' : undefined);
     const canClaim = !isOwner && (ownershipStatus === 'waiting_owner' || ownershipStatus === 'pending_claim');
     const claimLabel = claimStatus?.status === 'approved'
-        ? 'You Own This Pet'
+        ? t('You Own This Pet', 'คุณเป็นเจ้าของสัตว์เลี้ยงนี้')
         : claimStatus?.status === 'pending'
-            ? 'Claim Pending Review'
+            ? t('Claim Pending Review', 'รอตรวจสอบคำขอ')
             : claimStatus?.status === 'rejected'
-                ? 'Claim Rejected'
-                : 'Claim This Pet';
+                ? t('Claim Rejected', 'คำขอถูกปฏิเสธ')
+                : t('Claim This Pet', 'ขอเป็นเจ้าของสัตว์เลี้ยงนี้');
 
     const handleClaimSubmitted = async () => {
         setClaimModalOpen(false);
@@ -591,7 +600,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
-                            <span>No media</span>
+                            <span>{t('No media', 'ไม่มีสื่อ')}</span>
                         </div>
                     )}
 
@@ -639,7 +648,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                         </svg>
-                        <span className="text-sm font-semibold">Visit site</span>
+                        <span className="text-sm font-semibold">{t('Visit site', 'เยี่ยมชมเว็บไซต์')}</span>
                     </button>
                 </div>
 
@@ -655,7 +664,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                                <span className="text-sm font-semibold">Pedigree</span>
+                                <span className="text-sm font-semibold">{t('Pedigree', 'สายเลือด')}</span>
                             </button>
 
                             {onFindMate && (
@@ -663,7 +672,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                     onClick={() => onFindMate(pet)}
                                     className="flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500 text-white hover:bg-pink-600 transition-colors"
                                 >
-                                    <span className="text-sm font-semibold">Find Match</span>
+                                    <span className="text-sm font-semibold">{t('Find Match', 'หาเพื่อนผสม')}</span>
                                 </button>
                             )}
 
@@ -672,7 +681,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                     onClick={handleOpenVetProfile}
                                     className="flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
                                 >
-                                    <span className="text-sm font-semibold">Vet Profile</span>
+                                    <span className="text-sm font-semibold">{t('Vet Profile', 'โปรไฟล์สัตวแพทย์')}</span>
                                 </button>
                             )}
 
@@ -681,7 +690,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                 <button
                                     onClick={() => setShowShareMenu(!showShareMenu)}
                                     className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center transition-colors"
-                                    title="Share"
+                                    title={t('Share', 'แชร์')}
                                 >
                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -691,7 +700,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                 {/* Share Menu */}
                                 {showShareMenu && (
                                     <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 z-50">
-                                        <h3 className="font-bold text-sm mb-3">Share this pet</h3>
+                                        <h3 className="font-bold text-sm mb-3">{t('Share this pet', 'แชร์สัตว์เลี้ยงนี้')}</h3>
 
                                         {/* Copy Link */}
                                         <div className="flex items-center gap-2 mb-4">
@@ -705,7 +714,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                 onClick={handleCopyLink}
                                                 className="px-4 py-2 bg-[#ea4c89] text-white rounded-lg text-xs font-semibold hover:bg-[#d9457a] transition-colors"
                                             >
-                                                {copiedLink ? '✓ Copied!' : 'Copy'}
+                                                {copiedLink ? t('Copied!', 'คัดลอกแล้ว!') : t('Copy', 'คัดลอก')}
                                             </button>
                                         </div>
 
@@ -754,7 +763,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                                 </svg>
-                                                Download image
+                                                {t('Download image', 'ดาวน์โหลดรูปภาพ')}
                                             </button>
                                         )}
                                         {isOwner && (
@@ -768,7 +777,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                 </svg>
-                                                Edit pet profile
+                                                {t('Edit pet profile', 'แก้ไขโปรไฟล์สัตว์เลี้ยง')}
                                             </button>
                                         )}
                                         <button
@@ -781,7 +790,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                             </svg>
-                                            Report
+                                            {t('Report', 'รายงาน')}
                                         </button>
                                     </div>
                                 )}
@@ -795,7 +804,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                 onClick={handleSaveFullEdit}
                                 className="px-6 py-2.5 bg-[#ea4c89] text-white rounded-full font-bold text-sm hover:bg-[#d9457a] transition-colors shadow-md"
                             >
-                                Save
+                                {t('Save', 'บันทึก')}
                             </button>
                         )}
                     </div>
@@ -825,8 +834,10 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                         >
                             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex-shrink-0" />
                             <div className="min-w-0 flex-1">
-                                <p className={`font-semibold text-gray-900 truncate ${pet.owner_id ? 'group-hover:text-[#ea4c89]' : ''}`}>{pet.owner || 'Unknown Owner'}</p>
-                                <p className="text-sm text-gray-500 truncate">{pet.location || 'Location'}</p>
+                                <p className={`font-semibold text-gray-900 truncate ${pet.owner_id ? 'group-hover:text-[#ea4c89]' : ''}`}>
+                                    {pet.owner || t('Unknown Owner', 'ไม่ทราบชื่อเจ้าของ')}
+                                </p>
+                                <p className="text-sm text-gray-500 truncate">{pet.location || t('Location', 'สถานที่')}</p>
                             </div>
                             {pet.owner_id && (
                                 <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -840,12 +851,12 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                             <div className="mt-6 rounded-2xl border border-gray-100 bg-gray-50 p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-[11px] uppercase text-gray-500 font-semibold">Ownership</p>
+                                        <p className="text-[11px] uppercase text-gray-500 font-semibold">{t('Ownership', 'ความเป็นเจ้าของ')}</p>
                                         <p className="text-sm font-semibold text-gray-900">
-                                            {ownershipStatus === 'waiting_owner' && 'Waiting Owner'}
-                                            {ownershipStatus === 'pending_claim' && 'Claim In Review'}
-                                            {ownershipStatus === 'verified' && 'Verified Owner'}
-                                            {ownershipStatus === 'disputed' && 'Ownership Disputed'}
+                                            {ownershipStatus === 'waiting_owner' && t('Waiting Owner', 'รอเจ้าของยืนยัน')}
+                                            {ownershipStatus === 'pending_claim' && t('Claim In Review', 'กำลังตรวจสอบคำขอ')}
+                                            {ownershipStatus === 'verified' && t('Verified Owner', 'เจ้าของยืนยันแล้ว')}
+                                            {ownershipStatus === 'disputed' && t('Ownership Disputed', 'มีข้อโต้แย้ง')}
                                         </p>
                                     </div>
                                     {canClaim && (
@@ -860,11 +871,11 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                 </div>
                                 {canClaim && (
                                     <p className="text-xs text-gray-500 mt-2">
-                                        {claimStatusLoading && 'Checking claim status...'}
-                                        {!claimStatusLoading && claimStatus?.status === 'pending' && 'Your claim is pending admin review.'}
-                                        {!claimStatusLoading && claimStatus?.status === 'approved' && 'You already own this pet.'}
-                                        {!claimStatusLoading && claimStatus?.status === 'rejected' && 'Your claim was rejected. Contact admin for help.'}
-                                        {!claimStatusLoading && !claimStatus && 'Submit your claim to become the verified owner.'}
+                                        {claimStatusLoading && t('Checking claim status...', 'กำลังตรวจสอบสถานะคำขอ...')}
+                                        {!claimStatusLoading && claimStatus?.status === 'pending' && t('Your claim is pending admin review.', 'คำขอของคุณกำลังรอการตรวจสอบ')}
+                                        {!claimStatusLoading && claimStatus?.status === 'approved' && t('You already own this pet.', 'คุณเป็นเจ้าของสัตว์เลี้ยงนี้แล้ว')}
+                                        {!claimStatusLoading && claimStatus?.status === 'rejected' && t('Your claim was rejected. Contact admin for help.', 'คำขอถูกปฏิเสธ กรุณาติดต่อแอดมิน')}
+                                        {!claimStatusLoading && !claimStatus && t('Submit your claim to become the verified owner.', 'ยื่นคำขอเพื่อเป็นเจ้าของที่ยืนยันแล้ว')}
                                     </p>
                                 )}
                             </div>
@@ -873,19 +884,19 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                         {/* Full Edit Mode */}
                         {isEditingFull && isOwner ? (
                             <div className="my-6 p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl border border-blue-100">
-                                <h3 className="font-bold text-lg mb-4">Edit Pet Profile</h3>
+                                <h3 className="font-bold text-lg mb-4">{t('Edit Pet Profile', 'แก้ไขโปรไฟล์สัตว์เลี้ยง')}</h3>
 
                                 <div className="space-y-4">
                                     {/* Media Manager */}
                                     <div className="p-4 bg-white/80 rounded-2xl border border-blue-100 space-y-4">
                                         <div className="flex items-center justify-between">
-                                            <h4 className="text-sm font-bold text-gray-800">Media Manager</h4>
+                                            <h4 className="text-sm font-bold text-gray-800">{t('Media Manager', 'จัดการสื่อ')}</h4>
                                             <button
                                                 onClick={() => galleryInputRef.current?.click()}
                                                 className="px-3 py-1.5 rounded-full bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 disabled:opacity-60"
                                                 disabled={galleryUploading}
                                             >
-                                                {galleryUploading ? 'Uploading...' : 'Add photos'}
+                                                {galleryUploading ? t('Uploading...', 'กำลังอัปโหลด...') : t('Add photos', 'เพิ่มรูปภาพ')}
                                             </button>
                                         </div>
 
@@ -894,40 +905,40 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                 {editForm.imageUrl ? (
                                                     <img src={editForm.imageUrl} alt="Cover" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <span className="text-[11px] text-gray-400">No cover</span>
+                                                    <span className="text-[11px] text-gray-400">{t('No cover', 'ไม่มีหน้าปก')}</span>
                                                 )}
                                             </div>
                                             <div className="flex-1">
-                                                <p className="text-xs font-semibold text-gray-600 uppercase">Cover photo</p>
+                                                <p className="text-xs font-semibold text-gray-600 uppercase">{t('Cover photo', 'รูปหน้าปก')}</p>
                                                 <div className="flex flex-wrap gap-2 mt-2">
                                                     <button
                                                         onClick={() => coverInputRef.current?.click()}
                                                         className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-semibold text-gray-700 hover:border-gray-300"
                                                     >
-                                                        Change cover
+                                                        {t('Change cover', 'เปลี่ยนหน้าปก')}
                                                     </button>
                                                     {editForm.imageUrl && (
                                                         <button
                                                             onClick={() => setEditForm(prev => ({ ...prev, imageUrl: '' }))}
                                                             className="px-3 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-semibold text-gray-500 hover:border-gray-300"
                                                         >
-                                                            Remove
+                                                            {t('Remove', 'ลบ')}
                                                         </button>
                                                     )}
                                                 </div>
-                                                <p className="text-[11px] text-gray-500 mt-2">Choose any gallery photo to set as cover.</p>
+                                                <p className="text-[11px] text-gray-500 mt-2">{t('Choose any gallery photo to set as cover.', 'เลือกรูปจากแกลเลอรีเพื่อใช้เป็นหน้าปก')}</p>
                                             </div>
                                         </div>
 
                                         <div className="space-y-2">
                                             <div className="flex items-center justify-between">
-                                                <p className="text-xs font-semibold text-gray-600 uppercase">Gallery</p>
-                                                <span className="text-xs text-gray-400">{galleryPhotos.length} items</span>
+                                                <p className="text-xs font-semibold text-gray-600 uppercase">{t('Gallery', 'แกลเลอรี')}</p>
+                                                <span className="text-xs text-gray-400">{galleryPhotos.length} {t('items', 'รายการ')}</span>
                                             </div>
                                             {galleryLoading ? (
-                                                <p className="text-xs text-gray-500">Loading gallery...</p>
+                                                <p className="text-xs text-gray-500">{t('Loading gallery...', 'กำลังโหลดแกลเลอรี...')}</p>
                                             ) : galleryPhotos.length === 0 ? (
-                                                <p className="text-sm text-gray-500">No gallery photos yet.</p>
+                                                <p className="text-sm text-gray-500">{t('No gallery photos yet.', 'ยังไม่มีรูปในแกลเลอรี')}</p>
                                             ) : (
                                                 <div className="grid grid-cols-3 gap-2">
                                                     {galleryPhotos.map((photo) => (
@@ -939,7 +950,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                             />
                                                             {editForm.imageUrl === photo.image_url && (
                                                                 <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-white/90 text-[10px] font-semibold text-gray-700">
-                                                                    Cover
+                                                                    {t('Cover', 'หน้าปก')}
                                                                 </span>
                                                             )}
                                                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -947,13 +958,13 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                                     onClick={() => setEditForm(prev => ({ ...prev, imageUrl: photo.image_url }))}
                                                                     className="px-2 py-1 rounded-full bg-white text-[10px] font-semibold text-gray-800"
                                                                 >
-                                                                    Set cover
+                                                                    {t('Set cover', 'ตั้งเป็นหน้าปก')}
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleGalleryDelete(photo.id)}
                                                                     className="px-2 py-1 rounded-full bg-white text-[10px] font-semibold text-gray-800"
                                                                 >
-                                                                    Remove
+                                                                    {t('Remove', 'ลบ')}
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -964,23 +975,23 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
 
                                         <div>
                                             <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">
-                                                Primary video URL
+                                                {t('Primary video URL', 'ลิงก์วิดีโอหลัก')}
                                             </label>
                                             <input
                                                 type="url"
                                                 value={editForm.videoUrl}
                                                 onChange={(e) => setEditForm({ ...editForm, videoUrl: e.target.value })}
                                                 className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
-                                                placeholder="Direct MP4 link or hosted video URL"
+                                                placeholder={t('Direct MP4 link or hosted video URL', 'ลิงก์ MP4 หรือลิงก์วิดีโอที่โฮสต์')}
                                             />
                                             <div className="flex items-center justify-between mt-2">
-                                                <p className="text-[11px] text-gray-500">Direct MP4 links work best for playback.</p>
+                                                <p className="text-[11px] text-gray-500">{t('Direct MP4 links work best for playback.', 'ลิงก์ MP4 ตรงจะเล่นได้ดีที่สุด')}</p>
                                                 <button
                                                     type="button"
                                                     disabled
                                                     className="px-3 py-1.5 rounded-full bg-gray-100 text-[11px] font-semibold text-gray-400 cursor-not-allowed"
                                                 >
-                                                    AI video (coming soon)
+                                                    {t('AI video (coming soon)', 'วิดีโอ AI (เร็ว ๆ นี้)')}
                                                 </button>
                                             </div>
                                         </div>
@@ -989,7 +1000,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                     {/* Basic Info */}
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">Name</label>
+                                            <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">{t('Name', 'ชื่อ')}</label>
                                             <input
                                                 type="text"
                                                 value={editForm.name}
@@ -998,13 +1009,13 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                             />
                                         </div>
                                         <div>
-                                            <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">Breed</label>
+                                            <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">{t('Breed', 'สายพันธุ์')}</label>
                                             <select
                                                 value={editForm.breed}
                                                 onChange={(e) => setEditForm({ ...editForm, breed: e.target.value })}
                                                 className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none bg-white"
                                             >
-                                                <option value="">-- Select Breed --</option>
+                                                <option value="">{t('-- Select Breed --', '-- เลือกสายพันธุ์ --')}</option>
                                                 <option value="Thai Ridgeback Dog">Thai Ridgeback Dog</option>
                                                 <option value="Thai Bangkaew">Thai Bangkaew</option>
                                                 <option value="Poodle">Poodle</option>
@@ -1062,7 +1073,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">Birth Date</label>
+                                            <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">{t('Birth Date', 'วันเกิด')}</label>
                                             <input
                                                 type="date"
                                                 value={editForm.birthDate}
@@ -1071,30 +1082,30 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                             />
                                         </div>
                                         <div>
-                                            <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">Color</label>
+                                            <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">{t('Color', 'สี')}</label>
                                             <input
                                                 type="text"
                                                 value={editForm.color}
                                                 onChange={(e) => setEditForm({ ...editForm, color: e.target.value })}
                                                 className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
-                                                placeholder="e.g., Brown, Black"
+                                                placeholder={t('e.g., Brown, Black', 'เช่น น้ำตาล, ดำ')}
                                             />
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">Location</label>
+                                        <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">{t('Location', 'สถานที่')}</label>
                                         <input
                                             type="text"
                                             value={editForm.location}
                                             onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
                                             className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-xl text-sm focus:border-blue-500 outline-none"
-                                            placeholder="City, Country"
+                                            placeholder={t('City, Country', 'เมือง, ประเทศ')}
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">Registration Number</label>
+                                        <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">{t('Registration Number', 'เลขทะเบียน')}</label>
                                         <input
                                             type="text"
                                             value={editForm.registrationNumber}
@@ -1104,7 +1115,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                     </div>
 
                                     <div>
-                                        <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">Description</label>
+                                        <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">{t('Description', 'คำอธิบาย')}</label>
                                         <textarea
                                             value={editForm.description}
                                             onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
@@ -1115,11 +1126,11 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
 
                                     {/* Parents */}
                                     <div className="pt-4 border-t border-gray-200">
-                                        <h4 className="font-bold text-sm mb-3">Family Tree</h4>
+                                        <h4 className="font-bold text-sm mb-3">{t('Family Tree', 'ผังสายเลือด')}</h4>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-xs font-bold text-blue-600 uppercase block mb-1.5">
-                                                    Sire (พ่อ) {loading && <span className="text-gray-400">Loading...</span>}
+                                                    {t('Sire', 'พ่อพันธุ์')} {loading && <span className="text-gray-400">{t('Loading...', 'กำลังโหลด...')}</span>}
                                                 </label>
                                                 <select
                                                     value={editForm.sireId || ''}
@@ -1127,7 +1138,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                     className="w-full px-3 py-2.5 border-2 border-blue-200 rounded-xl text-sm focus:border-blue-500 outline-none"
                                                     disabled={loading}
                                                 >
-                                                    <option value="">-- Select --</option>
+                                                    <option value="">{t('-- Select --', '-- เลือก --')}</option>
                                                     {malePets.map(p => (
                                                         <option key={p.id} value={p.id}>
                                                             {p.name} {p.registrationNumber && `(${p.registrationNumber})`}
@@ -1135,7 +1146,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                     ))}
                                                 </select>
                                                 <p className="text-[10px] text-gray-400 mt-1">
-                                                    {malePets.length} male {editForm.breed} available
+                                                    {malePets.length} {t('male', 'ตัวผู้')} {editForm.breed} {t('available', 'พร้อมใช้งาน')}
                                                 </p>
                                                 {sireAgeWarning && (
                                                     <p className="text-[11px] text-amber-600 mt-1">{sireAgeWarning}</p>
@@ -1144,7 +1155,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
 
                                             <div>
                                                 <label className="text-xs font-bold text-pink-600 uppercase block mb-1.5">
-                                                    Dam (แม่) {loading && <span className="text-gray-400">Loading...</span>}
+                                                    {t('Dam', 'แม่พันธุ์')} {loading && <span className="text-gray-400">{t('Loading...', 'กำลังโหลด...')}</span>}
                                                 </label>
                                                 <select
                                                     value={editForm.damId || ''}
@@ -1152,7 +1163,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                     className="w-full px-3 py-2.5 border-2 border-pink-200 rounded-xl text-sm focus:border-pink-500 outline-none"
                                                     disabled={loading}
                                                 >
-                                                    <option value="">-- Select --</option>
+                                                    <option value="">{t('-- Select --', '-- เลือก --')}</option>
                                                     {femalePets.map(p => (
                                                         <option key={p.id} value={p.id}>
                                                             {p.name} {p.registrationNumber && `(${p.registrationNumber})`}
@@ -1160,7 +1171,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                     ))}
                                                 </select>
                                                 <p className="text-[10px] text-gray-400 mt-1">
-                                                    {femalePets.length} female {editForm.breed} available
+                                                    {femalePets.length} fe{t('male', 'ตัวผู้')} {editForm.breed} {t('available', 'พร้อมใช้งาน')}
                                                 </p>
                                                 {damAgeWarning && (
                                                     <p className="text-[11px] text-amber-600 mt-1">{damAgeWarning}</p>
@@ -1175,13 +1186,13 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                             onClick={handleSaveFullEdit}
                                             className="flex-1 py-3 bg-gradient-to-r from-[#ea4c89] to-[#d9457a] text-white text-sm font-bold rounded-xl hover:shadow-lg transition-all"
                                         >
-                                            ✓ Save All Changes
+                                            {t('Save All Changes', 'บันทึกการเปลี่ยนแปลงทั้งหมด')}
                                         </button>
                                         <button
                                             onClick={() => setIsEditingFull(false)}
                                             className="px-6 py-3 bg-gray-100 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-200 transition-all"
                                         >
-                                            Cancel
+                                            {t('Cancel', 'ยกเลิก')}
                                         </button>
                                     </div>
                                 </div>
@@ -1195,13 +1206,13 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                             <svg className="w-4 h-4 text-[#ea4c89]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                                             </svg>
-                                            Family Tree
+                                            {t('Family Tree', 'ผังสายเลือด')}
                                         </h3>
                                         <div className="space-y-2">
                                             {sirePet && (
                                                 <div className="flex items-center gap-2 text-sm">
                                                     <span className="text-blue-500">👨</span>
-                                                    <span className="text-gray-600">Sire:</span>
+                                                    <span className="text-gray-600">{t('Sire', 'พ่อพันธุ์')}:</span>
                                                     <button onClick={() => onViewPedigree(sirePet)} className="font-semibold text-blue-600 hover:underline">
                                                         {sirePet.name}
                                                     </button>
@@ -1210,7 +1221,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                             {damPet && (
                                                 <div className="flex items-center gap-2 text-sm">
                                                     <span className="text-pink-500">👩</span>
-                                                    <span className="text-gray-600">Dam:</span>
+                                                    <span className="text-gray-600">{t('Dam', 'แม่พันธุ์')}:</span>
                                                     <button onClick={() => onViewPedigree(damPet)} className="font-semibold text-pink-600 hover:underline">
                                                         {damPet.name}
                                                     </button>
@@ -1231,12 +1242,12 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
 
                         {/* Comments Section */}
                         <div className="border-t border-gray-100 pt-6 mt-6">
-                            <h3 className="font-bold text-gray-900 mb-4">Comments</h3>
+                            <h3 className="font-bold text-gray-900 mb-4">{t('Comments', 'ความคิดเห็น')}</h3>
 
                             <div className="space-y-4 mb-4">
                                 {comments.length === 0 ? (
                                     <p className="text-sm text-gray-400 italic text-center py-4">
-                                        No comments yet. Be the first to comment!
+                                        {t('No comments yet. Be the first to comment!', 'ยังไม่มีความคิดเห็น เป็นคนแรกที่แสดงความคิดเห็น')}
                                     </p>
                                 ) : (
                                     comments.map(comment => (
@@ -1259,7 +1270,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                     </div>
                                                 )}
                                                 <p className="text-xs text-gray-400 mt-1">
-                                                    {new Date(comment.created_at).toLocaleDateString('th-TH')}
+                                                    {new Date(comment.created_at).toLocaleDateString(isThai ? 'th-TH' : 'en-US')}
                                                 </p>
                                             </div>
                                         </div>
@@ -1299,7 +1310,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                             <textarea
                                 value={commentText}
                                 onChange={(e) => setCommentText(e.target.value)}
-                                placeholder="Add a comment..."
+                                placeholder={t('Add a comment...', 'เพิ่มความคิดเห็น...')}
                                 className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-full text-sm resize-none focus:border-[#ea4c89] outline-none"
                                 rows={1}
                                 onKeyDown={(e) => {
@@ -1391,7 +1402,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                     <div className="bg-white rounded-none md:rounded-3xl shadow-2xl max-w-none md:max-w-lg w-full h-full md:h-auto max-h-full md:max-h-[80vh] overflow-hidden">
                         {/* Header */}
                         <div className="px-4 md:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                            <h3 className="text-xl font-bold text-gray-900">Report this pet</h3>
+                            <h3 className="text-xl font-bold text-gray-900">{t('Report this pet', 'รายงานสัตว์เลี้ยงนี้')}</h3>
                             <button
                                 onClick={() => {
                                     setShowReportModal(false);
@@ -1409,21 +1420,21 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                         {/* Body */}
                         <div className="px-4 md:px-6 py-4 overflow-y-auto md:max-h-[50vh]">
                             <p className="text-sm text-gray-600 mb-4">
-                                Help us understand what's happening. Your report is anonymous.
+                                {t("Help us understand what's happening. Your report is anonymous.", 'ช่วยให้เราทราบว่าเกิดอะไรขึ้น รายงานนี้เป็นแบบไม่ระบุตัวตน')}
                             </p>
 
                             {/* Report Reasons */}
                             <div className="space-y-2 mb-4">
                                 {[
-                                    { value: 'spam', label: 'Spam or scam', icon: '🚫' },
-                                    { value: 'fake', label: 'Fake or misleading information', icon: '⚠️' },
-                                    { value: 'inappropriate', label: 'Inappropriate content', icon: '🔞' },
-                                    { value: 'animal_welfare', label: 'Animal welfare concerns', icon: '🐾' },
-                                    { value: 'stolen', label: 'Stolen pet listing', icon: '🔒' },
-                                    { value: 'harassment', label: 'Harassment or hate speech', icon: '💢' },
-                                    { value: 'violence', label: 'Violence or dangerous content', icon: '⚔️' },
-                                    { value: 'copyright', label: 'Copyright or trademark violation', icon: '©️' },
-                                    { value: 'other', label: 'Something else', icon: '❓' },
+                                    { value: 'spam', label: t('Spam or scam', 'สแปมหรือหลอกลวง'), icon: '🚫' },
+                                    { value: 'fake', label: t('Fake or misleading information', 'ข้อมูลปลอมหรือทำให้เข้าใจผิด'), icon: '⚠️' },
+                                    { value: 'inappropriate', label: t('Inappropriate content', 'เนื้อหาไม่เหมาะสม'), icon: '🔞' },
+                                    { value: 'animal_welfare', label: t('Animal welfare concerns', 'ปัญหาสวัสดิภาพสัตว์'), icon: '🐾' },
+                                    { value: 'stolen', label: t('Stolen pet listing', 'ประกาศสัตว์เลี้ยงที่ถูกขโมย'), icon: '🔒' },
+                                    { value: 'harassment', label: t('Harassment or hate speech', 'การคุกคามหรือถ้อยคำเกลียดชัง'), icon: '💢' },
+                                    { value: 'violence', label: t('Violence or dangerous content', 'ความรุนแรงหรือเนื้อหาอันตราย'), icon: '⚔️' },
+                                    { value: 'copyright', label: t('Copyright or trademark violation', 'ละเมิดลิขสิทธิ์หรือเครื่องหมายการค้า'), icon: '©️' },
+                                    { value: 'other', label: t('Something else', 'อื่น ๆ'), icon: '❓' },
                                 ].map((reason) => (
                                     <button
                                         key={reason.value}
@@ -1455,12 +1466,12 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                             {reportReason && (
                                 <div className="mt-4">
                                     <label className="text-sm font-bold text-gray-700 block mb-2">
-                                        Additional details (optional)
+                                        {t('Additional details (optional)', 'รายละเอียดเพิ่มเติม (ไม่บังคับ)')}
                                     </label>
                                     <textarea
                                         value={reportDetails}
                                         onChange={(e) => setReportDetails(e.target.value)}
-                                        placeholder="Please provide more information to help us review your report..."
+                                        placeholder={t('Please provide more information to help us review your report...', 'โปรดให้ข้อมูลเพิ่มเติมเพื่อช่วยเราตรวจสอบรายงานของคุณ')}
                                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm focus:border-red-500 outline-none resize-none"
                                         rows={4}
                                     />
@@ -1478,14 +1489,14 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                 }}
                                 className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors"
                             >
-                                Cancel
+                                {t('Cancel', 'ยกเลิก')}
                             </button>
                             <button
                                 onClick={handleSubmitReport}
                                 disabled={!reportReason}
                                 className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Submit Report
+                                {t('Submit Report', 'ส่งรายงาน')}
                             </button>
                         </div>
                     </div>

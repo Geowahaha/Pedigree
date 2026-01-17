@@ -221,31 +221,34 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
     // Mobile header scroll detection - show on scroll up, hide on scroll down
     useEffect(() => {
-        const container = chatContainerRef.current;
-        if (!container) return;
-
         const handleScroll = () => {
-            const currentScrollTop = container.scrollTop;
+            const container = chatContainerRef.current;
+            const currentScrollTop = container
+                ? container.scrollTop
+                : (window.scrollY || document.documentElement.scrollTop || 0);
             const delta = currentScrollTop - lastScrollTopRef.current;
 
-            if (delta < -2) {
-                // Scrolling up - show header immediately
+            if (delta < 0) {
                 setShowMobileHeader(true);
-            } else if (delta > 6 && currentScrollTop > 48) {
-                // Scrolling down past top - hide header
+            } else if (delta > 4 && currentScrollTop > 24) {
                 setShowMobileHeader(false);
             }
 
-            // Always show header at top
-            if (currentScrollTop <= 8) {
+            if (currentScrollTop <= 4) {
                 setShowMobileHeader(true);
             }
 
             lastScrollTopRef.current = currentScrollTop;
         };
 
-        container.addEventListener('scroll', handleScroll, { passive: true });
-        return () => container.removeEventListener('scroll', handleScroll);
+        const container = chatContainerRef.current;
+        container?.addEventListener('scroll', handleScroll, { passive: true });
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        handleScroll();
+        return () => {
+            container?.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('scroll', handleScroll);
+        };
     }, []);
 
     // Convert DB Pet
@@ -1237,6 +1240,9 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
     // Smart Search - Filter home grid inline (PM requirement: stay on home page)
     const [activeSearchQuery, setActiveSearchQuery] = useState('');
+    const [searchAiResponse, setSearchAiResponse] = useState<string | null>(null);
+    const [searchAiSuggestions, setSearchAiSuggestions] = useState<string[]>([]);
+    const [searchAiSource, setSearchAiSource] = useState<'local' | 'rag' | 'llm' | null>(null);
 
     const executeSmartSearch = async (query: string) => {
         if (!query.trim()) return;
@@ -1245,7 +1251,10 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
         setActiveSearchQuery(query); // Track active search for "Clear Search" UI
         setSearchQuery('');
         setActiveView('home'); // Stay on home page
-
+        setSearchAiResponse(null);
+        setSearchAiSuggestions([]);
+        setSearchAiSource(null);
+        setChatHistory(prev => [...prev, { role: 'user', text: query }]);
         setIsAiTyping(true);
 
         try {
@@ -1270,11 +1279,11 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
             // Get AI response
             const response = await aiThink(query, {
-                language: language as 'th' | 'en',
-                userProfile: user ? { id: user.id, full_name: user.profile?.full_name } : undefined
+                conversationHistory: [...chatHistory, { role: 'user', text: query }].slice(-6),
+                userProfile: user ? { id: user.id, full_name: user.profile?.full_name } : undefined,
+                pageContext: 'home'
             });
 
-            // Add AI response with search results
             // Add AI response with search results
             let finalPets = searchResults;
 
@@ -1318,24 +1327,29 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                 }
             }
 
+            setSearchAiResponse(response.text);
+            setSearchAiSuggestions(response.suggestions || []);
+            setSearchAiSource(response.source || null);
             setChatHistory(prev => [...prev, {
                 role: 'ai',
                 text: response.text,
                 pets: finalPets.slice(0, 12)
             }]);
 
-            // Update filtered pets
-            if (finalPets.length > 0) {
-                setFilteredPets(finalPets);
-            }
-
+            // Update filtered pets (show empty state if none)
+            setFilteredPets(finalPets);
         } catch (error) {
+            const fallbackText = language === 'th'
+                ? 'ขอโทษค่ะ ไม่สามารถประมวลผลคำค้นหานี้ได้ในขณะนี้'
+                : 'Sorry, I could not process your search at this time.';
+            setSearchAiResponse(fallbackText);
+            setSearchAiSuggestions([]);
+            setSearchAiSource(null);
             setChatHistory(prev => [...prev, {
                 role: 'ai',
-                text: language === 'th'
-                    ? 'ขออภัย ไม่สามารถประมวลผลคำค้นหาได้ในขณะนี้'
-                    : 'Sorry, I could not process your search at this time.'
+                text: fallbackText
             }]);
+            setFilteredPets([]);
         } finally {
             setIsAiTyping(false);
         }
@@ -1354,6 +1368,10 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     // Clear search and restore full home feed
     const clearSearch = () => {
         setActiveSearchQuery('');
+        setSearchAiResponse(null);
+        setSearchAiSuggestions([]);
+        setSearchAiSource(null);
+        setChatHistory([]);
         setFilteredPets(allPets);
     };
 
@@ -1792,7 +1810,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                         {/* Search Results Header - inline on home page */}
                         {activeSearchQuery && (
                             <div className="flex items-center justify-between mb-[clamp(8px,2vw,16px)] p-[clamp(10px,2vw,16px)] bg-white rounded-2xl border border-gray-100 shadow-sm">
-                                <div className="flex items-center gap-2">
+                                <div className="relative top-1 flex items-center gap-2">
                                     <span className="text-[#ea4c89]">🔍</span>
                                     <span className="text-sm text-gray-600">
                                         {language === 'th' ? 'ผลการค้นหา:' : 'Results for:'}
@@ -1809,6 +1827,35 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                     </svg>
                                     {language === 'th' ? 'เคลียร์' : 'Clear'}
                                 </button>
+                            </div>
+                        )}
+
+
+                        {activeSearchQuery && searchAiResponse && (
+                            <div className="mb-[clamp(8px,2vw,16px)] p-[clamp(12px,2vw,18px)] bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-gray-500">
+                                        <span className="text-[#ea4c89]">✨</span>
+                                        <span>{language === 'th' ? 'สรุปจาก AI' : 'AI Summary'}</span>
+                                    </div>
+                                    {searchAiSource && (
+                                        <span className="text-[10px] text-gray-400 uppercase">{searchAiSource}</span>
+                                    )}
+                                </div>
+                                <p className="text-sm text-gray-700 whitespace-pre-wrap">{searchAiResponse}</p>
+                                {searchAiSuggestions.length > 0 && (
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {searchAiSuggestions.map((suggestion) => (
+                                            <button
+                                                key={suggestion}
+                                                onClick={() => executeSmartSearch(suggestion)}
+                                                className="px-3 py-1.5 rounded-full bg-[#ea4c89]/10 text-[#ea4c89] text-xs font-semibold hover:bg-[#ea4c89]/20 transition-colors"
+                                            >
+                                                {suggestion}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -2097,7 +2144,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                     </button>
                                 </div>
 
-                                <div className="flex items-center gap-2">
+                                <div className="relative top-2 flex items-center gap-2">
                                     {user && (user.email === 'geowahaha@gmail.com' || user.email === 'truesaveus@hotmail.com' || user.profile?.is_admin) && (
                                         <button
                                             onClick={() => setAdminPanelOpen(true)}

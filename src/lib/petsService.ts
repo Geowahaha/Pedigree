@@ -209,6 +209,25 @@ function mapSupabasePetToPet(data: any): Pet {
         finalType = 'cat';
     }
 
+    // SECURITY FIX: Sanitize description to prevent metadata leak
+    let descriptionText = data.description || '';
+    if (descriptionText.trim().startsWith('{')) {
+        try {
+            const parsed = JSON.parse(descriptionText);
+            if (typeof parsed.description === 'string' && parsed.description.trim()) {
+                descriptionText = parsed.description.trim();
+            } else {
+                descriptionText = '';
+            }
+        } catch (e) {
+            if (descriptionText.includes('"media_type"') ||
+                descriptionText.includes('"external_link"') ||
+                descriptionText.includes('"source"')) {
+                descriptionText = '';
+            }
+        }
+    }
+
     return {
         id: data.id,
         name: data.name,
@@ -229,7 +248,7 @@ function mapSupabasePetToPet(data: any): Pet {
         available: data.available ?? true,
         for_sale: data.for_sale ?? false,
         verified: data.verified ?? false,
-        description: data.description || '',
+        description: descriptionText,
         medicalHistory: data.medical_history,
         healthCertified: data.verified,
         parentIds: {

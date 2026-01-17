@@ -8,6 +8,7 @@ import { Pet } from '@/data/petData';
 import { getPedigreeTree, getPetOffspring } from '@/lib/petsService';
 import PedigreeTree from '../PedigreeTree';
 import { PedigreeAnalytics } from '../PedigreeAnalytics';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PedigreeModalProps {
   isOpen: boolean;
@@ -17,12 +18,15 @@ interface PedigreeModalProps {
 }
 
 const PedigreeModal: React.FC<PedigreeModalProps> = ({ isOpen, onClose, pet, onPetClick }) => {
+  const { language } = useLanguage();
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [pedigreeTree, setPedigreeTree] = useState<any>(null);
   const [offspring, setOffspring] = useState<Pet[]>([]);
   const [loading, setLoading] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const isThai = language === 'th';
+  const t = (en: string, th: string) => (isThai ? th : en);
 
   // Fetch pedigree tree and offspring when pet changes
   useEffect(() => {
@@ -57,10 +61,10 @@ const PedigreeModal: React.FC<PedigreeModalProps> = ({ isOpen, onClose, pet, onP
   if (!isOpen || !pet) return null;
 
   const formatBirthDate = (birthDate?: string) => {
-    if (!birthDate) return 'Unknown';
+    if (!birthDate) return t('Unknown', 'ไม่ทราบ');
     const parsed = new Date(birthDate);
-    if (Number.isNaN(parsed.getTime())) return 'Unknown';
-    return parsed.toLocaleDateString('en-US', {
+    if (Number.isNaN(parsed.getTime())) return t('Unknown', 'ไม่ทราบ');
+    return parsed.toLocaleDateString(isThai ? 'th-TH' : 'en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -68,13 +72,13 @@ const PedigreeModal: React.FC<PedigreeModalProps> = ({ isOpen, onClose, pet, onP
   };
 
   const resolveOwnerName = (petData: any) => {
-    if (!petData) return 'Unknown';
+    if (!petData) return t('Unknown', 'ไม่ทราบ');
     if (typeof petData.owner === 'string') return petData.owner;
     if (typeof petData.owner === 'object' && petData.owner !== null) {
-      return petData.owner.full_name || petData.owner.name || petData.owner.username || 'Unknown';
+      return petData.owner.full_name || petData.owner.name || petData.owner.username || t('Unknown', 'ไม่ทราบ');
     }
     if (typeof petData.owner_name === 'string' && petData.owner_name.trim()) return petData.owner_name;
-    return 'Unknown';
+    return t('Unknown', 'ไม่ทราบ');
   };
 
   const resolvedImage = pet.image || (pet as any).image_url || '';
@@ -83,25 +87,28 @@ const PedigreeModal: React.FC<PedigreeModalProps> = ({ isOpen, onClose, pet, onP
   const resolvedOwnerName = resolveOwnerName(pet);
 
   const handleExportCertificate = () => {
+    const registrationLine = resolvedRegistrationNumber
+      ? `${t('Registration', 'เลขทะเบียน')}: ${resolvedRegistrationNumber}`
+      : `${t('Registration', 'เลขทะเบียน')}: ${t('Waiting Update', 'รออัปเดต')}`;
     const certificateContent = `
-OFFICIAL PEDIGREE CERTIFICATE
-════════════════════════════════
+${t('OFFICIAL PEDIGREE CERTIFICATE', 'ใบรับรองสายพันธุ์อย่างเป็นทางการ')}
+ออออออออออออออออออออออออออออออออ
 
-Name: ${pet.name || 'N/A'}
-Breed: ${pet.breed || 'N/A'}
-Type: ${pet.type?.toUpperCase() || 'DOG'}
-Gender: ${pet.gender || 'N/A'}
-Birth Date: ${resolvedBirthDate || 'N/A'}
-Color: ${pet.color || 'N/A'}
-${resolvedRegistrationNumber ? `Registration: ${resolvedRegistrationNumber}` : 'Registration: Waiting Update'}
-Health Certified: ${pet.healthCertified ? 'YES ✓' : 'NO'}
-Location: ${pet.location || 'N/A'}
-Owner: ${resolvedOwnerName || 'N/A'}
+${t('Name', 'ชื่อ')}: ${pet.name || 'N/A'}
+${t('Breed', 'สายพันธุ์')}: ${pet.breed || 'N/A'}
+${t('Type', 'ประเภท')}: ${pet.type?.toUpperCase() || 'DOG'}
+${t('Gender', 'เพศ')}: ${pet.gender || 'N/A'}
+${t('Birth Date', 'วันเกิด')}: ${resolvedBirthDate || 'N/A'}
+${t('Color', 'สี')}: ${pet.color || 'N/A'}
+${registrationLine}
+${t('Health Certified', 'รับรองสุขภาพ')}: ${pet.healthCertified ? t('YES', 'ใช่') : t('NO', 'ไม่ใช่')}
+${t('Location', 'สถานที่')}: ${pet.location || 'N/A'}
+${t('Owner', 'เจ้าของ')}: ${resolvedOwnerName || 'N/A'}
 
-════════════════════════════════
-Generated on: ${new Date().toLocaleDateString()}
-Powered by Eibpo
-    `;
+ออออออออออออออออออออออออออออออออ
+${t('Generated on', 'สร้างเมื่อ')}: ${new Date().toLocaleDateString(isThai ? 'th-TH' : 'en-US')}
+${t('Powered by Eibpo', 'โดย Eibpo')}
+`;
 
     const blob = new Blob([certificateContent], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
@@ -113,7 +120,7 @@ Powered by Eibpo
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    setToastMessage('Certificate downloaded successfully!');
+    setToastMessage(t('Certificate downloaded successfully!', 'ดาวน์โหลดใบรับรองเรียบร้อยแล้ว!'));
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
   };
@@ -123,25 +130,27 @@ Powered by Eibpo
     // Use registration number if available, fallback to id
     const slug = resolvedRegistrationNumber || pet.id;
     const profileUrl = `${baseUrl}/pet/${encodeURIComponent(slug)}`;
-    const shareText = `Check out ${pet.name}'s pedigree - ${pet.breed} from ${pet.location}`;
+    const shareText = isThai
+      ? `ดูสายเลือดของ ${pet.name} - ${pet.breed} จาก ${pet.location || t('Unknown', 'ไม่ทราบ')}`
+      : `Check out ${pet.name}'s pedigree - ${pet.breed} from ${pet.location}`;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `${pet.name}'s Pedigree`,
+          title: isThai ? `สายเลือดของ ${pet.name}` : `${pet.name}'s Pedigree`,
           text: shareText,
           url: profileUrl,
         });
-        setToastMessage('Profile shared successfully!');
+        setToastMessage(t('Profile shared successfully!', 'แชร์โปรไฟล์เรียบร้อยแล้ว!'));
       } catch (err) {
         console.log('Share cancelled');
       }
     } else {
       try {
         await navigator.clipboard.writeText(profileUrl);
-        setToastMessage('Profile link copied to clipboard!');
+        setToastMessage(t('Profile link copied to clipboard!', 'คัดลอกลิงก์โปรไฟล์แล้ว!'));
       } catch (err) {
-        setToastMessage('Failed to copy link');
+        setToastMessage(t('Failed to copy link', 'คัดลอกลิงก์ไม่สำเร็จ'));
       }
     }
     setShowToast(true);
@@ -169,9 +178,11 @@ Powered by Eibpo
         {/* Header */}
         <div className="flex-none flex items-center justify-between p-4 md:p-6 border-b border-[#C5A059]/20 bg-[#0D0D0D]">
           <div>
-            <h2 className="text-2xl font-['Playfair_Display'] font-bold text-[#F5F5F0]">Family Tree</h2>
+            <h2 className="text-2xl font-['Playfair_Display'] font-bold text-[#F5F5F0]">
+              {t('Family Tree', 'ผังสายเลือด')}
+            </h2>
             <p className="text-sm text-[#B8B8B8] mt-1">
-              Pedigree for <span className="font-semibold text-[#C5A059]">{pet.name}</span>
+              {t('Pedigree for', 'สายเลือดของ')} <span className="font-semibold text-[#C5A059]">{pet.name}</span>
             </p>
           </div>
           <button
@@ -211,7 +222,7 @@ Powered by Eibpo
                       ? 'bg-[#C5A059]/10 text-[#C5A059] border border-[#C5A059]/30'
                       : 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
                       }`}>
-                      {pet.type === 'dog' ? 'Dog' : 'Cat'}
+                      {pet.type === 'dog' ? t('Dog', 'สุนัข') : t('Cat', 'แมว')}
                     </span>
                   )}
                   {pet.healthCertified && (
@@ -219,7 +230,7 @@ Powered by Eibpo
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      Verified
+                      {t('Verified', 'ยืนยันแล้ว')}
                     </span>
                   )}
                 </div>
@@ -230,21 +241,21 @@ Powered by Eibpo
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-[#1A1A1A] rounded-xl border border-[#C5A059]/10">
                   <div>
-                    <span className="text-[10px] uppercase tracking-wider text-[#B8B8B8]/60 font-semibold">Birth Date</span>
+                    <span className="text-[10px] uppercase tracking-wider text-[#B8B8B8]/60 font-semibold">{t('Birth Date', 'วันเกิด')}</span>
                     <p className="font-bold text-[#F5F5F0] text-sm">{formatBirthDate(resolvedBirthDate)}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase tracking-wider text-[#B8B8B8]/60 font-semibold">Gender</span>
+                    <span className="text-[10px] uppercase tracking-wider text-[#B8B8B8]/60 font-semibold">{t('Gender', 'เพศ')}</span>
                     <p className={`font-bold text-sm capitalize ${pet.gender === 'male' ? 'text-blue-400' : 'text-pink-400'}`}>
                       {pet.gender === 'male' ? '♂' : '♀'} {pet.gender}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase tracking-wider text-[#B8B8B8]/60 font-semibold">Location</span>
-                    <p className="font-bold text-[#F5F5F0] text-sm">{pet.location || 'Unknown'}</p>
+                    <span className="text-[10px] uppercase tracking-wider text-[#B8B8B8]/60 font-semibold">{t('Location', 'สถานที่')}</span>
+                    <p className="font-bold text-[#F5F5F0] text-sm">{pet.location || t('Unknown', 'ไม่ทราบ')}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase tracking-wider text-[#B8B8B8]/60 font-semibold">Owner</span>
+                    <span className="text-[10px] uppercase tracking-wider text-[#B8B8B8]/60 font-semibold">{t('Owner', 'เจ้าของ')}</span>
                     <p className="font-bold text-[#F5F5F0] text-sm truncate">{resolvedOwnerName}</p>
                   </div>
                 </div>
@@ -274,10 +285,16 @@ Powered by Eibpo
             >
               <div className={isFullScreen ? "bg-[#0D0D0D]/80 backdrop-blur-md p-3 rounded-xl border border-[#C5A059]/20" : ""}>
                 <h3 className={`font-bold text-[#F5F5F0] flex items-center gap-2 ${isFullScreen ? 'text-lg' : 'text-xl'}`}>
-                  <span className="text-[#C5A059]">🌳</span> Bloodline
-                  {isFullScreen && <span className="text-[10px] bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded-full uppercase tracking-wider">Fullscreen</span>}
+                  <span className="text-[#C5A059]">🌳</span> {t('Bloodline', 'สายเลือด')}
+                  {isFullScreen && (
+                    <span className="text-[10px] bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                      {t('Fullscreen', 'เต็มจอ')}
+                    </span>
+                  )}
                 </h3>
-                <p className={`text-[#B8B8B8]/60 ${isFullScreen ? 'text-xs' : 'text-sm'}`}>Verified Ancestry & Genetic History</p>
+                <p className={`text-[#B8B8B8]/60 ${isFullScreen ? 'text-xs' : 'text-sm'}`}>
+                  {t('Verified Ancestry & Genetic History', 'สายเลือดยืนยันและประวัติพันธุกรรม')}
+                </p>
               </div>
 
               {/* Expand hint */}
@@ -289,7 +306,7 @@ Powered by Eibpo
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                   </svg>
-                  Expand
+                  {t('Expand', 'ขยาย')}
                 </button>
               )}
             </div>
@@ -320,15 +337,15 @@ Powered by Eibpo
                   />
                 </div>
               ) : (
-                <div className="text-center py-12 text-[#B8B8B8]/60">No pedigree data available</div>
+                <div className="text-center py-12 text-[#B8B8B8]/60">{t('No pedigree data available', 'ยังไม่มีข้อมูลสายเลือด')}</div>
               )}
             </div>
 
             {!isFullScreen && (
               <div className="mt-4 flex justify-center gap-6 text-xs text-[#B8B8B8]/60">
-                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-500" /> Verified</div>
-                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#C5A059]" /> Pending</div>
-                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500" /> Disputed</div>
+                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-green-500" /> {t('Verified', 'ยืนยันแล้ว')}</div>
+                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-[#C5A059]" /> {t('Pending', 'รอดำเนินการ')}</div>
+                <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-red-500" /> {t('Disputed', 'มีข้อโต้แย้ง')}</div>
               </div>
             )}
           </div>
@@ -338,8 +355,8 @@ Powered by Eibpo
             <div className="bg-[#0D0D0D] rounded-xl p-6 border border-[#C5A059]/10 mb-6 transition-all hover:border-[#C5A059]/30">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-xl font-bold text-[#F5F5F0]">Pedigree Analytics</h3>
-                  <p className="text-sm text-[#B8B8B8]/60">Genetic Profile & Influence</p>
+                  <h3 className="text-xl font-bold text-[#F5F5F0]">{t('Pedigree Analytics', 'การวิเคราะห์สายเลือด')}</h3>
+                  <p className="text-sm text-[#B8B8B8]/60">{t('Genetic Profile & Influence', 'โปรไฟล์พันธุกรรมและอิทธิพล')}</p>
                 </div>
               </div>
               <PedigreeAnalytics pet={pet} tree={pedigreeTree} />
@@ -350,11 +367,11 @@ Powered by Eibpo
           <div className="bg-[#0D0D0D] rounded-xl p-6 border border-[#C5A059]/10">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-xl font-bold text-[#F5F5F0]">Progeny Record</h3>
-                <p className="text-sm text-[#B8B8B8]/60">Registered Offspring</p>
+                <h3 className="text-xl font-bold text-[#F5F5F0]">{t('Progeny Record', 'บันทึกลูกหลาน')}</h3>
+                <p className="text-sm text-[#B8B8B8]/60">{t('Registered Offspring', 'ลูกที่ลงทะเบียนแล้ว')}</p>
               </div>
               <span className="px-3 py-1 bg-[#C5A059]/10 text-[#C5A059] text-xs font-bold rounded-full border border-[#C5A059]/30">
-                {offspring.length} Offspring
+                {offspring.length} {t('Offspring', 'ลูกหลาน')}
               </span>
             </div>
 
@@ -374,7 +391,7 @@ Powered by Eibpo
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-bold text-sm text-[#F5F5F0] truncate group-hover:text-[#C5A059] transition-colors">{child.name}</h4>
-                      <p className="text-xs text-[#B8B8B8]/60 truncate">{child.registrationNumber || 'Pending'}</p>
+                      <p className="text-xs text-[#B8B8B8]/60 truncate">{child.registrationNumber || t('Pending', 'รอดำเนินการ')}</p>
                     </div>
                     <svg className="w-4 h-4 text-[#B8B8B8]/40 group-hover:text-[#C5A059]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -384,7 +401,7 @@ Powered by Eibpo
               </div>
             ) : (
               <div className="text-center py-8 text-[#B8B8B8]/40 bg-[#1A1A1A] rounded-xl border border-dashed border-[#C5A059]/10">
-                No registered offspring found
+                {t('No registered offspring found', 'ยังไม่พบลูกที่ลงทะเบียน')}
               </div>
             )}
           </div>
@@ -397,7 +414,7 @@ Powered by Eibpo
             onClick={onClose}
             className="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-[#C5A059]/30 text-[#B8B8B8] font-bold hover:bg-[#C5A059]/10 hover:text-[#F5F5F0] transition-colors"
           >
-            Close
+            {t('Close', 'ปิด')}
           </button>
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <button
@@ -407,7 +424,7 @@ Powered by Eibpo
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              Export Certificate
+              {t('Export Certificate', 'ส่งออกใบรับรอง')}
             </button>
             <button
               onClick={handleShareProfile}
@@ -416,7 +433,7 @@ Powered by Eibpo
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
-              Share Profile
+              {t('Share Profile', 'แชร์โปรไฟล์')}
             </button>
           </div>
         </div>
