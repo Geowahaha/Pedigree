@@ -20,6 +20,7 @@ import type { OwnershipClaim } from '@/lib/ownership';
 import { getPetComments, postPetComment, deletePetComment, type PetComment } from '@/lib/social_features';
 import { ClaimOwnershipModal } from '@/components/modals/ClaimOwnershipModal';
 import { useLanguage } from '@/contexts/LanguageContext';
+import SmartImage from '@/components/ui/SmartImage';
 import data from '@emoji-mart/data'
 import Picker from '@emoji-mart/react'
 
@@ -565,12 +566,12 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-stretch md:items-center justify-center p-0 md:p-4"
+            className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-stretch justify-center p-0"
             onClick={onClose}
         >
             {/* Modal Container */}
             <div
-                className="relative bg-white rounded-none md:rounded-3xl overflow-hidden max-w-none md:max-w-[1400px] w-full h-full md:h-[95vh] flex flex-col md:flex-row shadow-2xl"
+                className="relative bg-white rounded-none overflow-hidden w-screen h-[100dvh] max-w-none flex flex-col md:flex-row shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* LEFT: Large Media */}
@@ -585,8 +586,9 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                             poster={displayImage || undefined}
                         />
                     ) : displayImage ? (
-                        <img
+                        <SmartImage
                             src={displayImage}
+                            petId={pet.id}
                             alt={pet.name}
                             className={`w-full h-full object-contain ${isEditingFull && isOwner ? 'cursor-pointer' : ''}`}
                             onClick={handleCoverImageClick}
@@ -1398,8 +1400,8 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
 
             {/* Report Modal - Pinterest Style */}
             {showReportModal && (
-                <div className="fixed inset-0 bg-black/60 flex items-stretch md:items-center justify-center z-[200] p-0 md:p-4">
-                    <div className="bg-white rounded-none md:rounded-3xl shadow-2xl max-w-none md:max-w-lg w-full h-full md:h-auto max-h-full md:max-h-[80vh] overflow-hidden">
+                <div className="fixed inset-0 bg-black/60 flex items-stretch justify-center z-[200] p-0">
+                    <div className="bg-white rounded-none shadow-2xl w-screen h-[100dvh] max-w-none max-h-none overflow-hidden">
                         {/* Header */}
                         <div className="px-4 md:px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                             <h3 className="text-xl font-bold text-gray-900">{t('Report this pet', 'รายงานสัตว์เลี้ยงนี้')}</h3>
@@ -1512,17 +1514,17 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
 
             {expandedCommentImage && (
                 <div
-                    className="fixed inset-0 z-[10002] bg-black/80 flex items-stretch md:items-center justify-center p-0 md:p-4"
+                    className="fixed inset-0 z-[10002] bg-black/80 flex items-stretch justify-center p-0"
                     onClick={(e) => {
                         e.stopPropagation();
                         setExpandedCommentImage(null);
                     }}
                 >
-                    <div className="relative w-full h-full md:h-auto md:max-w-4xl flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                    <div className="relative w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                         <img
                             src={expandedCommentImage}
                             alt="Comment full"
-                            className="w-full h-full md:max-h-[85vh] object-contain rounded-none md:rounded-2xl"
+                            className="w-full h-full object-contain rounded-none"
                         />
                         <button
                             onClick={() => setExpandedCommentImage(null)}

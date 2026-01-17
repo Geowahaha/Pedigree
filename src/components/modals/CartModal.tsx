@@ -30,12 +30,12 @@ const CartModal: React.FC<CartModalProps> = ({
   const total = subtotal + shipping;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-end">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       
       {/* Drawer */}
-      <div className="relative bg-white h-full w-full max-w-md shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+      <div className="relative bg-white w-screen h-[100dvh] max-w-none shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-[#8B9D83]/10">
           <div className="flex items-center gap-3">

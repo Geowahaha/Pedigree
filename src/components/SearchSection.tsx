@@ -9,6 +9,7 @@ import { breeds, locations, Pet } from '@/data/petData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { getPublicPets, searchPets, Pet as DbPet, createReservation, submitChatRequest, submitReport } from '@/lib/database';
+import SmartImage from '@/components/ui/SmartImage';
 import PuppyComingSoonSection from './PuppyComingSoonSection';
 
 interface SearchSectionProps {
@@ -427,11 +428,11 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                     onClick={() => onViewDetails(pair.sire)}
                   >
                     <div className="relative">
-                      <img
+                      <SmartImage
                         src={pair.sire.image || ''}
+                        petId={pair.sire.id}
                         className="w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl object-cover border-2 sm:border-4 border-white shadow-lg group-hover/sire:scale-105 transition-transform"
                         alt="Sire"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
                       <div className="absolute -bottom-1 sm:-bottom-2 -right-1 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">♂</div>
                     </div>
@@ -455,11 +456,11 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                     onClick={() => onViewDetails(pair.dam)}
                   >
                     <div className="relative">
-                      <img
+                      <SmartImage
                         src={pair.dam.image || ''}
+                        petId={pair.dam.id}
                         className="w-16 h-16 sm:w-24 sm:h-24 rounded-xl sm:rounded-2xl object-cover border-2 sm:border-4 border-white shadow-lg group-hover/dam:scale-105 transition-transform"
                         alt="Dam"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
                       />
                       <div className="absolute -bottom-1 sm:-bottom-2 -left-1 sm:-left-2 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-[#ea4c89] flex items-center justify-center text-white text-xs font-bold shadow-lg">♀</div>
                     </div>
@@ -486,9 +487,11 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                         onClick={() => onViewPedigree(child)}
                         className="bg-gray-50 p-2 rounded-xl flex flex-col items-center text-center cursor-pointer hover:bg-white hover:shadow-md border border-transparent hover:border-gray-100 transition-all">
                         {child.image ? (
-                          <img src={child.image}
+                          <SmartImage
+                            src={child.image}
+                            petId={child.id}
                             className="w-10 h-10 rounded-full object-cover mb-2 border-2 border-white shadow-sm"
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            alt={child.name}
                           />
                         ) : (
                           <div className="w-10 h-10 rounded-full bg-white border border-gray-100 mb-2 flex items-center justify-center text-gray-400 text-[10px] font-bold">
@@ -561,8 +564,18 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                 <form onSubmit={handleSubmitInteraction} className="space-y-4">
                   <div className="p-4 bg-gray-50 rounded-2xl flex items-center gap-4 mb-4 border border-gray-100">
                     <div className="flex -space-x-2 overflow-hidden">
-                      <img src={selectedInteraction.sire.image} className="w-10 h-10 rounded-full object-cover border-2 border-white" />
-                      <img src={selectedInteraction.dam.image} className="w-10 h-10 rounded-full object-cover border-2 border-white" />
+                      <SmartImage
+                        src={selectedInteraction.sire.image}
+                        petId={selectedInteraction.sire.id}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                        alt={selectedInteraction.sire.name}
+                      />
+                      <SmartImage
+                        src={selectedInteraction.dam.image}
+                        petId={selectedInteraction.dam.id}
+                        className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                        alt={selectedInteraction.dam.name}
+                      />
                     </div>
                     <div>
                       <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pairing</p>

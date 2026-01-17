@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pet } from '@/data/petData';
+import SmartImage from '@/components/ui/SmartImage';
 
 interface PetCardProps {
   pet: Pet;
@@ -71,8 +72,9 @@ const PetCard: React.FC<PetCardProps> = ({ pet, onViewPedigree, onViewDetails, i
             <span className="text-xs sm:text-sm font-medium text-foreground/40 font-mono">waiting owner update</span>
           </div>
         ) : (
-          <img
+          <SmartImage
             src={pet.image}
+            petId={pet.id}
             alt={pet.name}
             loading="eager"
             decoding="async"

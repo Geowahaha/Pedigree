@@ -123,9 +123,9 @@ export const ClaimOwnershipModal: React.FC<ClaimOwnershipModalProps> = ({
 
     if (!user && !loading) {
         return (
-            <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="fixed inset-0 z-[10000] flex items-stretch justify-center p-0" onClick={(e) => e.stopPropagation()}>
                 <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
-                <div className="relative bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+                <div className="relative bg-white rounded-none w-screen h-[100dvh] max-w-none p-6 shadow-2xl">
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">Sign in required</h3>
                     <p className="text-sm text-gray-600 mb-6">
                         Please sign in to submit an ownership claim.
@@ -142,9 +142,9 @@ export const ClaimOwnershipModal: React.FC<ClaimOwnershipModalProps> = ({
     }
 
     return (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[10000] flex items-stretch justify-center p-0" onClick={(e) => e.stopPropagation()}>
             <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
-            <div className="relative bg-white rounded-2xl w-full max-w-lg shadow-2xl">
+            <div className="relative bg-white rounded-none w-screen h-[100dvh] max-w-none shadow-2xl">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
                     <div>
                         <h3 className="text-xl font-semibold text-gray-900">Claim ownership</h3>

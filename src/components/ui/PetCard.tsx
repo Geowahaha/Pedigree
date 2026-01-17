@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Pet } from '@/data/petData';
+import SmartImage from '@/components/ui/SmartImage';
 
 interface PetCardProps {
     pet: Pet;
@@ -183,8 +184,9 @@ const PetCard: React.FC<PetCardProps> = ({ pet, isLiked = false, isOwner = false
                             );
                         })()
                     ) : pet.image && !imageError ? (
-                        <img
+                        <SmartImage
                             src={pet.image}
+                            petId={pet.id}
                             alt={pet.name}
                             className={`w-full h-full object-cover transition-opacity duration-500 bg-gray-100 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                             onLoad={() => setImageLoaded(true)}

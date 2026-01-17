@@ -135,9 +135,9 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
   // Check if user is logged in
   if (!user) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0">
         <div className="absolute inset-0 bg-[#0A0A0A]/90 backdrop-blur-md" onClick={onClose} />
-        <div className="relative bg-[#1A1A1A] rounded-2xl shadow-2xl w-full max-w-md p-8 text-center border border-[#C5A059]/20">
+        <div className="relative bg-[#1A1A1A] rounded-none shadow-2xl w-screen h-[100dvh] max-w-none p-8 text-center border-0">
           <div className="w-16 h-16 rounded-full bg-[#C5A059]/10 flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8 text-[#C5A059]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -159,12 +159,12 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0">
       {/* Backdrop - Dark Luxury */}
       <div className="absolute inset-0 bg-[#0A0A0A]/90 backdrop-blur-md" onClick={handleClose} />
 
       {/* Modal - Dark Luxury Theme */}
-      <div className="relative bg-[#1A1A1A] rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden border border-[#C5A059]/20">
+      <div className="relative bg-[#1A1A1A] rounded-none shadow-2xl w-screen h-[100dvh] max-w-none max-h-none overflow-hidden border-0">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-[#C5A059]/10">
           <div>

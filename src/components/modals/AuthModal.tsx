@@ -142,12 +142,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0">
       {/* Backdrop - Luxury Dark */}
       <div className="absolute inset-0 bg-[#0A0A0A]/90 backdrop-blur-md" onClick={onClose} />
 
       {/* Modal - Luxury Dark Theme */}
-      <div className="relative bg-[#1A1A1A] rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-[#C5A059]/20">
+      <div className="relative bg-[#1A1A1A] rounded-none shadow-2xl w-screen h-[100dvh] max-w-none overflow-hidden border-0">
         {/* Header */}
         <div className="p-6 pb-0">
           <div className="flex items-center justify-between mb-6">

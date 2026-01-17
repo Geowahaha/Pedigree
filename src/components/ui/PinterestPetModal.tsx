@@ -12,6 +12,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Pet } from '@/data/petData';
 import { getPublicPets, updatePedigree } from '@/lib/database';
+import SmartImage from '@/components/ui/SmartImage';
 import data from '@emoji-mart/data'
 import Picker from '@emoji-mart/react'
 
@@ -169,12 +170,12 @@ export const PinterestPetModal: React.FC<PinterestPetModalProps> = ({
     return (
         <>
             <div
-            className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-hidden"
+            className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-stretch justify-center p-0 overflow-hidden"
             onClick={onClose}
             >
             {/* Modal Container - Pinterest Style */}
             <div
-                className="relative bg-white rounded-3xl overflow-hidden max-w-6xl w-full max-h-[95vh] flex shadow-2xl"
+                className="relative bg-white rounded-none overflow-hidden w-screen h-[100dvh] max-w-none flex shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* LEFT: Large Media Display */}
@@ -189,8 +190,9 @@ export const PinterestPetModal: React.FC<PinterestPetModalProps> = ({
                             loop
                         />
                     ) : pet.image ? (
-                        <img
+                        <SmartImage
                             src={pet.image}
+                            petId={pet.id}
                             alt={pet.name}
                             className="w-full h-full object-contain"
                         />

@@ -77,7 +77,7 @@ export const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0">
             {/* Backdrop - Teal Theme */}
             <div
                 className="absolute inset-0 bg-[#3D8A91]/70 backdrop-blur-md animate-in fade-in duration-300"
@@ -85,7 +85,7 @@ export const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({
             />
 
             {/* Modal - Cream/Teal Theme */}
-            <div className="relative w-full max-w-4xl max-h-[90vh] bg-gradient-to-b from-[#FAF8F5] to-[#F0EDE5] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 border border-[#8B956D]/20">
+            <div className="relative w-screen h-[100dvh] max-w-none max-h-none bg-gradient-to-b from-[#FAF8F5] to-[#F0EDE5] rounded-none shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 border-0">
                 {/* Header - Teal/Olive Gradient */}
                 <div className="sticky top-0 z-10 bg-gradient-to-r from-[#5BBCC4] to-[#8B956D] px-6 py-5">
                     <div className="flex items-center justify-between">
@@ -112,7 +112,7 @@ export const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({
                 </div>
 
                 {/* Content - Cream Background */}
-                <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)] bg-gradient-to-b from-[#FAF8F5] to-[#F5F0E8]">
+                <div className="flex-1 p-6 overflow-y-auto bg-gradient-to-b from-[#FAF8F5] to-[#F5F0E8]">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-16 gap-4">
                             <div className="w-16 h-16 border-4 border-[#5BBCC4]/20 border-t-[#5BBCC4] rounded-full animate-spin" />

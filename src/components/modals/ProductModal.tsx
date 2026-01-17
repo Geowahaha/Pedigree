@@ -24,12 +24,12 @@ const ProductModal: React.FC<ProductModalProps> = ({ isOpen, onClose, product, o
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       
       {/* Modal */}
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden">
+      <div className="relative bg-white rounded-none shadow-2xl w-screen h-[100dvh] max-w-none max-h-none overflow-hidden">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 rounded-xl bg-white/80 hover:bg-white transition-colors shadow-lg"

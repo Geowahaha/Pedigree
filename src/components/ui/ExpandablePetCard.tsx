@@ -9,6 +9,7 @@ import { hasClaimedPet } from '@/lib/ownership';
 import type { OwnershipClaim } from '@/lib/ownership';
 import { ClaimOwnershipModal } from '@/components/modals/ClaimOwnershipModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import SmartImage from '@/components/ui/SmartImage';
 
 
 interface ExpandablePetCardProps {
@@ -306,8 +307,9 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
                             autoPlay
                         />
                     ) : pet.image ? (
-                        <img
+                        <SmartImage
                             src={pet.image}
+                            petId={pet.id}
                             alt={pet.name}
                             className={`w-full h-full object-cover transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'
                                 }`}

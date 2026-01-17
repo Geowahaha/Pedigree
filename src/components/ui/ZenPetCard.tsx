@@ -10,6 +10,7 @@
 import React, { useState } from 'react';
 import { Pet } from '@/data/petData';
 import { cn } from '@/lib/utils';
+import SmartImage from '@/components/ui/SmartImage';
 
 interface ZenPetCardProps {
     pet: Pet;
@@ -124,8 +125,9 @@ const ZenPetCard: React.FC<ZenPetCardProps> = ({
                         <span className="text-xs font-medium text-foreground/30">No photo yet</span>
                     </div>
                 ) : (
-                    <img
+                    <SmartImage
                         src={pet.image}
+                        petId={pet.id}
                         alt={pet.name}
                         loading="lazy"
                         decoding="async"

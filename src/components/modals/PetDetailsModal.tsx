@@ -15,6 +15,7 @@ import { Pet } from '@/data/petData';
 import { getPetDocuments, PetDocument, addPetDocument, initChat, sendMessage } from '@/lib/database';
 import { uploadPetDocument } from '@/lib/storage';
 import { useAuth } from '@/contexts/AuthContext';
+import SmartImage from '@/components/ui/SmartImage';
 import {
   approvePetComment, deletePetComment, getPetComments, postPetComment, getPetSocialStats, togglePetLike, incrementPetView, subscribeToPetComments,
   PetComment, PetSocialStats
@@ -74,7 +75,7 @@ const PetDetailsModal: React.FC<PetDetailsModalProps> = ({ isOpen, onClose, pet,
   const [photos, setPhotos] = useState<PetPhoto[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const [isMaximized, setIsMaximized] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(true);
 
   useEffect(() => {
     if (pet && isOpen) {
@@ -409,7 +410,7 @@ const PetDetailsModal: React.FC<PetDetailsModalProps> = ({ isOpen, onClose, pet,
   const resolvedOwnerName = resolveOwnerName(pet);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-stretch md:items-center justify-center p-0 md:p-4">
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center p-0">
       {/* Backdrop - Clean Light */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
@@ -506,14 +507,11 @@ const PetDetailsModal: React.FC<PetDetailsModalProps> = ({ isOpen, onClose, pet,
               );
             })()
           ) : resolvedImage ? (
-            <img
+            <SmartImage
               src={resolvedImage}
+              petId={pet.id}
               alt={pet.name}
               className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-              }}
             />
           ) : null}
 

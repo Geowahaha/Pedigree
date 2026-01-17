@@ -9,6 +9,7 @@ import { getPedigreeTree, getPetOffspring } from '@/lib/petsService';
 import PedigreeTree from '../PedigreeTree';
 import { PedigreeAnalytics } from '../PedigreeAnalytics';
 import { useLanguage } from '@/contexts/LanguageContext';
+import SmartImage from '@/components/ui/SmartImage';
 
 interface PedigreeModalProps {
   isOpen: boolean;
@@ -158,7 +159,7 @@ ${t('Powered by Eibpo', 'โดย Eibpo')}
   };
 
   return (
-    <div className="fixed inset-0 z-[10000] flex items-stretch md:items-center justify-center p-0 md:p-4 animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[10000] flex items-stretch justify-center p-0 animate-in fade-in duration-300">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
 
@@ -173,7 +174,7 @@ ${t('Powered by Eibpo', 'โดย Eibpo')}
       )}
 
       {/* Modal Content */}
-      <div className="relative bg-[#1A1A1A] rounded-none md:rounded-2xl shadow-2xl w-full h-full md:h-auto max-w-none md:max-w-6xl max-h-full md:max-h-[90vh] flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden border-0 md:border md:border-[#C5A059]/20">
+      <div className="relative bg-[#1A1A1A] rounded-none shadow-2xl w-screen h-[100dvh] max-w-none max-h-none flex flex-col animate-in zoom-in-95 duration-300 overflow-hidden border-0">
 
         {/* Header */}
         <div className="flex-none flex items-center justify-between p-4 md:p-6 border-b border-[#C5A059]/20 bg-[#0D0D0D]">
@@ -203,8 +204,9 @@ ${t('Powered by Eibpo', 'โดย Eibpo')}
             <div className="flex flex-col sm:flex-row gap-6">
               <div className="relative group">
                 {resolvedImage ? (
-                  <img
+                  <SmartImage
                     src={resolvedImage}
+                    petId={pet.id}
                     alt={pet.name}
                     className="w-12 h-12 rounded-xl object-cover shadow-lg group-hover:scale-105 transition-transform duration-500 border border-[#C5A059]/20"
                   />
@@ -383,11 +385,11 @@ ${t('Powered by Eibpo', 'โดย Eibpo')}
                     onClick={() => onPetClick && onPetClick(child)}
                     className="flex items-center gap-3 p-3 rounded-xl border border-[#C5A059]/10 hover:border-[#C5A059]/30 hover:bg-[#C5A059]/5 cursor-pointer transition-all group"
                   >
-                    <img
+                    <SmartImage
                       src={child.image}
+                      petId={child.id}
                       alt={child.name}
                       className="w-12 h-12 rounded-lg object-cover bg-[#1A1A1A]"
-                      onError={(e) => { (e.target as HTMLImageElement).src = ''; }}
                     />
                     <div className="flex-1 min-w-0">
                       <h4 className="font-bold text-sm text-[#F5F5F0] truncate group-hover:text-[#C5A059] transition-colors">{child.name}</h4>
