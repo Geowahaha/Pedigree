@@ -35,6 +35,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ThemeSwitcher } from '../ui/ThemeSwitcher';
 import { EibpoMark } from '@/components/branding/EibpoLogo';
 import LanguageToggle from '@/components/LanguageToggle';
+import SmartImage from '@/components/ui/SmartImage';
 
 const PetRegistrationModal = lazy(() => import('../PetRegistrationModal'));
 const PedigreeModal = lazy(() => import('../modals/PedigreeModal'));
@@ -1629,7 +1630,12 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                         onClick={() => handleViewPetDetails(pet)}
                                     >
                                         <div className="h-48 overflow-hidden relative">
-                                            <img src={pet.image} alt={pet.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                            <SmartImage
+                                                src={pet.image}
+                                                petId={pet.id}
+                                                alt={pet.name}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                            />
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                         </div>
                                         <div className="p-4">
@@ -1791,7 +1797,12 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                                     onClick={() => handleViewPetDetails(pet)}
                                                 >
                                                     <div className="h-28 overflow-hidden">
-                                                        <img src={pet.image} alt={pet.name} className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500" />
+                                                        <SmartImage
+                                                            src={pet.image}
+                                                            petId={pet.id}
+                                                            alt={pet.name}
+                                                            className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
+                                                        />
                                                     </div>
                                                     <div className="p-3">
                                                         <p className="text-sm font-bold text-[#0d0c22] truncate">{pet.name}</p>

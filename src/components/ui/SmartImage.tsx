@@ -15,7 +15,15 @@ const SmartImage: React.FC<SmartImageProps> = ({
   referrerPolicy,
   ...props
 }) => {
-  const [currentSrc, setCurrentSrc] = React.useState<string>(src || fallbackSrc);
+  const initialSrc = React.useMemo(() => {
+    if (!src) return fallbackSrc;
+    if (isBlockedExternalImage(src)) {
+      return getCachedImageUrl(src) || getProxyImageUrl(src) || fallbackSrc;
+    }
+    return src;
+  }, [src, fallbackSrc]);
+
+  const [currentSrc, setCurrentSrc] = React.useState<string>(initialSrc);
   const [cacheAttempted, setCacheAttempted] = React.useState(false);
   const isBlocked = isBlockedExternalImage(src);
   const proxyUrl = isBlocked ? getProxyImageUrl(src) : null;

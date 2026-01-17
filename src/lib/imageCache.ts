@@ -1,5 +1,6 @@
 const CACHE_KEY = 'eibpo_image_cache_v1';
-const FALLBACK_IMAGE = '/placeholder.svg';
+// Reliable base64 placeholder (gray with dog emoji) - never fails to load
+const FALLBACK_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNDAwIiB2aWV3Qm94PSIwIDAgNDAwIDQwMCI+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9IiNlNWU3ZWIiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1zaXplPSI4MCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPvCfkZU8L3RleHQ+PC9zdmc+';
 
 type CacheMap = Record<string, string>;
 
