@@ -163,6 +163,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const [mobileCreateOpen, setMobileCreateOpen] = useState(false);
     // Mobile header scroll detection - hide on scroll down, show on scroll up
     const [showMobileHeader, setShowMobileHeader] = useState(true);
+    const [forceMobileHeader, setForceMobileHeader] = useState(false);
     const lastScrollTopRef = useRef(0);
 
 
@@ -230,6 +231,15 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                 : (window.scrollY || document.documentElement.scrollTop || 0);
             const delta = currentScrollTop - lastScrollTopRef.current;
 
+            if (forceMobileHeader) {
+                setShowMobileHeader(true);
+                if (currentScrollTop <= 4) {
+                    setForceMobileHeader(false);
+                }
+                lastScrollTopRef.current = currentScrollTop;
+                return;
+            }
+
             if (delta < 0) {
                 setShowMobileHeader(true);
             } else if (delta > 4 && currentScrollTop > 24) {
@@ -251,7 +261,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             container?.removeEventListener('scroll', handleScroll);
             window.removeEventListener('scroll', handleScroll);
         };
-    }, []);
+    }, [forceMobileHeader]);
 
     // Convert DB Pet
     const convertDbPet = (dbPet: DbPet): Pet => {
@@ -2097,7 +2107,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             < div className={`transition-all duration-700 ease-in-out transform ${isImmersiveSearch ? 'opacity-0 scale-95 filter blur-lg pointer-events-none' : 'opacity-100 scale-100'}`}>
                 <main className="flex-1 ml-0 md:ml-16 lg:ml-20 flex flex-col min-h-[100dvh] bg-[#F9F8FD]">
                     {/* Mobile Header - Pinterest Style - Hide on scroll down, show on scroll up */}
-                    <header className={`sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 md:hidden transition-transform duration-300 ${showMobileHeader ? 'translate-y-0' : '-translate-y-full'}`}>
+                    <header className={`sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 md:hidden transition-transform duration-300 ${(showMobileHeader || forceMobileHeader) ? 'translate-y-0' : '-translate-y-full'}`}>
                         <div className="px-[clamp(10px,3vw,16px)] pt-[max(0.75rem,env(safe-area-inset-top))] pb-[clamp(6px,2vw,10px)]">
                             <div className="flex items-center gap-3">
                                 <button
@@ -2453,9 +2463,11 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                     setActiveCategory('all');
                                     setActiveMobileTab('all');
                                     exitSearchMode();
+                                    setForceMobileHeader(true);
                                     setShowMobileHeader(true);
-                                    chatContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-                                    setTimeout(() => searchInputRef.current?.focus(), 0);
+                                    chatContainerRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+                                    window.scrollTo({ top: 0, behavior: 'auto' });
+                                    setTimeout(() => searchInputRef.current?.focus(), 50);
                                 }}
                                 className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${isSearchMode ? 'text-[#ea4c89] bg-[#ea4c89]/10' : 'text-gray-400 hover:text-[#0d0c22]'}`}
                                 aria-label="Search"

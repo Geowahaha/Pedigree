@@ -3,6 +3,7 @@ import crypto from "crypto";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const ALLOWED_HOST = "fbcdn.net";
+const PLACEHOLDER_PIXEL = Buffer.from("R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==", "base64");
 
 const isAllowedHost = (hostname) => hostname.toLowerCase().endsWith(ALLOWED_HOST);
 
@@ -39,16 +40,22 @@ const validateUrl = (url) => {
   return { parsed };
 };
 
+const sendPlaceholder = (res) => {
+  res.setHeader("Content-Type", "image/gif");
+  res.setHeader("Cache-Control", "public, max-age=600");
+  return res.status(200).send(PLACEHOLDER_PIXEL);
+};
+
 export default async function handler(req, res) {
   if (req.method === "GET") {
     const rawUrl = readUrlParam(req.query?.url);
     if (!rawUrl) {
-      return res.status(400).json({ error: "Missing url" });
+      return sendPlaceholder(res);
     }
 
     const validation = validateUrl(rawUrl);
     if (validation.error) {
-      return res.status(400).json({ error: validation.error });
+      return sendPlaceholder(res);
     }
 
     try {
@@ -60,22 +67,22 @@ export default async function handler(req, res) {
       });
 
       if (!response.ok) {
-        return res.status(422).json({ error: "Image fetch failed", status: response.status });
+        return sendPlaceholder(res);
       }
 
       const contentType = response.headers.get("content-type") || "";
       if (!contentType.startsWith("image/")) {
-        return res.status(415).json({ error: "Unsupported content type" });
+        return sendPlaceholder(res);
       }
 
       const contentLength = response.headers.get("content-length");
       if (contentLength && Number(contentLength) > MAX_BYTES) {
-        return res.status(413).json({ error: "Image too large" });
+        return sendPlaceholder(res);
       }
 
       const buffer = Buffer.from(await response.arrayBuffer());
       if (buffer.length > MAX_BYTES) {
-        return res.status(413).json({ error: "Image too large" });
+        return sendPlaceholder(res);
       }
 
       res.setHeader("Content-Type", contentType);
@@ -84,7 +91,7 @@ export default async function handler(req, res) {
     } catch (error) {
       const message = error?.message ? String(error.message) : "Unknown error";
       console.error("[image-cache] proxy error:", message);
-      return res.status(500).json({ error: message });
+      return sendPlaceholder(res);
     }
   }
 

@@ -26,6 +26,9 @@ export interface PetSocialStats {
 
 // 1. GET COMMENTS
 export async function getPetComments(petId: string, options?: { includeUnapproved?: boolean }) {
+    if (petId.startsWith('mock-')) {
+        return [];
+    }
     const { data: { user } } = await supabase.auth.getUser();
     let query = supabase
         .from('pet_comments')

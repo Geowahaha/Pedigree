@@ -11,10 +11,13 @@ const SmartImage: React.FC<SmartImageProps> = ({
   petId,
   fallbackSrc = FALLBACK_IMAGE,
   onError,
+  crossOrigin,
+  referrerPolicy,
   ...props
 }) => {
   const [currentSrc, setCurrentSrc] = React.useState<string>(src || fallbackSrc);
   const [cacheAttempted, setCacheAttempted] = React.useState(false);
+  const isBlocked = isBlockedExternalImage(src);
 
   React.useEffect(() => {
     setCacheAttempted(false);
@@ -24,14 +27,15 @@ const SmartImage: React.FC<SmartImageProps> = ({
       return;
     }
 
-    if (isBlockedExternalImage(src)) {
+    if (isBlocked) {
       const cached = getCachedImageUrl(src);
       if (cached) {
         setCurrentSrc(cached);
         return;
       }
 
-      setCurrentSrc(fallbackSrc);
+      // Try direct load first (some hosts allow no-referrer).
+      setCurrentSrc(src);
       cacheExternalImage(src, petId).then((cachedUrl) => {
         if (cachedUrl) setCurrentSrc(cachedUrl);
       });
@@ -46,7 +50,7 @@ const SmartImage: React.FC<SmartImageProps> = ({
 
     if (!src) return;
 
-    if (isBlockedExternalImage(src) && !cacheAttempted) {
+    if (isBlocked && !cacheAttempted) {
       setCacheAttempted(true);
       cacheExternalImage(src, petId).then((cachedUrl) => {
         if (cachedUrl) setCurrentSrc(cachedUrl);
@@ -59,7 +63,18 @@ const SmartImage: React.FC<SmartImageProps> = ({
     }
   };
 
-  return <img {...props} src={currentSrc} onError={handleError} />;
+  const resolvedReferrerPolicy = isBlocked ? (referrerPolicy || 'no-referrer') : referrerPolicy;
+  const resolvedCrossOrigin = isBlocked ? (crossOrigin || 'anonymous') : crossOrigin;
+
+  return (
+    <img
+      {...props}
+      src={currentSrc}
+      onError={handleError}
+      referrerPolicy={resolvedReferrerPolicy}
+      crossOrigin={resolvedCrossOrigin}
+    />
+  );
 };
 
 export default SmartImage;
