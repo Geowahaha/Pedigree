@@ -84,7 +84,7 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
         type: formData.type,
         breed: formData.breed,
         gender: formData.gender,
-        birth_date: formData.birthDate,
+        birth_date: formData.birthDate || null,
         color: formData.color || undefined,
         health_certified: formData.healthCertified,
         location: formData.location || undefined,
@@ -324,13 +324,12 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-[#B8B8B8] mb-2">Birth Date *</label>
+                        <label className="block text-sm font-medium text-[#B8B8B8] mb-2">Birth Date (optional)</label>
                         <input
                           type="date"
                           name="birthDate"
                           value={formData.birthDate}
                           onChange={handleChange}
-                          required
                           className="w-full px-4 py-3 rounded-lg bg-[#0A0A0A] border border-[#C5A059]/20 text-[#F5F5F0] focus:border-[#C5A059]/60 focus:outline-none transition-all"
                         />
                       </div>
@@ -478,7 +477,7 @@ const RegisterPetModal: React.FC<RegisterPetModalProps> = ({ isOpen, onClose, on
                 <button
                   type="button"
                   onClick={() => setStep(step + 1)}
-                  disabled={step === 1 && (!formData.name || !formData.breed || !formData.birthDate)}
+                  disabled={step === 1 && (!formData.name || !formData.breed)}
                   className="px-6 py-3 rounded-lg bg-[#C5A059] text-[#0A0A0A] font-medium hover:bg-[#D4C4B5] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue

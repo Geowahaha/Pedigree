@@ -241,7 +241,7 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
                 type: formData.type,
                 breed: formData.breed,
                 gender: formData.gender,
-                birth_date: formData.birthDate || new Date().toISOString(),
+                birth_date: formData.birthDate || null,
                 color: formData.color,
                 registration_number: formData.registrationNumber,
                 image_url: finalImageUrl,
@@ -490,7 +490,7 @@ const PetRegistrationModal: React.FC<PetRegistrationModalProps> = ({ isOpen, onC
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-[#F5F5F0]">Birth Date</Label>
+                                    <Label className="text-[#F5F5F0]">Birth Date (optional)</Label>
                                     <Input
                                         type="date"
                                         value={formData.birthDate}

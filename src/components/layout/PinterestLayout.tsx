@@ -189,6 +189,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const [expandedMessages, setExpandedMessages] = useState(false);
 
     // Selected items
+    const enableDesignExplorer = false;
     const [isImmersiveSearch, setIsImmersiveSearch] = useState(false);
     const [immersiveAnimation, setImmersiveAnimation] = useState<'hidden' | 'entering' | 'active' | 'exiting'>('hidden');
 
@@ -2105,9 +2106,9 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                         ref={searchInputRef}
                                         type="text"
                                         value={searchQuery}
-                                        onFocus={() => {
-                                            if (searchQuery.trim().length > 0) setShowSearchSuggestions(true);
-                                        }}
+                                    onFocus={() => {
+                                        if (searchQuery.trim().length > 0) setShowSearchSuggestions(true);
+                                    }}
                                         onChange={(e) => {
                                             const value = e.target.value;
                                             setSearchQuery(value);
@@ -2365,7 +2366,10 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                 <input
                                     type="text"
                                     value={searchQuery}
-                                    onFocus={() => setIsImmersiveSearch(true)}
+                                    onFocus={() => {
+                                        if (enableDesignExplorer) setIsImmersiveSearch(true);
+                                        if (searchQuery.trim().length > 0) setShowSearchSuggestions(true);
+                                    }}
                                     onChange={(e) => {
                                         setSearchQuery(e.target.value);
                                         if (e.target.value.trim().length > 0) setShowSearchSuggestions(true);
@@ -2441,6 +2445,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                     setActiveView('home');
                                     setActiveMobileTab('all');
                                     exitSearchMode();
+                                    setShowMobileHeader(true);
                                     setTimeout(() => searchInputRef.current?.focus(), 0);
                                 }}
                                 className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${isSearchMode ? 'text-[#ea4c89] bg-[#ea4c89]/10' : 'text-gray-400 hover:text-[#0d0c22]'}`}
@@ -2483,7 +2488,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
             {/* ===== IMMERSIVE SEARCH OVERLAY (The 'Thanos' New World) ===== */}
             {
-                immersiveAnimation !== 'hidden' && (
+                enableDesignExplorer && immersiveAnimation !== 'hidden' && (
                     <div className={`fixed inset-0 z-[60] bg-[#FDFBF7] transition-all duration-700 ease-in-out flex flex-col ${immersiveAnimation === 'active' ? 'opacity-100' : 'opacity-0'}`}>
                         {/* Header for Immersive Mode */}
                         <div className="flex items-center justify-between px-8 py-6">

@@ -310,7 +310,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
             await updatePet(pet.id, {
                 name: editForm.name,
                 breed: editForm.breed,
-                birth_date: editForm.birthDate,
+                birth_date: editForm.birthDate || null,
                 color: editForm.color,
                 location: editForm.location,
                 description: editForm.description,
@@ -1073,7 +1073,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">{t('Birth Date', 'วันเกิด')}</label>
+                                            <label className="text-xs font-bold text-gray-700 uppercase block mb-1.5">{t('Birth Date (optional)', 'วันเกิด (ไม่บังคับ)')}</label>
                                             <input
                                                 type="date"
                                                 value={editForm.birthDate}
