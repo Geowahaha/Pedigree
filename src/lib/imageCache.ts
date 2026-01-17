@@ -38,6 +38,16 @@ export const isBlockedExternalImage = (url?: string | null): boolean => {
   }
 };
 
+export const getProxyImageUrl = (url?: string | null): string | null => {
+  if (!url) return null;
+  try {
+    new URL(url);
+    return `/api/image-cache?url=${encodeURIComponent(url)}`;
+  } catch (error) {
+    return null;
+  }
+};
+
 export const getCachedImageUrl = (url?: string | null): string | null => {
   if (!url) return null;
   const cache = readCache();

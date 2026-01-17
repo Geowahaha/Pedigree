@@ -40,6 +40,50 @@ const validateUrl = (url) => {
   return { parsed };
 };
 
+const buildWeservUrl = (url) => {
+  const stripped = url.replace(/^https?:\/\//, "");
+  return `https://images.weserv.nl/?url=${encodeURIComponent(stripped)}`;
+};
+
+const fetchImage = async (url) => {
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0",
+      Accept: "image/*,*/*;q=0.8",
+      Referer: "https://www.facebook.com/",
+    },
+  });
+
+  if (!response.ok) {
+    return { ok: false, status: response.status };
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.startsWith("image/")) {
+    return { ok: false, status: 415 };
+  }
+
+  const contentLength = response.headers.get("content-length");
+  if (contentLength && Number(contentLength) > MAX_BYTES) {
+    return { ok: false, status: 413 };
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.length > MAX_BYTES) {
+    return { ok: false, status: 413 };
+  }
+
+  return { ok: true, buffer, contentType };
+};
+
+const fetchImageWithFallback = async (url) => {
+  const primary = await fetchImage(url);
+  if (primary.ok) return primary;
+  const fallback = await fetchImage(buildWeservUrl(url));
+  if (fallback.ok) return fallback;
+  return primary;
+};
+
 const sendPlaceholder = (res) => {
   res.setHeader("Content-Type", "image/gif");
   res.setHeader("Cache-Control", "public, max-age=600");
@@ -59,35 +103,11 @@ export default async function handler(req, res) {
     }
 
     try {
-      const response = await fetch(rawUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          Accept: "image/*,*/*;q=0.8",
-        },
-      });
-
-      if (!response.ok) {
-        return sendPlaceholder(res);
-      }
-
-      const contentType = response.headers.get("content-type") || "";
-      if (!contentType.startsWith("image/")) {
-        return sendPlaceholder(res);
-      }
-
-      const contentLength = response.headers.get("content-length");
-      if (contentLength && Number(contentLength) > MAX_BYTES) {
-        return sendPlaceholder(res);
-      }
-
-      const buffer = Buffer.from(await response.arrayBuffer());
-      if (buffer.length > MAX_BYTES) {
-        return sendPlaceholder(res);
-      }
-
-      res.setHeader("Content-Type", contentType);
+      const result = await fetchImageWithFallback(rawUrl);
+      if (!result.ok) return sendPlaceholder(res);
+      res.setHeader("Content-Type", result.contentType);
       res.setHeader("Cache-Control", "public, max-age=3600");
-      return res.status(200).send(buffer);
+      return res.status(200).send(result.buffer);
     } catch (error) {
       const message = error?.message ? String(error.message) : "Unknown error";
       console.error("[image-cache] proxy error:", message);
@@ -117,33 +137,12 @@ export default async function handler(req, res) {
   }
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-        Accept: "image/*,*/*;q=0.8",
-      },
-    });
-
-    if (!response.ok) {
-      return res.status(200).json({ url: buildProxyUrl(url), cached: false, proxied: true, status: response.status });
+    const result = await fetchImageWithFallback(url);
+    if (!result.ok) {
+      return res.status(200).json({ url: buildProxyUrl(url), cached: false, proxied: true, status: result.status });
     }
 
-    const contentType = response.headers.get("content-type") || "";
-    if (!contentType.startsWith("image/")) {
-      return res.status(415).json({ error: "Unsupported content type" });
-    }
-
-    const contentLength = response.headers.get("content-length");
-    if (contentLength && Number(contentLength) > MAX_BYTES) {
-      return res.status(413).json({ error: "Image too large" });
-    }
-
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.length > MAX_BYTES) {
-      return res.status(413).json({ error: "Image too large" });
-    }
-
-    const ext = normalizeExtension(contentType);
+    const ext = normalizeExtension(result.contentType);
     const hash = crypto.createHash("sha256").update(url).digest("hex");
     const filePath = `external-cache/${hash}.${ext}`;
 
@@ -153,8 +152,8 @@ export default async function handler(req, res) {
 
     const { error: uploadError } = await supabase.storage
       .from("pet-photos")
-      .upload(filePath, buffer, {
-        contentType,
+      .upload(filePath, result.buffer, {
+        contentType: result.contentType,
         cacheControl: "3600",
         upsert: true,
       });

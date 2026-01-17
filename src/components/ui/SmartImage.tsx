@@ -1,5 +1,5 @@
 import React from 'react';
-import { cacheExternalImage, FALLBACK_IMAGE, getCachedImageUrl, isBlockedExternalImage } from '@/lib/imageCache';
+import { cacheExternalImage, FALLBACK_IMAGE, getCachedImageUrl, getProxyImageUrl, isBlockedExternalImage } from '@/lib/imageCache';
 
 type SmartImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
   petId?: string;
@@ -18,6 +18,7 @@ const SmartImage: React.FC<SmartImageProps> = ({
   const [currentSrc, setCurrentSrc] = React.useState<string>(src || fallbackSrc);
   const [cacheAttempted, setCacheAttempted] = React.useState(false);
   const isBlocked = isBlockedExternalImage(src);
+  const proxyUrl = isBlocked ? getProxyImageUrl(src) : null;
 
   React.useEffect(() => {
     setCacheAttempted(false);
@@ -34,8 +35,12 @@ const SmartImage: React.FC<SmartImageProps> = ({
         return;
       }
 
-      // Try direct load first (some hosts allow no-referrer).
-      setCurrentSrc(src);
+      // Use server proxy first to avoid hotlink blocks.
+      if (proxyUrl) {
+        setCurrentSrc(proxyUrl);
+      } else {
+        setCurrentSrc(fallbackSrc);
+      }
       cacheExternalImage(src, petId).then((cachedUrl) => {
         if (cachedUrl) setCurrentSrc(cachedUrl);
       });
