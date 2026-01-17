@@ -160,7 +160,7 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
                 // First, check if user has a saved language preference in profile
                 const { data: profile } = await supabase
                     .from('profiles')
-                    .select('language_preference')
+                    .select('*')
                     .eq('id', user.id)
                     .single();
 

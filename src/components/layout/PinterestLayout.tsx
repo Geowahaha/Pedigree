@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Pet, Product, products } from '@/data/petData';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -130,6 +130,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const { user, savedCart, syncCart } = useAuth();
     const { language, setLanguage } = useLanguage();
     const navigate = useNavigate();
+    const location = useLocation();
 
     // State
     const [activeView, setActiveView] = useState<ActiveView>('home');
@@ -1367,14 +1368,20 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     };
 
     // Clear search and restore full home feed
-    const clearSearch = () => {
+    const clearSearch = useCallback(() => {
         setActiveSearchQuery('');
         setSearchAiResponse(null);
         setSearchAiSuggestions([]);
         setSearchAiSource(null);
         setChatHistory([]);
         setFilteredPets(allPets);
-    };
+    }, [allPets]);
+
+    useEffect(() => {
+        if (activeView !== 'home' && activeSearchQuery) {
+            clearSearch();
+        }
+    }, [activeView, activeSearchQuery, clearSearch]);
 
     // Handle form submit
     const handleSearch = async (e: React.FormEvent) => {
@@ -2443,9 +2450,11 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                             <button
                                 onClick={() => {
                                     setActiveView('home');
+                                    setActiveCategory('all');
                                     setActiveMobileTab('all');
                                     exitSearchMode();
                                     setShowMobileHeader(true);
+                                    chatContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
                                     setTimeout(() => searchInputRef.current?.focus(), 0);
                                 }}
                                 className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${isSearchMode ? 'text-[#ea4c89] bg-[#ea4c89]/10' : 'text-gray-400 hover:text-[#0d0c22]'}`}
@@ -2981,6 +2990,9 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                     onClose={() => {
                         setPetDetailsModalOpen(false);
                         setPetDetailsFocus(null);
+                        if (location.pathname.startsWith('/pet/')) {
+                            navigate('/', { replace: true });
+                        }
                     }}
                     pet={selectedPet!}
                     onViewPedigree={handleViewPedigree}
