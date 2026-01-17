@@ -228,19 +228,16 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             const currentScrollTop = container.scrollTop;
             const delta = currentScrollTop - lastScrollTopRef.current;
 
-            // Only trigger if scroll delta is significant (>10px)
-            if (Math.abs(delta) > 10) {
-                if (delta > 0 && currentScrollTop > 100) {
-                    // Scrolling down & not at top - hide header
-                    setShowMobileHeader(false);
-                } else if (delta < 0) {
-                    // Scrolling up - show header
-                    setShowMobileHeader(true);
-                }
+            if (delta < -2) {
+                // Scrolling up - show header immediately
+                setShowMobileHeader(true);
+            } else if (delta > 6 && currentScrollTop > 48) {
+                // Scrolling down past top - hide header
+                setShowMobileHeader(false);
             }
 
             // Always show header at top
-            if (currentScrollTop < 50) {
+            if (currentScrollTop <= 8) {
                 setShowMobileHeader(true);
             }
 

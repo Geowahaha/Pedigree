@@ -21,6 +21,7 @@ const PetDetailsPage = () => {
     const { petId } = useParams<{ petId: string }>();
     const navigate = useNavigate();
     const [pet, setPet] = useState<Pet | null>(null);
+    const [resolvedPetId, setResolvedPetId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -31,16 +32,41 @@ const PetDetailsPage = () => {
             }
 
             try {
-                const { data, error } = await supabase
-                    .from('pets')
-                    .select('*')
-                    .eq('id', petId)
-                    .single();
+                const identifier = decodeURIComponent(petId);
+                const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier);
+                let data: Pet | null = null;
 
-                if (error) throw error;
+                if (isUuid) {
+                    const { data: idData, error: idError } = await supabase
+                        .from('pets')
+                        .select('*')
+                        .eq('id', identifier)
+                        .single();
+
+                    if (idError && idError.code !== 'PGRST116') {
+                        throw idError;
+                    }
+
+                    data = idData || null;
+                }
+
+                if (!data) {
+                    const { data: regData, error: regError } = await supabase
+                        .from('pets')
+                        .select('*')
+                        .eq('registration_number', identifier)
+                        .single();
+
+                    if (regError && regError.code !== 'PGRST116') {
+                        throw regError;
+                    }
+
+                    data = regData || null;
+                }
 
                 if (data) {
                     setPet(data);
+                    setResolvedPetId(data.id);
                     // Track this pet view for personalized recommendations
                     trackRecentlyViewedPet(data.id);
                 } else {
@@ -82,8 +108,8 @@ const PetDetailsPage = () => {
         );
     }
 
-    // Pass the pet ID to PinterestLayout to auto-open the modal
-    return <PinterestLayout initialPetId={petId} />;
+    // Pass the resolved pet ID to PinterestLayout to auto-open the modal
+    return <PinterestLayout initialPetId={resolvedPetId || petId} />;
 };
 
 export default PetDetailsPage;
