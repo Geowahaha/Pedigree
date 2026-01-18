@@ -39,7 +39,16 @@ const DialogContent = React.forwardRef<
         ref={ref}
         aria-describedby={ariaDescribedBy}
         className={cn(
-          "fixed inset-0 z-50 grid h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 gap-4 border-0 bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 !rounded-none !border-0 !max-w-none !w-screen !h-[100dvh] !translate-x-0 !translate-y-0",
+          // Base styles for all screen sizes
+          "fixed z-50 grid gap-4 border bg-background p-6 shadow-lg duration-200",
+          "data-[state=open]:animate-in data-[state=closed]:animate-out",
+          "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+          "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+          // Mobile: full-screen
+          "max-sm:inset-0 max-sm:w-screen max-sm:h-[100dvh] max-sm:max-w-none max-sm:rounded-none max-sm:border-0",
+          // Tablet/PC: centered modal
+          "sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2",
+          "sm:max-w-lg sm:w-full sm:rounded-lg sm:max-h-[85vh] sm:overflow-y-auto",
           className
         )}
         {...rest}
