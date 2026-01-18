@@ -18,6 +18,8 @@ const PedigreePage = lazy(() => import("./pages/PedigreePage"));
 const VetAIProfilePage = lazy(() => import("./pages/VetAIProfilePage"));
 const PetDetailsPage = lazy(() => import("./pages/PetDetailsPage"));
 const BreederProfilePage = lazy(() => import("./pages/BreederProfilePage"));
+const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
+const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
 
 const queryClient = new QueryClient();
 
@@ -46,6 +48,8 @@ const App = () => (
                     <Route path="/pedigree/:petId" element={<PedigreePage />} />
                     <Route path="/profile/:userId" element={<BreederProfilePage />} />
                     <Route path="/vet-profile/:petId" element={<VetAIProfilePage />} />
+                    <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                    <Route path="/terms" element={<TermsOfServicePage />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </Suspense>
