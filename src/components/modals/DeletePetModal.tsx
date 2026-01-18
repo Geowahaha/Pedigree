@@ -27,6 +27,27 @@ export const DeletePetModal: React.FC<DeletePetModalProps> = ({
     const [isDeleting, setIsDeleting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Extract the shortest word from pet name for easier confirmation
+    // e.g., "มะตูม MATOOM" → "MATOOM", "Bella Rose Champion" → "Bella"
+    const getShortName = (name: string): string => {
+        // Split by spaces and common separators
+        const words = name.split(/[\s\-_\/]+/).filter(w => w.length > 0);
+        if (words.length === 0) return name;
+        if (words.length === 1) return words[0];
+
+        // Prefer English words (ASCII only) over Thai
+        const englishWords = words.filter(w => /^[A-Za-z0-9]+$/.test(w));
+        if (englishWords.length > 0) {
+            // Return the shortest English word (usually the nickname)
+            return englishWords.reduce((a, b) => a.length <= b.length ? a : b);
+        }
+
+        // No English words - return shortest word overall
+        return words.reduce((a, b) => a.length <= b.length ? a : b);
+    };
+
+    const shortName = getShortName(petName);
+
     // Reset on open
     useEffect(() => {
         if (isOpen) {
@@ -36,11 +57,11 @@ export const DeletePetModal: React.FC<DeletePetModalProps> = ({
         }
     }, [isOpen]);
 
-    const canDelete = isMagicCard || confirmText.toLowerCase() === petName.toLowerCase();
+    const canDelete = isMagicCard || confirmText.toLowerCase() === shortName.toLowerCase();
 
     const handleDelete = async () => {
         if (!canDelete) {
-            setError(`Please type "${petName}" to confirm deletion`);
+            setError(`Please type "${shortName}" to confirm deletion`);
             return;
         }
 
@@ -102,13 +123,13 @@ export const DeletePetModal: React.FC<DeletePetModalProps> = ({
                     {!isMagicCard && (
                         <div className="mb-4">
                             <label className="block text-sm text-[#B8B8B8] mb-2">
-                                Please type <span className="text-red-400 font-bold">"{petName}"</span> to confirm:
+                                Please type <span className="text-red-400 font-bold">"{shortName}"</span> to confirm:
                             </label>
                             <input
                                 type="text"
                                 value={confirmText}
                                 onChange={(e) => setConfirmText(e.target.value)}
-                                placeholder={`Type ${petName} here...`}
+                                placeholder={`Type ${shortName} here...`}
                                 className="w-full px-4 py-3 rounded-xl bg-[#0A0A0A] border border-red-500/20 text-[#F5F5F0] placeholder:text-[#B8B8B8]/40 focus:border-red-500/50 focus:outline-none"
                                 autoFocus
                             />
