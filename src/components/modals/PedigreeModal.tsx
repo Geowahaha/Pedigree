@@ -410,34 +410,26 @@ ${t('Powered by Eibpo', 'โดย Eibpo')}
 
         </div>
 
-        {/* Footer */}
-        <div className="flex-none flex flex-col sm:flex-row items-center justify-between gap-4 p-6 border-t border-[#C5A059]/20 bg-[#0D0D0D]">
+        {/* Floating Action Buttons - Bottom Right */}
+        <div className="fixed bottom-6 right-6 z-[60] flex items-center gap-3">
           <button
-            onClick={onClose}
-            className="w-full sm:w-auto px-6 py-2.5 rounded-xl border border-[#C5A059]/30 text-[#B8B8B8] font-bold hover:bg-[#C5A059]/10 hover:text-[#F5F5F0] transition-colors"
+            onClick={handleExportCertificate}
+            className="w-12 h-12 rounded-full bg-[#1A1A1A] border border-[#C5A059]/30 text-[#F5F5F0] hover:bg-[#C5A059]/20 hover:border-[#C5A059] transition-all shadow-lg flex items-center justify-center"
+            title={t('Export Certificate', 'ส่งออกใบรับรอง')}
           >
-            {t('Close', 'ปิด')}
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
           </button>
-          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-            <button
-              onClick={handleExportCertificate}
-              className="px-6 py-2.5 rounded-xl bg-[#1A1A1A] border border-[#C5A059]/20 text-[#F5F5F0] font-bold hover:bg-[#C5A059]/10 transition-colors flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              {t('Export Certificate', 'ส่งออกใบรับรอง')}
-            </button>
-            <button
-              onClick={handleShareProfile}
-              className="px-6 py-2.5 rounded-xl bg-[#C5A059] text-[#0A0A0A] font-bold hover:bg-[#D4C4B5] transition-colors flex items-center justify-center gap-2 shadow-lg shadow-[#C5A059]/25"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-              </svg>
-              {t('Share Profile', 'แชร์โปรไฟล์')}
-            </button>
-          </div>
+          <button
+            onClick={handleShareProfile}
+            className="w-12 h-12 rounded-full bg-[#C5A059] text-[#0A0A0A] hover:bg-[#D4C4B5] transition-all shadow-lg shadow-[#C5A059]/30 flex items-center justify-center"
+            title={t('Share Profile', 'แชร์โปรไฟล์')}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>

@@ -155,12 +155,12 @@ const LanguageToggle: React.FC<LanguageToggleProps> = ({ className = '', compact
                 {showTooltip && (
                     <div
                         className={`
-                            absolute bottom-full mb-2 left-1/2 -translate-x-1/2
+                            absolute top-full mt-2 left-1/2 -translate-x-1/2
                             px-3 py-1.5 rounded-lg
                             bg-gray-900 text-white text-xs font-medium
                             whitespace-nowrap
                             shadow-lg
-                            animate-in fade-in slide-in-from-bottom-1 duration-200
+                            animate-in fade-in slide-in-from-top-1 duration-200
                             z-50
                         `}
                     >
@@ -181,8 +181,8 @@ const LanguageToggle: React.FC<LanguageToggleProps> = ({ className = '', compact
                         ) : (
                             language === 'th' ? 'คลิกเพื่อเปลี่ยนภาษา' : 'Click to switch language'
                         )}
-                        {/* Tooltip arrow */}
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+                        {/* Tooltip arrow - points up */}
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900" />
                     </div>
                 )}
             </div>
