@@ -477,6 +477,18 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             });
             newCard = convertDbPet(savedPet);
 
+            // IMMEDIATE IMAGE BACKUP: Copy external image to Supabase Storage
+            // Fire-and-forget - doesn't block UI, but ensures image is permanently cached
+            if (data.mediaType === 'image' && data.link) {
+                fetch('/api/image-cache', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: data.link, petId: savedPet.id })
+                }).then(res => res.json())
+                    .then(result => console.log('Image cached:', result.cached ? 'Supabase' : 'Proxy'))
+                    .catch(err => console.warn('Image cache failed:', err));
+            }
+
             // AUTO POST TO FACEBOOK
             if (data.autoPostFb) {
                 // Determine target link
@@ -2134,9 +2146,9 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                         ref={searchInputRef}
                                         type="text"
                                         value={searchQuery}
-                                    onFocus={() => {
-                                        if (searchQuery.trim().length > 0) setShowSearchSuggestions(true);
-                                    }}
+                                        onFocus={() => {
+                                            if (searchQuery.trim().length > 0) setShowSearchSuggestions(true);
+                                        }}
                                         onChange={(e) => {
                                             const value = e.target.value;
                                             setSearchQuery(value);
