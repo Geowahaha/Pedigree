@@ -95,7 +95,7 @@ export const AddExternalCardModal: React.FC<AddExternalCardModalProps> = ({ isOp
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) resetForm(); onClose(); }}>
-            <DialogContent className="bg-[#1A1A1A] border-0 sm:border sm:border-[#C5A059] text-[#F5F5F0] sm:max-w-md sm:rounded-2xl">
+            <DialogContent className="bg-[#1A1A1A] border-[#C5A059] text-[#F5F5F0] max-w-md rounded-2xl max-sm:fixed max-sm:inset-0 max-sm:w-full max-sm:h-full max-sm:max-w-none max-sm:max-h-none max-sm:rounded-none max-sm:overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="text-[#C5A059] flex items-center gap-2">
                         Create Magic Card
