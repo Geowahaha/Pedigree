@@ -54,6 +54,9 @@ const WalletModal = lazy(() => import('../modals/WalletModal'));
 const AddExternalCardModal = lazy(() =>
     import('../modals/AddExternalCardModal').then((module) => ({ default: module.AddExternalCardModal }))
 );
+const DeletePetModal = lazy(() =>
+    import('../modals/DeletePetModal').then((module) => ({ default: module.DeletePetModal }))
+);
 
 // Types
 interface CartItem {
@@ -214,6 +217,8 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     // Wallet State
     const [walletModalOpen, setWalletModalOpen] = useState(false);
     const [addCardModalOpen, setAddCardModalOpen] = useState(false);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [petToDelete, setPetToDelete] = useState<Pet | null>(null);
     const [boostConfirmPet, setBoostConfirmPet] = useState<Pet | null>(null);
     const [isBoosting, setIsBoosting] = useState(false);
 
@@ -1132,6 +1137,36 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
         setProductModalOpen(true);
     };
 
+    // Handle delete pet - open confirmation modal
+    const handleDeleteClick = (pet: Pet) => {
+        setPetToDelete(pet);
+        setDeleteModalOpen(true);
+    };
+
+    // Perform actual deletion
+    const handleConfirmDelete = async () => {
+        if (!petToDelete) return;
+
+        const { deletePet } = await import('@/lib/database');
+        await deletePet(petToDelete.id);
+
+        // Remove from local state
+        setAllPets(prev => prev.filter(p => p.id !== petToDelete.id));
+        setFilteredPets(prev => prev.filter(p => p.id !== petToDelete.id));
+
+        // Close any open modals showing this pet
+        if (selectedPet?.id === petToDelete.id) {
+            setPetDetailsModalOpen(false);
+            setSelectedPet(null);
+        }
+        if (expandedCard?.id === petToDelete.id) {
+            setExpandedCard(null);
+        }
+
+        setPetToDelete(null);
+        setDeleteModalOpen(false);
+    };
+
     const handlePetRegistered = () => {
         getPublicPets().then(dbPets => {
             const convertedPets = dbPets.slice(0, 50).map(convertDbPet);
@@ -1953,6 +1988,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                     onToggle={() => handleViewPetDetails(pet)} // Open Pinterest modal!
                                     isLiked={favorites.includes(pet.id)}
                                     isOwner={user?.id === (pet as any).owner_id}
+                                    isAdmin={Boolean(user && (user.email === 'geowahaha@gmail.com' || user.email === 'truesaveus@hotmail.com' || user.profile?.is_admin))}
                                     allPets={allPets}
                                     onUpdateParents={async (sireId, damId) => {
                                         // Update in database (implement this)
@@ -1967,6 +2003,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                     onMatchClick={() => setBreedingMatchPet(pet)}
                                     onVetClick={() => navigate(`/vet-profile/${pet.id}`)}
                                     onMagicCardClick={() => setAddCardModalOpen(true)}
+                                    onDeleteClick={() => handleDeleteClick(pet)}
                                 />
                             ))}
                         </div>
@@ -3108,6 +3145,15 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                     onAdd={handleAddExternalCard}
                     onRegisterPet={() => setRegisterModalOpen(true)}
                 />
+                {petToDelete && (
+                    <DeletePetModal
+                        isOpen={deleteModalOpen}
+                        onClose={() => { setDeleteModalOpen(false); setPetToDelete(null); }}
+                        onConfirm={handleConfirmDelete}
+                        petName={petToDelete.name}
+                        isMagicCard={petToDelete.breed === 'External Import'}
+                    />
+                )}
             </Suspense>
         </div >
     );

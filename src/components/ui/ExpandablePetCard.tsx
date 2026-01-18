@@ -21,6 +21,7 @@ interface ExpandablePetCardProps {
     onLikeClick: () => void;
     isLiked?: boolean;
     isOwner?: boolean;
+    isAdmin?: boolean;
     allPets?: Pet[];
     onUpdateParents?: (sireId: string | null, damId: string | null) => void;
     onCommentClick?: () => void;
@@ -28,6 +29,7 @@ interface ExpandablePetCardProps {
     onMatchClick?: () => void;
     onVetClick?: () => void;
     onMagicCardClick?: () => void;
+    onDeleteClick?: () => void;
 }
 
 export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
@@ -39,6 +41,7 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
     onLikeClick,
     isLiked = false,
     isOwner = false,
+    isAdmin = false,
     allPets = [],
     onUpdateParents,
     onCommentClick,
@@ -46,6 +49,7 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
     onMatchClick,
     onVetClick,
     onMagicCardClick,
+    onDeleteClick,
 }) => {
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -436,6 +440,20 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem onClick={() => onMagicCardClick()}>
                                                     Add Magic Card
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
+                                        {(isOwner || isAdmin) && onDeleteClick && (
+                                            <>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem
+                                                    onClick={() => onDeleteClick()}
+                                                    className="text-red-500 focus:text-red-500 focus:bg-red-500/10"
+                                                >
+                                                    <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                    Delete Card
                                                 </DropdownMenuItem>
                                             </>
                                         )}
