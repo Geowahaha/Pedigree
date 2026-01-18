@@ -1238,6 +1238,8 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             );
             loadNotificationCounts();
         }
+
+        // Handle chat message notifications
         if (notification.type === 'chat_message' && notification.payload?.room_id) {
             window.dispatchEvent(new CustomEvent('openChat', {
                 detail: {
@@ -1248,15 +1250,56 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             setNotificationPanelOpen(false);
             return;
         }
+
+        // Handle puppy notifications
         if (notification.type === 'puppy') {
             handleOpenPuppySection('available');
             return;
         }
+
+        // Handle breeding notifications
         if (notification.type === 'breeding') {
             setActiveView('breeding');
             closePanels();
             return;
         }
+
+        // Handle notifications with petId - navigate to the pet card
+        const petId = notification.payload?.petId || notification.payload?.pet_id;
+        if (petId) {
+            // Find the pet in allPets
+            const targetPet = allPets.find(p => p.id === petId);
+            if (targetPet) {
+                // Open the pet card
+                setExpandedCard(targetPet);
+                setNotificationPanelOpen(false);
+                // Scroll to the pet if it's visible in the feed
+                const petElement = document.getElementById(`pet-card-${petId}`);
+                if (petElement) {
+                    petElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            } else {
+                // Pet not in feed yet - try to fetch it
+                try {
+                    const { data: petData } = await supabase
+                        .from('pets')
+                        .select('*')
+                        .eq('id', petId)
+                        .single();
+                    if (petData) {
+                        const convertedPet = convertDbPet(petData);
+                        setExpandedCard(convertedPet);
+                        setNotificationPanelOpen(false);
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch pet for notification:', err);
+                }
+            }
+            return;
+        }
+
+        // Close panel for other notification types
+        setNotificationPanelOpen(false);
     };
 
     const closeChat = (roomId: string) => {
