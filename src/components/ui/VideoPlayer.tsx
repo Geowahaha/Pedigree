@@ -273,24 +273,43 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     // For embedded videos (YouTube, TikTok with full URL, Instagram, Facebook)
     if ((platform === 'youtube' || platform === 'instagram' || platform === 'facebook' || (platform === 'tiktok' && embedUrl)) && embedUrl) {
+        // Get platform label and icon
+        const platformLabel = {
+            youtube: '▶ YouTube',
+            tiktok: '♪ TikTok',
+            instagram: '📷 Instagram',
+            facebook: '📘 Facebook'
+        }[platform] || platform;
+
+        const platformIcon = {
+            youtube: '🎬',
+            tiktok: '🎵',
+            instagram: '📸',
+            facebook: '📘'
+        }[platform] || '🎬';
+
         return (
             <div className={`relative bg-black ${className}`}>
-                {showPoster && poster ? (
+                {showPoster ? (
                     <div className="relative w-full h-full">
-                        <img src={poster} alt="" className="w-full h-full object-cover" />
+                        {poster ? (
+                            <img src={poster} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800">
+                                <span className="text-6xl">{platformIcon}</span>
+                            </div>
+                        )}
                         <button
-                            onClick={(e) => { e.stopPropagation(); setShowPoster(false); setIsPlaying(true); }}
-                            className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors"
+                            onClick={(e) => { e.stopPropagation(); setShowPoster(false); setIsPlaying(true); if (onClick) onClick(); }}
+                            className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/40 transition-colors group"
                         >
-                            <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg">
+                            <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                                 <Play className="w-8 h-8 text-gray-900 ml-1" fill="currentColor" />
                             </div>
                         </button>
                         {/* Platform badge */}
                         <div className="absolute top-3 left-3 px-2 py-1 bg-black/60 rounded text-white text-xs font-medium">
-                            {platform === 'youtube' && '▶ YouTube'}
-                            {platform === 'tiktok' && '♪ TikTok'}
-                            {platform === 'instagram' && '📷 Instagram'}
+                            {platformLabel}
                         </div>
                     </div>
                 ) : (
@@ -303,10 +322,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                         />
                         {/* Platform badge */}
                         <div className="absolute top-3 left-3 px-2 py-1 bg-black/60 rounded text-white text-xs font-medium z-10">
-                            {platform === 'youtube' && '▶ YouTube'}
-                            {platform === 'tiktok' && '♪ TikTok'}
-                            {platform === 'instagram' && '📷 Instagram'}
-                            {platform === 'facebook' && '📘 Facebook'}
+                            {platformLabel}
                         </div>
                     </>
                 )}
