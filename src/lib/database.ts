@@ -292,6 +292,10 @@ export function mapPet(pet: any): Pet {
     if (externalLinkMatch) meta.external_link = externalLinkMatch[1].trim();
   }
 
+  // Map deserialized metadata from description - handle empty strings
+  const finalVideoUrl = (pet.video_url && pet.video_url.trim()) || meta.video_url || '';
+  const finalMediaType = (pet.media_type && pet.media_type.trim()) || meta.media_type || (finalVideoUrl ? 'video' : 'image');
+
   return {
     ...pet,
     type: finalType,
@@ -316,11 +320,10 @@ export function mapPet(pet: any): Pet {
     father_verified_status: pet.father_verified_status || (pet.father_id ? 'pending' : 'verified'),
     mother_verified_status: pet.mother_verified_status || (pet.mother_id ? 'pending' : 'verified'),
     boosted_until: pet.boosted_until,
-    // Map deserialized metadata from description if columns are missing
-    media_type: pet.media_type || meta.media_type || 'image',
-    video_url: pet.video_url || meta.video_url,
-    source: pet.source || meta.source || 'internal',
-    external_link: pet.external_link || meta.external_link,
+    media_type: finalMediaType,
+    video_url: finalVideoUrl,
+    source: (pet.source && pet.source.trim()) || meta.source || 'internal',
+    external_link: (pet.external_link && pet.external_link.trim()) || meta.external_link || '',
     is_sponsored: pet.is_sponsored || false
   };
 }
