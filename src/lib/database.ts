@@ -685,18 +685,34 @@ export async function updatePet(petId: string, updates: Partial<Pet>) {
   delete payload.id; // DB PK, no update
   delete payload.created_at;
   delete payload.owner; // Relation object, not a column
-  delete payload.media_type;
-  delete payload.video_url;
   delete payload.source;
-  delete payload.external_link;
   delete payload.is_sponsored;
+
+  // Prepare DB columns (these columns now exist)
+  const dbPayload: any = {
+    ...payload,
+    updated_at: new Date().toISOString()
+  };
+
+  // Add media columns if provided
+  if (updates.media_type !== undefined) {
+    dbPayload.media_type = updates.media_type;
+  }
+  if (updates.video_url !== undefined) {
+    dbPayload.video_url = updates.video_url || null;
+  }
+  if (updates.external_link !== undefined) {
+    dbPayload.external_link = updates.external_link || null;
+  }
+
+  // Clean up payload fields that were used for column updates
+  delete dbPayload.media_type_temp;
+  delete dbPayload.video_url_temp;
+  delete dbPayload.external_link_temp;
 
   const { data, error } = await supabase
     .from('pets')
-    .update({
-      ...payload,
-      updated_at: new Date().toISOString()
-    })
+    .update(dbPayload)
     .eq('id', petId)
     .select()
     .single();

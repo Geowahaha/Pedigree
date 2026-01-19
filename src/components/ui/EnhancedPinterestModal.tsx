@@ -31,6 +31,7 @@ interface EnhancedPinterestModalProps {
     onViewPedigree: (pet: Pet) => void;
     onFindMate?: (pet: Pet) => void;
     isOwner?: boolean;
+    isAdmin?: boolean;
     currentUserId?: string;
     canManageHealthProfile?: boolean;
 }
@@ -53,6 +54,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
     onViewPedigree,
     onFindMate,
     isOwner = false,
+    isAdmin = false,
     currentUserId,
     canManageHealthProfile = false,
 }) => {
@@ -87,6 +89,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
         sireId: null as string | null,
         damId: null as string | null,
         videoUrl: '',
+        externalLink: '',
     });
 
     const [comments, setComments] = useState<Comment[]>([]);
@@ -121,6 +124,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                 sireId: pet.parentIds?.sire || null,
                 damId: pet.parentIds?.dam || null,
                 videoUrl: pet.video_url || '',
+                externalLink: pet.external_link || '',
             });
         }
     }, [pet]);
@@ -307,8 +311,9 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
         try {
             const trimmedVideoUrl = editForm.videoUrl.trim();
             const mediaType = trimmedVideoUrl ? 'video' : 'image';
-            // Update pet profile
-            await updatePet(pet.id, {
+
+            // Build update object
+            const updateData: any = {
                 name: editForm.name,
                 breed: editForm.breed,
                 birth_date: editForm.birthDate || null,
@@ -319,7 +324,15 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                 image_url: editForm.imageUrl || undefined,
                 media_type: mediaType,
                 video_url: trimmedVideoUrl || undefined,
-            });
+            };
+
+            // Only admin can update external_link
+            if (isAdmin) {
+                updateData.external_link = editForm.externalLink.trim() || null;
+            }
+
+            // Update pet profile
+            await updatePet(pet.id, updateData);
 
             // Update pedigree
             await updatePedigree(pet.id, editForm.sireId || undefined, editForm.damId || undefined);
@@ -999,6 +1012,25 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                 </button>
                                             </div>
                                         </div>
+
+                                        {/* External Link - Admin Only */}
+                                        {isAdmin && (
+                                            <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                                                <label className="text-xs font-bold text-amber-700 uppercase block mb-1.5">
+                                                    🔐 {t('External Link (Admin Only)', 'ลิงก์ภายนอก (แอดมินเท่านั้น)')}
+                                                </label>
+                                                <input
+                                                    type="url"
+                                                    value={editForm.externalLink}
+                                                    onChange={(e) => setEditForm({ ...editForm, externalLink: e.target.value })}
+                                                    className="w-full px-3 py-2.5 border-2 border-amber-300 rounded-xl text-sm focus:border-amber-500 outline-none bg-white"
+                                                    placeholder={t('https://tiktok.com/... or any external URL', 'https://tiktok.com/... หรือลิงก์ภายนอกอื่นๆ')}
+                                                />
+                                                <p className="text-[11px] text-amber-600 mt-1">
+                                                    {t('This URL will be used for "Visit Site" button. Leave empty to auto-detect from video URL.', 'URL นี้จะใช้สำหรับปุ่ม "เยี่ยมชมเว็บไซต์" เว้นว่างเพื่อใช้ลิงก์จากวิดีโอ')}
+                                                </p>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Basic Info */}
