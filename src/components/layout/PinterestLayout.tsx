@@ -583,60 +583,9 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                 return dateB - dateA;
             });
 
-            // Mock Video & External Cards
-            const mockExt: Pet[] = [
-                {
-                    id: 'mock-vid-1',
-                    name: 'Funny Dog Compilation',
-                    breed: 'Golden Retriever',
-                    type: 'dog',
-                    gender: 'male',
-                    birthDate: '2023-01-01', created_at: new Date().toISOString(),
-                    image_url: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1',
-                    image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1',
-                    video_url: 'https://assets.mixkit.co/videos/preview/mixkit-dog-catching-a-ball-in-slow-motion-1271-large.mp4',
-                    media_type: 'video',
-                    location: 'Viral',
-                    healthCertified: false,
-                    isOwnerVerified: false, // Added to fix loose type
-                    available: false,
-                    owner: 'DogLovers'
-                },
-                {
-                    id: 'mock-ext-1',
-                    name: 'Top 10 Grooming Tips',
-                    breed: 'Poodle',
-                    type: 'dog',
-                    gender: 'female',
-                    birthDate: '2023-01-01', created_at: new Date().toISOString(),
-                    image_url: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7',
-                    image: 'https://images.unsplash.com/photo-1516734212186-a967f81ad0d7',
-                    source: 'instagram',
-                    location: 'Instagram',
-                    healthCertified: false,
-                    owner: 'PetStyle'
-                },
-                {
-                    id: 'mock-ext-2',
-                    name: 'Luxury Dog House Ideas',
-                    breed: 'Mixed',
-                    type: 'dog',
-                    gender: 'male',
-                    birthDate: '2023-01-01', created_at: new Date().toISOString(),
-                    image_url: 'https://images.unsplash.com/photo-1541599540903-216a46ca1dc0',
-                    image: 'https://images.unsplash.com/photo-1541599540903-216a46ca1dc0',
-                    source: 'pinterest',
-                    is_sponsored: true,
-                    location: 'Pinterest',
-                    healthCertified: false,
-                    owner: 'DesignWeekly'
-                }
-            ];
-
-            const finalPets = [...mockExt, ...sorted];
-            console.log("DEBUG: Injecting Mocks", mockExt.length, finalPets.length);
-            setAllPets(finalPets);
-            setFilteredPets(finalPets);
+            // Set pets directly without mock data (mocks removed for production)
+            setAllPets(sorted);
+            setFilteredPets(sorted);
         });
     }, []);
 
