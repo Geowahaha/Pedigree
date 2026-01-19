@@ -73,15 +73,18 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
     const hasVideoUrl = pet.video_url && typeof pet.video_url === 'string' && pet.video_url.trim().length > 0;
     const isVideo = pet.media_type === 'video' || hasVideoUrl;
 
-    // Debug: Log video detection for troubleshooting
-    if (hasVideoUrl || pet.media_type === 'video') {
-        console.log('ExpandablePetCard Video Debug:', {
+    // Debug: Log ALL pets that could be video (by name) for troubleshooting
+    const debugNames = ['thongdee', 'cute crazy dog', 'dog core'];
+    if (debugNames.some(n => pet.name?.toLowerCase().includes(n.toLowerCase()))) {
+        console.log('🎬 VIDEO PET DEBUG:', {
             petId: pet.id,
             name: pet.name,
             media_type: pet.media_type,
             video_url: pet.video_url,
+            image: pet.image,
             hasVideoUrl,
-            isVideo
+            isVideo,
+            willRenderVideo: isVideo && pet.video_url
         });
     }
     const ownershipStatus = pet.ownership_status ?? (pet.owner_id ? 'verified' : undefined);
