@@ -94,7 +94,7 @@ const parseVideoUrl = (url: string): { platform: 'youtube' | 'tiktok' | 'instagr
         return {
             platform: 'facebook',
             videoId: fbReelMatch[1],
-            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476`,
+            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476&autoplay=1&muted=1`,
             originalUrl: cleanUrl
         };
     }
@@ -119,7 +119,7 @@ const parseVideoUrl = (url: string): { platform: 'youtube' | 'tiktok' | 'instagr
         return {
             platform: 'facebook',
             videoId: fbWatchMatch[1],
-            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476`,
+            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476&autoplay=1&muted=1`,
             originalUrl: cleanUrl
         };
     }
@@ -131,7 +131,7 @@ const parseVideoUrl = (url: string): { platform: 'youtube' | 'tiktok' | 'instagr
         return {
             platform: 'facebook',
             videoId: fbPageVideoMatch[1],
-            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476`,
+            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476&autoplay=1&muted=1`,
             originalUrl: cleanUrl
         };
     }
@@ -141,7 +141,7 @@ const parseVideoUrl = (url: string): { platform: 'youtube' | 'tiktok' | 'instagr
         return {
             platform: 'facebook',
             videoId: null,
-            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476`,
+            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476&autoplay=1&muted=1`,
             originalUrl: cleanUrl
         };
     }
