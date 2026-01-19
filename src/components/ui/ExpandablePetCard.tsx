@@ -469,6 +469,8 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
 
                             <div className="hidden md:block">
                                 <QuickActions
+                                    petId={pet.id}
+                                    petName={pet.name}
                                     isLiked={isLiked}
                                     onLike={() => onLikeClick()}
                                     onShare={() => { }}

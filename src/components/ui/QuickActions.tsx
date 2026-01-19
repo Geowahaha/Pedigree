@@ -1,6 +1,8 @@
 import React from 'react';
 
 interface QuickActionsProps {
+    petId: string;
+    petName?: string;
     onLike: () => void;
     onShare: () => void;
     onAddToCollection: () => void;
@@ -8,24 +10,30 @@ interface QuickActionsProps {
 }
 
 export const QuickActions: React.FC<QuickActionsProps> = ({
+    petId,
+    petName,
     onLike,
     onShare,
     onAddToCollection,
     isLiked,
 }) => {
     const handleShare = async () => {
+        // Generate pet-specific share URL
+        const shareUrl = `${window.location.origin}/pet/${petId}`;
+        const shareTitle = petName ? `Check out ${petName}!` : 'Check out this pet!';
+
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: 'Check out this pet!',
-                    url: window.location.href,
+                    title: shareTitle,
+                    url: shareUrl,
                 });
             } catch (err) {
                 // User cancelled
             }
         } else {
             // Fallback: Copy to clipboard
-            navigator.clipboard.writeText(window.location.href);
+            navigator.clipboard.writeText(shareUrl);
             alert('Link copied to clipboard!');
         }
         onShare();
@@ -40,8 +48,8 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
             <button
                 onClick={onLike}
                 className={`flex-1 py-2 px-3 rounded-lg font-medium text-xs flex items-center justify-center gap-1.5 transition-all ${isLiked
-                        ? 'bg-[#ea4c89] text-white shadow-lg'
-                        : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white'
+                    ? 'bg-[#ea4c89] text-white shadow-lg'
+                    : 'bg-white/90 backdrop-blur-sm text-gray-700 hover:bg-white'
                     }`}
             >
                 <svg className="w-3.5 h-3.5" fill={isLiked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
