@@ -10,6 +10,7 @@ import type { OwnershipClaim } from '@/lib/ownership';
 import { ClaimOwnershipModal } from '@/components/modals/ClaimOwnershipModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import SmartImage from '@/components/ui/SmartImage';
+import { VideoPlayer } from '@/components/ui/VideoPlayer';
 
 
 interface ExpandablePetCardProps {
@@ -302,13 +303,15 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
                 {/* Media Content */}
                 <div className={`w-full ${isExpanded ? 'h-[300px]' : 'aspect-[4/5] md:aspect-[3/4]'} relative bg-black`}>
                     {isVideo && pet.video_url ? (
-                        <video
+                        <VideoPlayer
                             src={pet.video_url}
-                            className="w-full h-full object-cover"
-                            loop
-                            muted
-                            playsInline
-                            autoPlay
+                            poster={pet.image}
+                            className="w-full h-full"
+                            autoPlay={!isExpanded}
+                            muted={true}
+                            loop={true}
+                            showControls={true}
+                            onClick={onToggle}
                         />
                     ) : pet.image ? (
                         <SmartImage

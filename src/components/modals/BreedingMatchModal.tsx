@@ -309,132 +309,139 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
                             <p className="text-sm text-gray-400 mt-2">{t('Try again later as more breeders join.', 'ลองใหม่อีกครั้งเมื่อมีผู้เพาะพันธุ์เพิ่มขึ้น')}</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {matches.map(match => {
                                 const isUnlocked = unlockedMatches.includes(match.id) || isPro;
+                                const matchResult = (match as any).matchResult;
                                 return (
-                                    <div key={match.id} className="relative group bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300">
-                                        {/* Match Badge */}
-                                        <div className={`absolute top-3 left-3 z-10 px-3 py-1.5 rounded-full backdrop-blur-md flex items-center gap-1 font-bold text-[10px] uppercase shadow-sm
-                                            ${(match as any).matchResult.score >= 80 ? 'bg-green-100 text-green-700 border border-green-200' :
-                                                (match as any).matchResult.score >= 50 ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' :
-                                                    'bg-red-100 text-red-700 border border-red-200'}`}>
-                                            {formatMatchLabel((match as any).matchResult.label)} • {(match as any).matchResult.score}%
+                                    <div key={match.id} className="relative bg-white rounded-2xl overflow-hidden border border-gray-100 hover:shadow-xl transition-all duration-300">
+                                        {/* Match Score Badge - Top Center */}
+                                        <div className={`absolute top-3 left-1/2 -translate-x-1/2 z-20 px-4 py-2 rounded-full backdrop-blur-md flex items-center gap-2 font-bold text-xs shadow-lg
+                                            ${matchResult.score >= 80 ? 'bg-green-500 text-white' :
+                                                matchResult.score >= 50 ? 'bg-yellow-500 text-white' :
+                                                    'bg-red-500 text-white'}`}>
+                                            <span className="text-lg">💕</span>
+                                            {matchResult.score}% {formatMatchLabel(matchResult.label)}
                                         </div>
 
-                                        {/* Image */}
-                                        <div className="h-56 relative bg-gray-100">
-                                            <img src={match.image || (match as any).image_url} className={`w-full h-full object-cover transition-all duration-500 ${!isUnlocked ? 'blur-md grayscale opacity-80' : 'group-hover:scale-105'}`} alt={match.name} />
-                                            {!isUnlocked && (
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/30 backdrop-blur-sm">
-                                                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg mb-2">
-                                                        <span className="text-2xl">🔒</span>
+                                        {/* Stacked Pet Cards */}
+                                        <div className="flex flex-col">
+                                            {/* Source Pet (Your Pet) - Top */}
+                                            <div className="relative h-36 bg-gradient-to-b from-pink-50 to-white p-3 flex items-center gap-4 border-b border-gray-100">
+                                                <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 border-2 border-pink-200 shadow-md">
+                                                    <img
+                                                        src={sourcePet?.image || (sourcePet as any)?.image_url}
+                                                        className="w-full h-full object-cover"
+                                                        alt={sourcePet?.name}
+                                                    />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-[10px] uppercase tracking-wider text-pink-600 font-bold mb-1">
+                                                        {t('Your Pet', 'สัตว์เลี้ยงของคุณ')}
                                                     </div>
-                                                    <span className="font-bold text-gray-800 bg-white/80 px-3 py-1 rounded-full text-xs">
-                                                        {t('Locked Profile', 'โปรไฟล์ถูกล็อก')}
-                                                    </span>
+                                                    <h4 className="font-bold text-lg text-gray-900 truncate">{sourcePet?.name}</h4>
+                                                    <p className="text-sm text-gray-500 truncate">{sourcePet?.breed}</p>
+                                                    <p className="text-xs text-gray-400">{sourcePet?.gender === 'male' ? '♂ Male' : '♀ Female'}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Heart Connector */}
+                                            <div className="relative h-10 flex items-center justify-center bg-gradient-to-r from-pink-100 via-red-100 to-pink-100">
+                                                <div className="absolute inset-0 flex items-center">
+                                                    <div className="w-full border-t-2 border-dashed border-pink-200"></div>
+                                                </div>
+                                                <div className="relative z-10 w-10 h-10 bg-gradient-to-br from-pink-500 to-red-500 rounded-full flex items-center justify-center shadow-lg transform hover:scale-110 transition-transform">
+                                                    <span className="text-xl">❤️</span>
+                                                </div>
+                                            </div>
+
+                                            {/* Match Pet - Bottom */}
+                                            <div className={`relative h-36 bg-gradient-to-t from-blue-50 to-white p-3 flex items-center gap-4 ${!isUnlocked ? 'blur-sm' : ''}`}>
+                                                <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 border-2 border-blue-200 shadow-md">
+                                                    <img
+                                                        src={match.image || (match as any).image_url}
+                                                        className={`w-full h-full object-cover ${!isUnlocked ? 'grayscale' : ''}`}
+                                                        alt={match.name}
+                                                    />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-[10px] uppercase tracking-wider text-blue-600 font-bold mb-1">
+                                                        {t('Matched Partner', 'คู่ที่แมตช์')}
+                                                    </div>
+                                                    <h4 className="font-bold text-lg text-gray-900 truncate">
+                                                        {isUnlocked ? match.name : t('Hidden', 'ซ่อน')}
+                                                    </h4>
+                                                    <p className="text-sm text-gray-500 truncate">{match.breed}</p>
+                                                    <p className="text-xs text-gray-400">{match.gender === 'male' ? '♂ Male' : '♀ Female'}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Lock Overlay */}
+                                            {!isUnlocked && (
+                                                <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
+                                                    <div className="text-center">
+                                                        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-xl mb-3 mx-auto">
+                                                            <span className="text-3xl">🔒</span>
+                                                        </div>
+                                                        <p className="text-gray-600 font-medium">{t('Locked Match', 'คู่แมตช์ถูกล็อก')}</p>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
 
-                                        {/* Content */}
-                                        <div className="p-5">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <h3 className="font-bold text-xl text-black leading-tight">
-                                                    {isUnlocked ? match.name : t('Hidden Profile', 'ซ่อนโปรไฟล์')}
-                                                </h3>
-                                                <div className="text-right">
-                                                    <span className="px-2 py-0.5 bg-gray-100 rounded text-[10px] font-medium text-gray-500">
-                                                        {match.location || t('Thailand', 'ประเทศไทย')}
-                                                    </span>
-                                                </div>
+                                        {/* Analysis Section */}
+                                        <div className="p-4 space-y-3 border-t border-gray-100">
+                                            {/* AI Advice */}
+                                            <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
+                                                <p className="text-xs text-blue-800 italic font-medium">
+                                                    "{translateBreedingText(matchResult.advice)}"
+                                                </p>
                                             </div>
 
-                                            <div className="space-y-3 mb-6">
-                                                {/* Risk Analysis Quote */}
-                                                <div className="p-3 rounded-xl bg-blue-50 border border-blue-100">
-                                                    <p className="text-xs text-blue-800 italic font-medium">
-                                                        "{translateBreedingText((match as any).matchResult.advice)}"
-                                                    </p>
-                                                </div>
+                                            {/* Breeding Info */}
+                                            {(() => {
+                                                const breeding = matchResult?.breeding;
+                                                if (!breeding) return null;
+                                                const badgeClass = breeding.type === 'inbreeding'
+                                                    ? 'text-red-700'
+                                                    : breeding.type === 'linebreeding'
+                                                        ? 'text-amber-700'
+                                                        : 'text-emerald-700';
+                                                return (
+                                                    <div className="flex items-center justify-between text-sm bg-gray-50 rounded-lg p-2">
+                                                        <span className="text-gray-500">{t('Strategy', 'กลยุทธ์')}</span>
+                                                        <span className={`font-semibold ${badgeClass}`}>
+                                                            {formatBreedingLabel(breeding.type, breeding.level)}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })()}
 
-                                                {(() => {
-                                                    const breeding = (match as any).matchResult?.breeding;
-                                                    if (!breeding) return null;
-                                                    const badgeClass = breeding.type === 'inbreeding'
-                                                        ? 'text-red-700'
-                                                        : breeding.type === 'linebreeding'
-                                                            ? 'text-amber-700'
-                                                            : 'text-emerald-700';
-                                                    const warningText = breeding.warnings?.slice(0, 1).map(translateBreedingText).join(' ');
-                                                    const prosText = breeding.pros?.slice(0, 2).map(translateBreedingText).join('; ');
-                                                    const consText = breeding.cons?.slice(0, 2).map(translateBreedingText).join('; ');
-                                                    const summaryText = breeding.summary ? translateBreedingText(breeding.summary) : '';
-                                                    return (
-                                                        <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 space-y-2 text-xs">
-                                                            <div className="flex justify-between items-center">
-                                                                <span className="text-gray-500">{t('Breeding strategy', 'กลยุทธ์การผสมพันธุ์')}</span>
-                                                                <span className={`font-semibold ${badgeClass}`}>
-                                                                    {formatBreedingLabel(breeding.type, breeding.level)}
-                                                                </span>
-                                                            </div>
-                                                            {warningText && (
-                                                                <p className="text-amber-700">{t('Warning', 'คำเตือน')}: {warningText}</p>
-                                                            )}
-                                                            {prosText && (
-                                                                <p className="text-emerald-700">{t('Pros', 'ข้อดี')}: {prosText}</p>
-                                                            )}
-                                                            {consText && (
-                                                                <p className="text-rose-700">{t('Cons', 'ข้อเสีย')}: {consText}</p>
-                                                            )}
-                                                            {summaryText && (
-                                                                <p className="text-gray-500">{summaryText}</p>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })()}
-
-                                                {(() => {
-                                                    const breakdown = (match as any).matchResult?.breakdown;
-                                                    if (!breakdown) return null;
-                                                    return (
-                                                        <div className="space-y-2 text-xs">
-                                                            <div className="flex justify-between text-gray-500">
-                                                                <span>{t('Genetic safety', 'ความปลอดภัยทางพันธุกรรม')}</span>
-                                                                <span className="font-semibold text-gray-800">{Math.round(breakdown.genetic_risk)}%</span>
-                                                            </div>
-                                                            <div className="flex justify-between text-gray-500">
-                                                                <span>{t('Health readiness', 'ความพร้อมด้านสุขภาพ')}</span>
-                                                                <span className="font-semibold text-gray-800">{Math.round(breakdown.health_score)}%</span>
-                                                            </div>
-                                                            <div className="flex justify-between text-gray-500">
-                                                                <span>{t('Breed match', 'ความเข้ากันของสายพันธุ์')}</span>
-                                                                <span className="font-semibold text-gray-800">{Math.round(breakdown.breed_score)}%</span>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })()}
-
-                                                <div className="flex justify-between text-sm border-b border-gray-100 pb-2">
-                                                    <span className="text-gray-500">{t('Age', 'อายุ')}</span>
-                                                    <span className="font-medium text-black">{match.age ? `${match.age} ${t('yrs', 'ปี')}` : t('Unknown', 'ไม่ทราบ')}</span>
+                                            {/* Score Breakdown */}
+                                            {matchResult?.breakdown && (
+                                                <div className="grid grid-cols-3 gap-2 text-center">
+                                                    <div className="bg-gray-50 rounded-lg p-2">
+                                                        <div className="text-lg font-bold text-gray-800">{Math.round(matchResult.breakdown.genetic_risk)}%</div>
+                                                        <div className="text-[10px] text-gray-500">{t('Genetic', 'พันธุกรรม')}</div>
+                                                    </div>
+                                                    <div className="bg-gray-50 rounded-lg p-2">
+                                                        <div className="text-lg font-bold text-gray-800">{Math.round(matchResult.breakdown.health_score)}%</div>
+                                                        <div className="text-[10px] text-gray-500">{t('Health', 'สุขภาพ')}</div>
+                                                    </div>
+                                                    <div className="bg-gray-50 rounded-lg p-2">
+                                                        <div className="text-lg font-bold text-gray-800">{Math.round(matchResult.breakdown.breed_score)}%</div>
+                                                        <div className="text-[10px] text-gray-500">{t('Breed', 'สายพันธุ์')}</div>
+                                                    </div>
                                                 </div>
-                                                <div className="flex justify-between text-sm border-b border-gray-100 pb-2">
-                                                    <span className="text-gray-500">{t('Color', 'สี')}</span>
-                                                    <span className="font-medium text-black">{match.color || t('Unknown', 'ไม่ทราบ')}</span>
-                                                </div>
-                                                <div className="flex justify-between text-sm border-b border-gray-100 pb-2">
-                                                    <span className="text-gray-500">{t('Owner', 'เจ้าของ')}</span>
-                                                    <span className={isUnlocked ? 'font-medium text-black' : 'blur-sm text-gray-300'}>
-                                                        {isUnlocked ? ((match.owner as any)?.full_name || t('View Profile', 'ดูโปรไฟล์')) : t('Hidden Name', 'ซ่อนชื่อ')}
-                                                    </span>
-                                                </div>
-                                            </div>
+                                            )}
+                                        </div>
 
+                                        {/* Action Button */}
+                                        <div className="p-4 pt-0">
                                             {isUnlocked ? (
                                                 <button
                                                     onClick={() => handleContact(match)}
-                                                    className="w-full py-3 bg-black text-white font-bold rounded-full hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                                    className="w-full py-3 bg-gradient-to-r from-pink-500 to-red-500 text-white font-bold rounded-full hover:from-pink-600 hover:to-red-600 transition-all flex items-center justify-center gap-2 shadow-lg"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                                                     {t('Contact Owner', 'ติดต่อเจ้าของ')}
@@ -443,11 +450,11 @@ const BreedingMatchModal: React.FC<BreedingMatchModalProps> = ({ isOpen, onClose
                                                 <button
                                                     onClick={() => handleUnlock(match)}
                                                     disabled={unlockingId === match.id}
-                                                    className="w-full py-3 bg-white border-2 border-black text-black font-bold rounded-full hover:bg-black hover:text-white transition-all flex items-center justify-center gap-2 shadow-sm"
+                                                    className="w-full py-3 bg-white border-2 border-gray-900 text-gray-900 font-bold rounded-full hover:bg-gray-900 hover:text-white transition-all flex items-center justify-center gap-2 shadow-sm"
                                                 >
                                                     {unlockingId === match.id
                                                         ? t('Unlocking...', 'กำลังปลดล็อก...')
-                                                        : t(`Unlock Match (${MATCH_UNLOCK_COST} TRD)`, `ปลดล็อกคู่ผสมพันธุ์ (${MATCH_UNLOCK_COST} TRD)`)}
+                                                        : t(`Unlock (${MATCH_UNLOCK_COST} TRD)`, `ปลดล็อก (${MATCH_UNLOCK_COST} TRD)`)}
                                                 </button>
                                             )}
                                         </div>
