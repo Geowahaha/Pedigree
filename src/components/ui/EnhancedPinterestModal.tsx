@@ -550,6 +550,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
     ];
 
     const activeVideoUrl = isEditingFull ? editForm.videoUrl : pet.video_url;
+    console.log('🎬 Modal Video Debug:', { petId: pet.id, petName: pet.name, video_url: pet.video_url, media_type: pet.media_type, activeVideoUrl });
     const isVideo = Boolean(activeVideoUrl);
     const displayImage = isEditingFull
         ? (editForm.imageUrl || pet.image || pet.image_url || '')
