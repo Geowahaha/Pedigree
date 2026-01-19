@@ -129,11 +129,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
     const { platform, embedUrl, originalUrl } = parseVideoUrl(src);
 
-    // Debug log
-    useEffect(() => {
-        console.log('VideoPlayer:', { src, platform, embedUrl, autoPlay });
-    }, [src, platform, embedUrl, autoPlay]);
-
     // Control video playback
     useEffect(() => {
         if (videoRef.current && platform === 'direct') {

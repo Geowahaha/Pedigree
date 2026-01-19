@@ -224,19 +224,7 @@ async function validateParentAges(params: {
 
 // Helper to map DB pet to Interface (keeping backward compat)
 // Helper to map DB pet to Interface (keeping backward compat)
-// Helper to map DB pet to Interface (keeping backward compat)
 export function mapPet(pet: any): Pet {
-  // DEBUG: Log raw data from Supabase for video pets
-  if (pet.name?.toLowerCase().includes('thongdee') || pet.name?.toLowerCase().includes('cute crazy')) {
-    console.log('🔥 RAW SUPABASE DATA:', {
-      id: pet.id,
-      name: pet.name,
-      video_url: pet.video_url,
-      media_type: pet.media_type,
-      description: pet.description?.substring(0, 100)
-    });
-  }
-
   // Sanitize type based on breed (Consistency with petsService)
   const breedLower = (pet.breed || '').toLowerCase();
   let finalType: 'dog' | 'cat' = pet.type;
