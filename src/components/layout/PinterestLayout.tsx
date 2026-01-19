@@ -1096,24 +1096,30 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const handleConfirmDelete = async () => {
         if (!petToDelete) return;
 
-        const { deletePet } = await import('@/lib/database');
-        await deletePet(petToDelete.id);
+        try {
+            const { deletePet } = await import('@/lib/database');
+            await deletePet(petToDelete.id);
 
-        // Remove from local state
-        setAllPets(prev => prev.filter(p => p.id !== petToDelete.id));
-        setFilteredPets(prev => prev.filter(p => p.id !== petToDelete.id));
+            // Remove from local state
+            setAllPets(prev => prev.filter(p => p.id !== petToDelete.id));
+            setFilteredPets(prev => prev.filter(p => p.id !== petToDelete.id));
 
-        // Close any open modals showing this pet
-        if (selectedPet?.id === petToDelete.id) {
-            setPetDetailsModalOpen(false);
-            setSelectedPet(null);
+            // Close any open modals showing this pet
+            if (selectedPet?.id === petToDelete.id) {
+                setPetDetailsModalOpen(false);
+                setSelectedPet(null);
+            }
+            if (expandedCard?.id === petToDelete.id) {
+                setExpandedCard(null);
+            }
+
+            // Success - just close the modal
+            setPetToDelete(null);
+            setDeleteModalOpen(false);
+        } catch (err: any) {
+            // Re-throw with cleaner message for the modal to display
+            throw new Error(err?.message || 'Failed to delete pet');
         }
-        if (expandedCard?.id === petToDelete.id) {
-            setExpandedCard(null);
-        }
-
-        setPetToDelete(null);
-        setDeleteModalOpen(false);
     };
 
     const handlePetRegistered = () => {

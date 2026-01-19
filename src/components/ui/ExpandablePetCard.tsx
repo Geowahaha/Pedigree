@@ -69,7 +69,8 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
     const lastTapRef = useRef<number>(0);
     const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    const isVideo = pet.media_type === 'video';
+    // Detect video from either media_type or presence of video_url
+    const isVideo = pet.media_type === 'video' || (pet.video_url && pet.video_url.length > 0);
     const ownershipStatus = pet.ownership_status ?? (pet.owner_id ? 'verified' : undefined);
     const canClaim = !isOwner && (ownershipStatus === 'waiting_owner' || ownershipStatus === 'pending_claim');
     const claimLabel = claimStatus?.status === 'approved'
