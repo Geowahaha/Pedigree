@@ -271,19 +271,20 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
     // Convert DB Pet
     const convertDbPet = (dbPet: DbPet): Pet => {
-        let mediaType = 'image';
-        let videoUrl = '';
+        // PRIORITY 1: Read from database columns directly (new columns)
+        let mediaType = (dbPet.media_type && dbPet.media_type.trim()) || 'image';
+        let videoUrl = (dbPet.video_url && dbPet.video_url.trim()) || '';
         let source = '';
         let externalLink = '';
         let descriptionText = dbPet.description || '';
 
-        // Safely parse description for metadata
-        if (dbPet.description && dbPet.description.startsWith('{')) {
+        // PRIORITY 2: Fallback - parse description for metadata if columns are empty
+        if ((!videoUrl || !mediaType || mediaType === 'image') && dbPet.description && dbPet.description.startsWith('{')) {
             try {
                 const meta = JSON.parse(dbPet.description);
                 if (typeof meta.description === 'string') descriptionText = meta.description;
-                if (meta.media_type) mediaType = meta.media_type;
-                if (meta.video_url) videoUrl = meta.video_url;
+                if (!mediaType || mediaType === 'image') mediaType = meta.media_type || mediaType;
+                if (!videoUrl) videoUrl = meta.video_url || '';
                 if (meta.source) source = meta.source;
                 if (meta.external_link) externalLink = meta.external_link;
             } catch (e) {
@@ -291,17 +292,18 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
             }
         }
 
-        // Fallback: Check for Regex based metadata (Legacy support)
+        // PRIORITY 3: Fallback - Check for Regex based metadata (Legacy support)
         if (!videoUrl && dbPet.description) {
             const videoMatch = dbPet.description.match(/Video URL: (.*)/);
             if (videoMatch) videoUrl = videoMatch[1].trim();
 
             const mediaTypeMatch = dbPet.description.match(/Media Type: (.*)/);
             if (mediaTypeMatch) mediaType = mediaTypeMatch[1].trim();
-            else if (videoUrl) mediaType = 'video'; // Auto-detect if video url present
+        }
 
-            const sourceMatch = dbPet.description.match(/Source: (.*)/);
-            if (sourceMatch) source = sourceMatch[1].trim();
+        // Auto-detect media type from video_url
+        if (videoUrl && (!mediaType || mediaType === 'image')) {
+            mediaType = 'video';
         }
 
         return {
