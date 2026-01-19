@@ -452,11 +452,9 @@ export async function createPet(petData: {
       mother_verified_status: petData.mother_id ? 'pending' : null,
       is_public: true,
       verified: petData.health_certified,
-      // media_type: petData.media_type || 'image', // REMOVED: Column missing
-      // video_url: petData.video_url || null, // REMOVED: Column missing
-      // source: petData.source || 'internal' // REMOVED: Column missing
-      // external_link: petData.external_link || null, // REMOVED: Column does not exist
-      // is_sponsored: petData.is_sponsored || false // REMOVED: Column does not exist
+      // Now that columns exist, save them directly
+      media_type: petData.media_type || 'image',
+      video_url: petData.video_url || null,
     })
     .select()
     .single();
