@@ -18,7 +18,7 @@ interface VideoPlayerProps {
 }
 
 // Extract video ID and platform from URL
-const parseVideoUrl = (url: string): { platform: 'youtube' | 'tiktok' | 'instagram' | 'direct' | 'unknown'; videoId: string | null; embedUrl: string | null; originalUrl: string } => {
+const parseVideoUrl = (url: string): { platform: 'youtube' | 'tiktok' | 'instagram' | 'facebook' | 'direct' | 'unknown'; videoId: string | null; embedUrl: string | null; originalUrl: string } => {
     if (!url) return { platform: 'unknown', videoId: null, embedUrl: null, originalUrl: url };
 
     const cleanUrl = url.trim();
@@ -75,14 +75,61 @@ const parseVideoUrl = (url: string): { platform: 'youtube' | 'tiktok' | 'instagr
         };
     }
 
-    // Instagram Reels
-    const instaRegex = /instagram\.com\/(?:reel|reels|p)\/([a-zA-Z0-9_-]+)/;
+    // Instagram Reels/Posts/Stories
+    const instaRegex = /instagram\.com\/(?:reel|reels|p|stories)\/([a-zA-Z0-9_-]+)/;
     const instaMatch = cleanUrl.match(instaRegex);
     if (instaMatch) {
         return {
             platform: 'instagram',
             videoId: instaMatch[1],
             embedUrl: `https://www.instagram.com/p/${instaMatch[1]}/embed`,
+            originalUrl: cleanUrl
+        };
+    }
+
+    // Facebook Reels: https://www.facebook.com/reel/123456789
+    const fbReelRegex = /facebook\.com\/reel\/(\d+)/;
+    const fbReelMatch = cleanUrl.match(fbReelRegex);
+    if (fbReelMatch) {
+        return {
+            platform: 'facebook',
+            videoId: fbReelMatch[1],
+            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476`,
+            originalUrl: cleanUrl
+        };
+    }
+
+    // Facebook Watch/Videos: https://www.facebook.com/watch/?v=123456789
+
+    const fbWatchRegex = /facebook\.com\/watch\/?\?v=(\d+)/;
+    const fbWatchMatch = cleanUrl.match(fbWatchRegex);
+    if (fbWatchMatch) {
+        return {
+            platform: 'facebook',
+            videoId: fbWatchMatch[1],
+            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476`,
+            originalUrl: cleanUrl
+        };
+    }
+
+    // Facebook Page Videos: https://www.facebook.com/username/videos/123456789
+    const fbPageVideoRegex = /facebook\.com\/[^/]+\/videos\/(\d+)/;
+    const fbPageVideoMatch = cleanUrl.match(fbPageVideoRegex);
+    if (fbPageVideoMatch) {
+        return {
+            platform: 'facebook',
+            videoId: fbPageVideoMatch[1],
+            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476`,
+            originalUrl: cleanUrl
+        };
+    }
+
+    // Facebook general video links
+    if (cleanUrl.includes('facebook.com') && (cleanUrl.includes('video') || cleanUrl.includes('reel'))) {
+        return {
+            platform: 'facebook',
+            videoId: null,
+            embedUrl: `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(cleanUrl)}&show_text=false&width=476`,
             originalUrl: cleanUrl
         };
     }
@@ -224,8 +271,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         );
     }
 
-    // For embedded videos (YouTube, TikTok with full URL, Instagram)
-    if ((platform === 'youtube' || platform === 'instagram' || (platform === 'tiktok' && embedUrl)) && embedUrl) {
+    // For embedded videos (YouTube, TikTok with full URL, Instagram, Facebook)
+    if ((platform === 'youtube' || platform === 'instagram' || platform === 'facebook' || (platform === 'tiktok' && embedUrl)) && embedUrl) {
         return (
             <div className={`relative bg-black ${className}`}>
                 {showPoster && poster ? (
@@ -259,6 +306,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                             {platform === 'youtube' && '▶ YouTube'}
                             {platform === 'tiktok' && '♪ TikTok'}
                             {platform === 'instagram' && '📷 Instagram'}
+                            {platform === 'facebook' && '📘 Facebook'}
                         </div>
                     </>
                 )}

@@ -21,6 +21,7 @@ import { getPetComments, postPetComment, deletePetComment, type PetComment } fro
 import { ClaimOwnershipModal } from '@/components/modals/ClaimOwnershipModal';
 import { useLanguage } from '@/contexts/LanguageContext';
 import SmartImage from '@/components/ui/SmartImage';
+import { VideoPlayer } from '@/components/ui/VideoPlayer';
 import data from '@emoji-mart/data'
 import Picker from '@emoji-mart/react'
 
@@ -550,7 +551,6 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
     ];
 
     const activeVideoUrl = isEditingFull ? editForm.videoUrl : pet.video_url;
-    console.log('🎬 Modal Video Debug:', { petId: pet.id, petName: pet.name, video_url: pet.video_url, media_type: pet.media_type, activeVideoUrl });
     const isVideo = Boolean(activeVideoUrl);
     const displayImage = isEditingFull
         ? (editForm.imageUrl || pet.image || pet.image_url || '')
@@ -592,13 +592,10 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                 {/* LEFT: Large Media */}
                 <div className="relative w-full md:w-[55%] h-[50vh] md:h-auto bg-black flex items-center justify-center">
                     {isVideo && activeVideoUrl ? (
-                        <video
+                        <VideoPlayer
                             src={activeVideoUrl}
-                            className="w-full h-full object-contain"
-                            controls
-                            autoPlay
-                            loop
-                            poster={displayImage || undefined}
+                            autoPlay={true}
+                            className="w-full h-full"
                         />
                     ) : displayImage ? (
                         <SmartImage
