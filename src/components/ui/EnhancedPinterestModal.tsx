@@ -642,16 +642,18 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                         </svg>
                     </button>
 
-                    {/* Visit Site Button (Bottom-Left) */}
-                    <button
-                        onClick={() => window.open(pet.external_link || pet.image, '_blank')}
-                        className="absolute bottom-4 left-4 md:bottom-6 md:left-6 flex items-center gap-2 bg-white/95 hover:bg-white backdrop-blur-sm px-4 py-2.5 rounded-full shadow-lg transition-all z-10"
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                        <span className="text-sm font-semibold">{t('Visit site', 'เยี่ยมชมเว็บไซต์')}</span>
-                    </button>
+                    {/* Visit Site Button (Bottom-Left) - Hide for internal videos */}
+                    {!((isVideo && activeVideoUrl?.includes('supabase')) && !pet.external_link) && (
+                        <button
+                            onClick={() => window.open(pet.external_link || (isVideo && activeVideoUrl ? activeVideoUrl : pet.image), '_blank')}
+                            className="absolute bottom-4 left-4 md:bottom-6 md:left-6 flex items-center gap-2 bg-white/95 hover:bg-white backdrop-blur-sm px-4 py-2.5 rounded-full shadow-lg transition-all z-10"
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            <span className="text-sm font-semibold">{t('Visit site', 'เยี่ยมชมเว็บไซต์')}</span>
+                        </button>
+                    )}
                 </div>
 
                 {/* RIGHT: Info Panel */}
