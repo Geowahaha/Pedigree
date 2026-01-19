@@ -70,7 +70,20 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
     const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Detect video from either media_type or presence of video_url
-    const isVideo = pet.media_type === 'video' || (pet.video_url && pet.video_url.length > 0);
+    const hasVideoUrl = pet.video_url && typeof pet.video_url === 'string' && pet.video_url.trim().length > 0;
+    const isVideo = pet.media_type === 'video' || hasVideoUrl;
+
+    // Debug: Log video detection for troubleshooting
+    if (hasVideoUrl || pet.media_type === 'video') {
+        console.log('ExpandablePetCard Video Debug:', {
+            petId: pet.id,
+            name: pet.name,
+            media_type: pet.media_type,
+            video_url: pet.video_url,
+            hasVideoUrl,
+            isVideo
+        });
+    }
     const ownershipStatus = pet.ownership_status ?? (pet.owner_id ? 'verified' : undefined);
     const canClaim = !isOwner && (ownershipStatus === 'waiting_owner' || ownershipStatus === 'pending_claim');
     const claimLabel = claimStatus?.status === 'approved'
