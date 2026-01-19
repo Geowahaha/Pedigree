@@ -1636,7 +1636,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                                     onLikeClick={() => handleLike(pet.id)}
                                                     onCommentClick={() => handleViewPetDetails(pet, 'comments')}
                                                     onEditClick={() => handleViewPetDetails(pet, 'edit')}
-                                                    onMatchClick={() => setBreedingMatchPet(pet)}
+                                                    onMatchClick={() => navigate(`/breeding/${pet.id}`)}
                                                     onVetClick={() => navigate(`/vet-profile/${pet.id}`)}
                                                     onMagicCardClick={() => setAddCardModalOpen(true)}
                                                 />
@@ -2015,7 +2015,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                     onLikeClick={() => handleAddToFavorites(pet.id)}
                                     onCommentClick={() => handleViewPetDetails(pet, 'comments')}
                                     onEditClick={() => handleViewPetDetails(pet, 'edit')}
-                                    onMatchClick={() => setBreedingMatchPet(pet)}
+                                    onMatchClick={() => navigate(`/breeding/${pet.id}`)}
                                     onVetClick={() => navigate(`/vet-profile/${pet.id}`)}
                                     onMagicCardClick={() => setAddCardModalOpen(true)}
                                     onDeleteClick={() => handleDeleteClick(pet)}
@@ -3129,7 +3129,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                     onFindMate={(pet) => {
                         setPetDetailsModalOpen(false);
                         setPetDetailsFocus(null);
-                        setBreedingMatchPet(pet);
+                        navigate(`/breeding/${pet.id}`);
                     }}
                     isOwner={selectedPet?.owner_id === user?.id || Boolean(user && (user.email === 'geowahaha@gmail.com' || user.email === 'truesaveus@hotmail.com' || user.profile?.is_admin))}
                     isAdmin={Boolean(user && (user.email === 'geowahaha@gmail.com' || user.email === 'truesaveus@hotmail.com' || user.profile?.is_admin))}
