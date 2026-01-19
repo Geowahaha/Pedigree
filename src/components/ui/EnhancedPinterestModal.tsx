@@ -34,6 +34,7 @@ interface EnhancedPinterestModalProps {
     isAdmin?: boolean;
     currentUserId?: string;
     canManageHealthProfile?: boolean;
+    initialSection?: string | null;
 }
 
 interface Comment {

@@ -3131,7 +3131,8 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                         setPetDetailsFocus(null);
                         setBreedingMatchPet(pet);
                     }}
-                    isOwner={selectedPet?.owner_id === user?.id}
+                    isOwner={selectedPet?.owner_id === user?.id || Boolean(user && (user.email === 'geowahaha@gmail.com' || user.email === 'truesaveus@hotmail.com' || user.profile?.is_admin))}
+                    isAdmin={Boolean(user && (user.email === 'geowahaha@gmail.com' || user.email === 'truesaveus@hotmail.com' || user.profile?.is_admin))}
                     currentUserId={user?.id}
                     canManageHealthProfile={Boolean(user && (user.profile?.role === 'admin' || selectedPet?.owner_id === user.id))}
                     initialSection={petDetailsFocus}
