@@ -99,8 +99,20 @@ const parseVideoUrl = (url: string): { platform: 'youtube' | 'tiktok' | 'instagr
         };
     }
 
-    // Facebook Watch/Videos: https://www.facebook.com/watch/?v=123456789
+    // Facebook Share Links: https://www.facebook.com/share/r/xxx or /share/v/xxx
+    const fbShareRegex = /facebook\.com\/share\/[rv]\/([a-zA-Z0-9]+)/;
+    const fbShareMatch = cleanUrl.match(fbShareRegex);
+    if (fbShareMatch) {
+        // Facebook share links can't be embedded directly - show with external link
+        return {
+            platform: 'facebook',
+            videoId: fbShareMatch[1],
+            embedUrl: null, // Cannot embed share links
+            originalUrl: cleanUrl
+        };
+    }
 
+    // Facebook Watch/Videos: https://www.facebook.com/watch/?v=123456789
     const fbWatchRegex = /facebook\.com\/watch\/?\?v=(\d+)/;
     const fbWatchMatch = cleanUrl.match(fbWatchRegex);
     if (fbWatchMatch) {
@@ -124,7 +136,7 @@ const parseVideoUrl = (url: string): { platform: 'youtube' | 'tiktok' | 'instagr
         };
     }
 
-    // Facebook general video links
+    // Facebook general video links (reel, video)
     if (cleanUrl.includes('facebook.com') && (cleanUrl.includes('video') || cleanUrl.includes('reel'))) {
         return {
             platform: 'facebook',
@@ -266,6 +278,36 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 {/* Platform badge */}
                 <div className="absolute top-3 left-3 px-2 py-1 bg-black rounded text-white text-xs font-medium flex items-center gap-1">
                     <span>♪</span> TikTok
+                </div>
+            </div>
+        );
+    }
+
+    // For Facebook share links that can't be embedded - show poster with external link
+    if (platform === 'facebook' && !embedUrl) {
+        return (
+            <div className={`relative bg-black ${className}`} onClick={onClick}>
+                {poster ? (
+                    <img src={poster} alt="" className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-900 to-blue-800">
+                        <span className="text-6xl">📘</span>
+                    </div>
+                )}
+                <button
+                    onClick={handleOpenExternal}
+                    className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/50 transition-colors"
+                >
+                    <div className="text-center">
+                        <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center shadow-lg mb-2 mx-auto">
+                            <Play className="w-8 h-8 text-gray-900 ml-1" fill="currentColor" />
+                        </div>
+                        <span className="text-white text-sm font-medium">Watch on Facebook</span>
+                    </div>
+                </button>
+                {/* Platform badge */}
+                <div className="absolute top-3 left-3 px-2 py-1 bg-blue-600 rounded text-white text-xs font-medium flex items-center gap-1">
+                    <span>📘</span> Facebook
                 </div>
             </div>
         );

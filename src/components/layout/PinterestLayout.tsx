@@ -164,6 +164,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const [favorites, setFavorites] = useState<string[]>([]);
     const [puppyFocus, setPuppyFocus] = useState<'available' | 'coming' | null>(null);
     const [expandedCardId, setExpandedCardId] = useState<string | null>(null);
+    const [expandedCard, setExpandedCard] = useState<Pet | null>(null);
     const [mobileCreateOpen, setMobileCreateOpen] = useState(false);
     // Mobile header scroll detection - hide on scroll down, show on scroll up
     const [showMobileHeader, setShowMobileHeader] = useState(true);
