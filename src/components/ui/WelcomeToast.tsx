@@ -56,7 +56,7 @@ const WelcomeToast: React.FC = () => {
                     // Get the most recent pet info
                     const { data: recentPet } = await supabase
                         .from('pets')
-                        .select('id, name, primary_image_url')
+                        .select('id, name, image_url, video_url')
                         .eq('id', recentlyViewed[0])
                         .single();
 
@@ -68,7 +68,7 @@ const WelcomeToast: React.FC = () => {
                             emoji: '👀',
                             link: `/pet/${recentPet.id}`,
                             petId: recentPet.id,
-                            imageUrl: recentPet.primary_image_url
+                            imageUrl: recentPet.image_url || recentPet.video_url
                         });
                     }
                 }
@@ -79,8 +79,8 @@ const WelcomeToast: React.FC = () => {
 
                 const { data: newPuppies, count: puppyCount } = await supabase
                     .from('pets')
-                    .select('id, name, primary_image_url', { count: 'exact' })
-                    .gte('date_of_birth', thirtyDaysAgo.toISOString().split('T')[0])
+                    .select('id, name, image_url, video_url', { count: 'exact' })
+                    .gte('birthday', thirtyDaysAgo.toISOString().split('T')[0])
                     .limit(1);
 
                 if (puppyCount && puppyCount > 0) {
@@ -94,7 +94,7 @@ const WelcomeToast: React.FC = () => {
                             : 'Adorable puppies waiting for you',
                         emoji: '🐶',
                         link: '/?filter=new',
-                        imageUrl: newPuppies?.[0]?.primary_image_url
+                        imageUrl: newPuppies?.[0]?.image_url || newPuppies?.[0]?.video_url
                     });
                 }
 
