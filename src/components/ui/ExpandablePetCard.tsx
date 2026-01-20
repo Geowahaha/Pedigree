@@ -241,12 +241,21 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
 
     // Check if this pet is awaiting real owner verification
     const isAwaitingOwner = (() => {
+        // Priority 1: Check verified status from database
+        if (ownershipStatus === 'verified') {
+            return false; // Already verified, not awaiting
+        }
+        // Priority 2: Check if explicitly waiting for owner
+        if (ownershipStatus === 'waiting_owner' || ownershipStatus === 'pending_claim') {
+            return true;
+        }
+        // Priority 3: Fallback to owner name check for legacy data
         const ownerName = pet.owner || '';
-        const systemOwners = ['บุญพิง', 'Admin', 'Admin (System)', 'System', 'admin', 'system'];
+        const systemOwners = ['บุญพิง', 'Admin', 'Admin (System)', 'System', 'admin', 'system', 'External Import'];
         const isSystemOwner = systemOwners.some(sysOwner =>
             ownerName.toLowerCase().includes(sysOwner.toLowerCase())
         );
-        return isSystemOwner || ownershipStatus === 'waiting_owner';
+        return isSystemOwner;
     })();
 
     // Helper function to display owner name - show "Awaiting Owner" for system/admin accounts
@@ -770,8 +779,8 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
                                 onMouseEnter={handleOwnerProfileHover}
                                 disabled={!canOpenOwnerProfile && !isAwaitingOwner}
                                 className={`flex items-center gap-2 transition-opacity ${isAwaitingOwner
-                                        ? 'cursor-pointer hover:opacity-80'
-                                        : 'disabled:cursor-default hover:opacity-70'
+                                    ? 'cursor-pointer hover:opacity-80'
+                                    : 'disabled:cursor-default hover:opacity-70'
                                     }`}
                                 title={isAwaitingOwner ? 'คลิกเพื่อยืนยัน' : canOpenOwnerProfile ? 'View profile' : undefined}
                                 aria-label={isAwaitingOwner ? 'Verify ownership' : canOpenOwnerProfile ? `View profile for ${pet.owner || 'owner'}` : undefined}
