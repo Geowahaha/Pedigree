@@ -2409,9 +2409,22 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                 >
                                     All
                                 </button>
-                                {['Dogs', 'Cats', 'Male', 'Female', 'Verified', 'Pedigree'].map(filter => (
-                                    <button key={filter} className="px-5 py-2 rounded-full text-sm font-bold bg-white text-gray-500 border border-transparent shadow-sm hover:shadow-md hover:text-[#ea4c89] whitespace-nowrap transition-all">
-                                        {filter}
+                                {[
+                                    { key: 'dogs', label: '🐕 Dogs', icon: '🐕' },
+                                    { key: 'cats', label: '🐱 Cats', icon: '🐱' },
+                                    { key: 'birds', label: '🐦 Birds', icon: '🐦' },
+                                    { key: 'horses', label: '🐴 Horses', icon: '🐴' },
+                                    { key: 'livestock', label: '🐄 Livestock', icon: '🐄' },
+                                    { key: 'exotics', label: '🦎 Exotics', icon: '🦎' },
+                                ].map(filter => (
+                                    <button
+                                        key={filter.key}
+                                        onClick={() => {
+                                            // TODO: Implement category filter
+                                        }}
+                                        className="px-5 py-2 rounded-full text-sm font-bold bg-white text-gray-500 border border-transparent shadow-sm hover:shadow-md hover:text-[#ea4c89] whitespace-nowrap transition-all"
+                                    >
+                                        {filter.label}
                                     </button>
                                 ))}
                                 {/* Smart Suggestion Chips - Pink Accent */}
