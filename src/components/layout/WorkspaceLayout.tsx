@@ -385,7 +385,6 @@ const StackedDeck: React.FC<{
             <div className="absolute top-2 left-1/2 -translate-x-1/2 text-white/40 text-xs font-medium tracking-wider z-10">
                 📚 {cards.length} CARDS
             </div>
-
             {/* Stacked cards */}
             {cards.map((card, index) => (
                 <TableCard
