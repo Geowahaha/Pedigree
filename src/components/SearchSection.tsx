@@ -22,7 +22,9 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
   const { user } = useAuth();
   const { language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
-  const [petType, setPetType] = useState<'all' | 'dog' | 'cat'>('all');
+  const [petType, setPetType] = useState<'all' | 'dog' | 'cat' | 'bird' | 'horse' | 'livestock' | 'exotic'>('all');
+  const [genderFilter, setGenderFilter] = useState<'all' | 'male' | 'female'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'sire' | 'dam' | 'puppy'>('all');
   const [selectedBreed, setSelectedBreed] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [healthCertified, setHealthCertified] = useState(false);
@@ -278,25 +280,68 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
             )}
           </div>
 
-          {/* Filters Grid - Mobile 2 cols, Desktop 4 cols */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
-            {/* Pet Type */}
-            <div className="space-y-1.5 sm:space-y-2">
-              <label className="block text-xs sm:text-sm font-bold text-[#0d0c22]">
-                {language === 'th' ? 'ประเภท' : 'Pet Type'}
-              </label>
-              <select
-                value={petType}
-                onChange={(e) => {
-                  setPetType(e.target.value as 'all' | 'dog' | 'cat');
+          {/* Category Tabs - 6 Animal Types */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide">
+            {[
+              { id: 'all', label: language === 'th' ? 'ทั้งหมด' : 'All', icon: '🐾' },
+              { id: 'dog', label: language === 'th' ? 'สุนัข' : 'Dogs', icon: '🐕' },
+              { id: 'cat', label: language === 'th' ? 'แมว' : 'Cats', icon: '🐱' },
+              { id: 'bird', label: language === 'th' ? 'นก' : 'Birds', icon: '🦜' },
+              { id: 'horse', label: language === 'th' ? 'ม้า' : 'Horses', icon: '🐴' },
+              { id: 'livestock', label: language === 'th' ? 'ปศุสัตว์' : 'Livestock', icon: '🐄' },
+              { id: 'exotic', label: language === 'th' ? 'สัตว์พิเศษ' : 'Exotics', icon: '🦎' },
+            ].map((category) => (
+              <button
+                key={category.id}
+                onClick={() => {
+                  setPetType(category.id as any);
                   setSelectedBreed('');
                 }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${petType === category.id
+                  ? 'bg-[#ea4c89] text-white shadow-lg shadow-pink-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+              >
+                <span className="text-base">{category.icon}</span>
+                {category.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Filters Grid - Gender, Role, Breed, Location */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+            {/* Gender Filter */}
+            <div className="space-y-1.5 sm:space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-[#0d0c22]">
+                {language === 'th' ? 'เพศ' : 'Gender'}
+              </label>
+              <select
+                value={genderFilter}
+                onChange={(e) => setGenderFilter(e.target.value as 'all' | 'male' | 'female')}
                 className="w-full px-3 sm:px-4 py-3 sm:py-3.5 min-h-[48px] rounded-xl border-2 border-gray-100 bg-white focus:border-[#ea4c89] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] cursor-pointer hover:border-gray-300 font-medium text-sm sm:text-base"
                 style={{ fontSize: '16px' }}
               >
-                <option value="all">{language === 'th' ? 'ทั้งหมด' : 'All Types'}</option>
-                <option value="dog">{language === 'th' ? 'สุนัข' : 'Dogs'}</option>
-                <option value="cat">{language === 'th' ? 'แมว' : 'Cats'}</option>
+                <option value="all">{language === 'th' ? 'ทั้งหมด' : 'All'}</option>
+                <option value="male">♂ {language === 'th' ? 'ตัวผู้' : 'Male'}</option>
+                <option value="female">♀ {language === 'th' ? 'ตัวเมีย' : 'Female'}</option>
+              </select>
+            </div>
+
+            {/* Role Filter */}
+            <div className="space-y-1.5 sm:space-y-2">
+              <label className="block text-xs sm:text-sm font-bold text-[#0d0c22]">
+                {language === 'th' ? 'บทบาท' : 'Role'}
+              </label>
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value as 'all' | 'sire' | 'dam' | 'puppy')}
+                className="w-full px-3 sm:px-4 py-3 sm:py-3.5 min-h-[48px] rounded-xl border-2 border-gray-100 bg-white focus:border-[#ea4c89] focus:ring-2 focus:ring-pink-100 outline-none transition-all text-[#0d0c22] cursor-pointer hover:border-gray-300 font-medium text-sm sm:text-base"
+                style={{ fontSize: '16px' }}
+              >
+                <option value="all">{language === 'th' ? 'ทั้งหมด' : 'All'}</option>
+                <option value="sire">{language === 'th' ? 'Available Sire (พ่อพันธุ์)' : 'Available Sire'}</option>
+                <option value="dam">{language === 'th' ? 'Available Dam (แม่พันธุ์)' : 'Available Dam'}</option>
+                <option value="puppy">{language === 'th' ? 'Puppies (ลูกสัตว์)' : 'Puppies'}</option>
               </select>
             </div>
 
@@ -335,25 +380,6 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
                 ))}
               </select>
             </div>
-
-            {/* Health Certified */}
-            <div className="space-y-1.5 sm:space-y-2">
-              <label className="block text-xs sm:text-sm font-bold text-[#0d0c22]">
-                {language === 'th' ? 'การรับรอง' : 'Certification'}
-              </label>
-              <button
-                onClick={() => setHealthCertified(!healthCertified)}
-                className={`w-full px-3 sm:px-4 py-3 sm:py-3.5 min-h-[48px] rounded-xl border-2 transition-all flex items-center justify-center gap-2 font-bold text-sm sm:text-base touch-target ${healthCertified
-                  ? 'border-[#ea4c89] bg-pink-50 text-[#ea4c89] shadow-sm'
-                  : 'border-gray-100 text-gray-400 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
-                  }`}
-              >
-                <svg className={`w-5 h-5 transition-colors ${healthCertified ? 'text-[#ea4c89]' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                {language === 'th' ? 'ผ่านการตรวจสุขภาพ' : 'Health Certified'}
-              </button>
-            </div>
           </div>
 
           {/* Clear Filters - Mobile Responsive */}
@@ -362,7 +388,14 @@ const SearchSection: React.FC<SearchSectionProps> = ({ onViewPedigree, onViewDet
               {language === 'th' ? 'พบ' : 'Found'} <span className="font-bold text-[#ea4c89] text-sm sm:text-base">{filteredPairs.length}</span> {language === 'th' ? 'คู่ผสมพันธุ์' : 'proven breeding pairs'}
             </p>
             <button
-              onClick={() => { setSearchQuery(''); setPetType('all'); setSelectedBreed(''); }}
+              onClick={() => {
+                setSearchQuery('');
+                setPetType('all');
+                setGenderFilter('all');
+                setRoleFilter('all');
+                setSelectedBreed('');
+                setSelectedLocation('');
+              }}
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-400 hover:text-[#0d0c22] active:text-[#ea4c89] font-semibold transition-colors py-2 min-h-[44px] touch-target"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
