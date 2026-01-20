@@ -223,6 +223,13 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const [boostConfirmPet, setBoostConfirmPet] = useState<Pet | null>(null);
     const [isBoosting, setIsBoosting] = useState(false);
 
+    // Pinch-to-Zoom State for Mobile
+    const [zoomLevel, setZoomLevel] = useState(1);
+    const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+    const initialPinchDistanceRef = useRef<number | null>(null);
+    const initialZoomRef = useRef<number>(1);
+    const lastPanRef = useRef({ x: 0, y: 0 });
+
     // Refs
     const searchInputRef = useRef<HTMLInputElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -1553,14 +1560,72 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const handleContentTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
         if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
         if (isImmersiveSearch) return;
-        touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        touchStartTimeRef.current = Date.now();
+
+        // Single touch - for swipe
+        if (e.touches.length === 1) {
+            touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            touchStartTimeRef.current = Date.now();
+            lastPanRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
+
+        // Two finger pinch - for zoom
+        if (e.touches.length === 2) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            initialPinchDistanceRef.current = Math.sqrt(dx * dx + dy * dy);
+            initialZoomRef.current = zoomLevel;
+        }
+    };
+
+    const handleContentTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
+
+        // Two finger pinch zoom
+        if (e.touches.length === 2 && initialPinchDistanceRef.current !== null) {
+            const dx = e.touches[0].clientX - e.touches[1].clientX;
+            const dy = e.touches[0].clientY - e.touches[1].clientY;
+            const currentDistance = Math.sqrt(dx * dx + dy * dy);
+            const scale = currentDistance / initialPinchDistanceRef.current;
+            const newZoom = Math.min(Math.max(initialZoomRef.current * scale, 0.5), 3);
+            setZoomLevel(newZoom);
+        }
+
+        // Single finger pan when zoomed in
+        if (e.touches.length === 1 && zoomLevel > 1) {
+            const dx = e.touches[0].clientX - lastPanRef.current.x;
+            const dy = e.touches[0].clientY - lastPanRef.current.y;
+            setPanOffset(prev => ({
+                x: prev.x + dx,
+                y: prev.y + dy
+            }));
+            lastPanRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        }
     };
 
     const handleContentTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
         if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
+
+        // Reset pinch tracking
+        if (e.touches.length < 2) {
+            initialPinchDistanceRef.current = null;
+        }
+
+        // Double tap to reset zoom
+        if (e.changedTouches.length === 1) {
+            const now = Date.now();
+            if (now - touchStartTimeRef.current < 300) {
+                // Quick tap - check for double tap
+                // Reset zoom if already zoomed
+                if (zoomLevel !== 1) {
+                    setZoomLevel(1);
+                    setPanOffset({ x: 0, y: 0 });
+                }
+            }
+        }
+
         if (!touchStartRef.current) return;
         if (isImmersiveSearch) return;
+        if (zoomLevel !== 1) return; // Don't swipe tabs when zoomed
 
         const dx = e.changedTouches[0].clientX - touchStartRef.current.x;
         const dy = e.changedTouches[0].clientY - touchStartRef.current.y;
@@ -1578,6 +1643,12 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
         if (nextIndex === currentIndex) return;
         handleMobileTabSelect(mobileTabs[nextIndex].key);
     };
+
+    // Reset zoom when changing views
+    useEffect(() => {
+        setZoomLevel(1);
+        setPanOffset({ x: 0, y: 0 });
+    }, [activeView, activeMobileTab]);
 
     // Toggle like
     const handleLike = async (petId: string) => {
@@ -2370,14 +2441,58 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-gray-100 transition-all duration-300 hidden md:block">
                         <div className="max-w-[1800px] mx-auto px-6 py-4">
                             <div className="flex items-center justify-between gap-4">
-                                {/* Title/Spacer */}
-                                <div className="flex-1">
-                                    <h1 className="font-['Playfair_Display'] text-2xl text-[#0d0c22] font-black italic tracking-tight hidden md:block">
+                                {/* Title + Search Box Inline */}
+                                <div className="flex items-center gap-4 flex-1">
+                                    <h1 className="font-['Playfair_Display'] text-2xl text-[#0d0c22] font-black italic tracking-tight whitespace-nowrap">
                                         {activeView === 'home' ? 'Discover' :
                                             activeView === 'myspace' ? 'My Space' :
                                                 activeView === 'favorites' ? 'Favorites' :
                                                     activeView === 'products' ? 'Marketplace' : 'Eibpo'}
                                     </h1>
+
+                                    {/* Inline Search Box - Pinterest Style */}
+                                    <div className="flex-1 max-w-xl relative">
+                                        <div className="flex items-center bg-gray-100 rounded-full px-4 py-2.5 border border-transparent hover:border-gray-200 focus-within:border-[#ea4c89] focus-within:bg-white focus-within:shadow-md transition-all">
+                                            <span className="text-lg mr-2">🐾</span>
+                                            <input
+                                                type="text"
+                                                value={searchQuery}
+                                                onChange={(e) => {
+                                                    setSearchQuery(e.target.value);
+                                                    if (e.target.value.trim().length > 0) setShowSearchSuggestions(true);
+                                                }}
+                                                onFocus={() => {
+                                                    if (searchQuery.trim().length > 0) setShowSearchSuggestions(true);
+                                                }}
+                                                onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        handleSearch(e as any);
+                                                        setShowSearchSuggestions(false);
+                                                    }
+                                                }}
+                                                placeholder={language === 'th' ? 'ค้นหาหรือถาม AI...' : 'Search or ask AI...'}
+                                                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-[#0d0c22] placeholder:text-gray-400"
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    if (searchQuery.trim()) handleSearch({ preventDefault: () => { } } as any);
+                                                }}
+                                                className="p-1.5 rounded-full hover:bg-[#ea4c89]/10 text-[#ea4c89] transition-colors"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                            </button>
+                                            <button
+                                                onClick={() => setActiveView('favorites')}
+                                                className="p-1.5 rounded-full hover:bg-gray-200 text-gray-400 hover:text-[#ea4c89] transition-colors ml-1"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Header Actions */}
@@ -2448,12 +2563,38 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                         ref={chatContainerRef}
                         className="flex-1 overflow-y-auto w-full px-[clamp(8px,3vw,16px)] sm:px-[clamp(12px,2.5vw,20px)] md:px-[clamp(16px,2vw,32px)] py-[clamp(10px,2.5vw,20px)] md:py-[clamp(16px,2vw,24px)] pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-32"
                         onTouchStart={handleContentTouchStart}
+                        onTouchMove={handleContentTouchMove}
                         onTouchEnd={handleContentTouchEnd}
+                        style={{
+                            touchAction: zoomLevel === 1 ? 'auto' : 'none',
+                        }}
                     >
-                        <div className="max-w-[1800px] mx-auto">
+                        <div
+                            className="max-w-[1800px] mx-auto transition-transform duration-100 ease-out md:transform-none"
+                            style={{
+                                transform: typeof window !== 'undefined' && window.innerWidth < 768
+                                    ? `scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`
+                                    : 'none',
+                                transformOrigin: 'center center',
+                            }}
+                        >
                             {renderMainContent()}
                         </div>
                     </div>
+
+                    {/* Zoom Indicator - Mobile Only */}
+                    {zoomLevel !== 1 && (
+                        <div className="fixed top-20 left-1/2 -translate-x-1/2 bg-black/70 text-white px-4 py-2 rounded-full text-sm font-bold z-50 md:hidden flex items-center gap-2 animate-in fade-in duration-200">
+                            <span>🔍</span>
+                            <span>{Math.round(zoomLevel * 100)}%</span>
+                            <button
+                                onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }}
+                                className="ml-2 bg-white/20 hover:bg-white/30 px-2 py-0.5 rounded text-xs"
+                            >
+                                Reset
+                            </button>
+                        </div>
+                    )}
                 </main>
             </div >
 
