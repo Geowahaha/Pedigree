@@ -192,6 +192,7 @@ async function validateParentAges(params: {
   motherId?: string | null;
 }) {
   const childDate = parseDateValue(params.childBirthDate);
+  // Skip validation if child has no birth date
   if (!childDate) return;
 
   const parentIds = [params.fatherId, params.motherId].filter(Boolean) as string[];
@@ -207,18 +208,19 @@ async function validateParentAges(params: {
 
   for (const parent of data) {
     const parentDate = parseDateValue(parent.birthday || parent.birth_date);
+    // Skip validation if parent has no birth date (can't determine age)
     if (!parentDate) continue;
 
     const diffDays = (childDate.getTime() - parentDate.getTime()) / MS_PER_DAY;
     const label = parent.id === params.fatherId ? 'Sire' : 'Dam';
     const parentName = parent.name ? ` (${parent.name})` : '';
 
+    // Only validate that parent was born BEFORE child
     if (diffDays < 0) {
       throw new Error(`${label}${parentName} birth date cannot be after the child birth date.`);
     }
-    if (diffDays < MIN_PARENT_AGE_YEARS * 365) {
-      throw new Error(`${label}${parentName} must be at least ${MIN_PARENT_AGE_YEARS} year older than the child.`);
-    }
+    // NOTE: Removed strict 1-year age check - too restrictive for legacy data
+    // Users can set any parent as long as parent was born before child
   }
 }
 
