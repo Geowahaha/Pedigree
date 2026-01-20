@@ -366,10 +366,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         const notes = prompt('Admin notes (optional)') || undefined;
         try {
             await approveOwnershipClaim(claim.id, notes);
-            await loadOwnershipClaims();
-            // Reload pets to refresh home card display
-            await loadPets();
-            alert('✅ Claim approved successfully! Pet owner updated.');
+            alert('✅ Claim approved successfully! Pet owner updated. Page will refresh.');
+            // Force full page reload to refresh all components
+            window.location.reload();
         } catch (error) {
             console.error(error);
             alert('Failed to approve claim.');
@@ -380,10 +379,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         const notes = prompt('Admin notes (optional)') || undefined;
         try {
             await rejectOwnershipClaim(claim.id, notes);
-            await loadOwnershipClaims();
-            // Reload pets to refresh home card display
-            await loadPets();
-            alert('✅ Claim rejected.');
+            alert('✅ Claim rejected. Page will refresh.');
+            // Force full page reload to refresh all components
+            window.location.reload();
         } catch (error) {
             console.error(error);
             alert('Failed to reject claim.');
