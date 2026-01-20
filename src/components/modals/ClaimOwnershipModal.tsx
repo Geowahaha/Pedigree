@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Pet } from '@/data/petData';
 import { useAuth } from '@/contexts/AuthContext';
 import { createOwnershipClaim } from '@/lib/ownership';
@@ -121,28 +122,30 @@ export const ClaimOwnershipModal: React.FC<ClaimOwnershipModalProps> = ({
         }
     };
 
-    if (!user && !loading) {
-        return (
-            <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
-                <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
-                <div className="relative bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Sign in required</h3>
-                    <p className="text-sm text-gray-600 mb-6">
-                        Please sign in to submit an ownership claim.
-                    </p>
-                    <button
-                        onClick={handleClose}
-                        className="w-full px-4 py-2.5 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800"
-                    >
-                        Close
-                    </button>
-                </div>
+    const signInModal = (
+        <div className="fixed top-0 left-0 right-0 bottom-0 z-[10000] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
+            <div className="relative bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl">
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">Sign in required</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                    Please sign in to submit an ownership claim.
+                </p>
+                <button
+                    onClick={handleClose}
+                    className="w-full px-4 py-2.5 rounded-lg bg-gray-900 text-white font-medium hover:bg-gray-800"
+                >
+                    Close
+                </button>
             </div>
-        );
+        </div>
+    );
+
+    if (!user && !loading) {
+        return createPortal(signInModal, document.body);
     }
 
-    return (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+    const mainModal = (
+        <div className="fixed top-0 left-0 right-0 bottom-0 z-[10000] flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
             <div className="absolute inset-0 bg-black/60" onClick={handleClose} />
             <div className="relative bg-white rounded-2xl w-full max-w-lg max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
                 {/* Header */}
@@ -272,4 +275,6 @@ export const ClaimOwnershipModal: React.FC<ClaimOwnershipModalProps> = ({
             </div>
         </div>
     );
+
+    return createPortal(mainModal, document.body);
 };
