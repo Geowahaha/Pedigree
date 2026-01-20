@@ -139,7 +139,7 @@ export async function createOwnershipClaim(claimData: {
         .select('id')
         .eq('pet_id', claimData.pet_id)
         .eq('claimant_id', user.id)
-        .single();
+        .maybeSingle();
 
     if (existing) {
         throw new Error('You already have a claim for this pet');
