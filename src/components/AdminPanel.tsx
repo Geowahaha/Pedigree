@@ -367,6 +367,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         try {
             await approveOwnershipClaim(claim.id, notes);
             await loadOwnershipClaims();
+            // Reload pets to refresh home card display
+            await loadPets();
+            alert('✅ Claim approved successfully! Pet owner updated.');
         } catch (error) {
             console.error(error);
             alert('Failed to approve claim.');
@@ -378,6 +381,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         try {
             await rejectOwnershipClaim(claim.id, notes);
             await loadOwnershipClaims();
+            // Reload pets to refresh home card display
+            await loadPets();
+            alert('✅ Claim rejected.');
         } catch (error) {
             console.error(error);
             alert('Failed to reject claim.');
