@@ -754,19 +754,20 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
     const dueDatePreview = matchForm.matchDate ? addDays(matchForm.matchDate, 63) : null;
 
-    // Empty template for new pet
+    // Empty template for new pet - Default values for easier data entry
     const emptyPet: Pet = {
         id: '',
         name: '',
-        breed: '',
+        breed: 'Thai Ridgeback Dog',
         type: 'dog',
         gender: 'male',
         birthDate: '',
-        image: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=500&auto=format&fit=crop',
+        image: '/default-pet-avatar.png',
         color: '',
         location: 'Bangkok, Thailand',
-        owner: 'Admin',
+        owner: 'Admin (System)',
         healthCertified: false,
+        registrationNumber: '', // Will be auto-generated
         parentIds: { sire: '', dam: '', sireStatus: 'verified', damStatus: 'verified' }
     };
 

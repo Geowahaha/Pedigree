@@ -239,6 +239,25 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
 
     const canOpenOwnerProfile = Boolean(pet.owner_id);
 
+    // Check if this pet is awaiting real owner verification
+    const isAwaitingOwner = (() => {
+        const ownerName = pet.owner || '';
+        const systemOwners = ['บุญพิง', 'Admin', 'Admin (System)', 'System', 'admin', 'system'];
+        const isSystemOwner = systemOwners.some(sysOwner =>
+            ownerName.toLowerCase().includes(sysOwner.toLowerCase())
+        );
+        return isSystemOwner || ownershipStatus === 'waiting_owner';
+    })();
+
+    // Helper function to display owner name - show "Awaiting Owner" for system/admin accounts
+    const getDisplayOwnerName = () => {
+        if (isAwaitingOwner) {
+            return '🔔 รอเจ้าของยืนยัน'; // Awaiting Owner
+        }
+        return pet.owner || 'Unknown Owner';
+    };
+    const displayOwnerName = getDisplayOwnerName();
+
     // Prefetch owner profile data on hover for instant feel
     const handleOwnerProfileHover = () => {
         if (!pet.owner_id) return;
@@ -507,19 +526,36 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
                         {/* Owner */}
                         <button
                             type="button"
-                            onClick={handleOwnerProfileClick}
+                            onClick={(e) => {
+                                if (isAwaitingOwner) {
+                                    e.stopPropagation();
+                                    setClaimModalOpen(true);
+                                } else {
+                                    handleOwnerProfileClick(e);
+                                }
+                            }}
                             onMouseEnter={handleOwnerProfileHover}
-                            disabled={!canOpenOwnerProfile}
-                            className="flex items-center gap-3 mb-6 pb-6 border-b text-left w-full disabled:cursor-default hover:bg-gray-50/50 transition-colors rounded-lg p-2 -m-2"
-                            title={canOpenOwnerProfile ? 'View profile' : undefined}
-                            aria-label={canOpenOwnerProfile ? `View profile for ${pet.owner || 'owner'}` : undefined}
+                            disabled={!canOpenOwnerProfile && !isAwaitingOwner}
+                            className={`flex items-center gap-3 mb-6 pb-6 border-b text-left w-full transition-colors rounded-lg p-2 -m-2 ${isAwaitingOwner
+                                ? 'cursor-pointer hover:bg-amber-50/50 border-amber-200'
+                                : 'disabled:cursor-default hover:bg-gray-50/50'
+                                }`}
+                            title={isAwaitingOwner ? 'คลิกเพื่อยืนยันความเป็นเจ้าของ / Click to verify ownership' : canOpenOwnerProfile ? 'View profile' : undefined}
+                            aria-label={isAwaitingOwner ? 'Verify ownership' : canOpenOwnerProfile ? `View profile for ${pet.owner || 'owner'}` : undefined}
                         >
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-gray-200 to-gray-300" />
+                            <div className={`w-10 h-10 rounded-full ${isAwaitingOwner ? 'bg-gradient-to-tr from-amber-200 to-amber-300' : 'bg-gradient-to-tr from-gray-200 to-gray-300'}`} />
                             <div className="flex-1">
-                                <p className="text-sm font-medium">{pet.owner || 'Unknown Owner'}</p>
+                                <p className={`text-sm font-medium ${isAwaitingOwner ? 'text-amber-600' : ''}`}>{displayOwnerName}</p>
                                 <p className="text-xs text-gray-400">{pet.location || 'Location'}</p>
                             </div>
-                            {canOpenOwnerProfile && (
+                            {isAwaitingOwner ? (
+                                <span className="ml-auto flex items-center gap-1 text-xs text-amber-500 font-medium">
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                    </svg>
+                                    <span className="hidden sm:inline">ยืนยัน</span>
+                                </span>
+                            ) : canOpenOwnerProfile && (
                                 <span className="ml-auto flex items-center gap-1 text-xs text-gray-400">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12h.01M12 12h.01M9 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -723,18 +759,32 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
                         <div className="flex justify-between items-center">
                             <button
                                 type="button"
-                                onClick={handleOwnerProfileClick}
+                                onClick={(e) => {
+                                    if (isAwaitingOwner) {
+                                        e.stopPropagation();
+                                        setClaimModalOpen(true);
+                                    } else {
+                                        handleOwnerProfileClick(e);
+                                    }
+                                }}
                                 onMouseEnter={handleOwnerProfileHover}
-                                disabled={!canOpenOwnerProfile}
-                                className="flex items-center gap-2 disabled:cursor-default hover:opacity-70 transition-opacity"
-                                title={canOpenOwnerProfile ? 'View profile' : undefined}
-                                aria-label={canOpenOwnerProfile ? `View profile for ${pet.owner || 'owner'}` : undefined}
+                                disabled={!canOpenOwnerProfile && !isAwaitingOwner}
+                                className={`flex items-center gap-2 transition-opacity ${isAwaitingOwner
+                                        ? 'cursor-pointer hover:opacity-80'
+                                        : 'disabled:cursor-default hover:opacity-70'
+                                    }`}
+                                title={isAwaitingOwner ? 'คลิกเพื่อยืนยัน' : canOpenOwnerProfile ? 'View profile' : undefined}
+                                aria-label={isAwaitingOwner ? 'Verify ownership' : canOpenOwnerProfile ? `View profile for ${pet.owner || 'owner'}` : undefined}
                             >
-                                <div className="w-5 h-5 rounded-full bg-gray-100 overflow-hidden">
-                                    <div className="w-full h-full bg-gradient-to-tr from-gray-200 to-gray-300" />
+                                <div className={`w-5 h-5 rounded-full overflow-hidden ${isAwaitingOwner ? 'bg-amber-100' : 'bg-gray-100'}`}>
+                                    <div className={`w-full h-full ${isAwaitingOwner ? 'bg-gradient-to-tr from-amber-200 to-amber-300' : 'bg-gradient-to-tr from-gray-200 to-gray-300'}`} />
                                 </div>
-                                <span className="text-xs font-medium text-[#0d0c22] truncate max-w-[100px]">{pet.owner || 'User'}</span>
-                                {canOpenOwnerProfile && (
+                                <span className={`text-xs font-medium truncate max-w-[100px] ${isAwaitingOwner ? 'text-amber-600' : 'text-[#0d0c22]'}`}>{displayOwnerName}</span>
+                                {isAwaitingOwner ? (
+                                    <svg className="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                    </svg>
+                                ) : canOpenOwnerProfile && (
                                     <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h.01M12 12h.01M15 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                     </svg>
