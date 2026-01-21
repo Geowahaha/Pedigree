@@ -18,6 +18,9 @@ export interface MarketplaceListing {
     seller_id: string;
     status: 'active' | 'sold' | 'pending' | 'archived';
     created_at: string;
+    external_link?: string;
+    source?: 'shopee' | 'lazada' | 'other';
+    is_promoted?: boolean;
     seller?: {
         full_name: string;
         avatar_url: string;
