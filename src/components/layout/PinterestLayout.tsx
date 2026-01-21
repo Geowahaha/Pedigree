@@ -226,6 +226,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     // Pinch-to-Zoom State for Mobile
     const [zoomLevel, setZoomLevel] = useState(1);
     const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+    const [isMobile, setIsMobile] = useState(false);
     const initialPinchDistanceRef = useRef<number | null>(null);
     const initialZoomRef = useRef<number>(1);
     const lastPanRef = useRef({ x: 0, y: 0 });
@@ -235,6 +236,14 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const touchStartRef = useRef<{ x: number; y: number } | null>(null);
     const touchStartTimeRef = useRef<number>(0);
+
+    // Detect mobile device
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Mobile header scroll detection - show on scroll up, hide on scroll down
     useEffect(() => {
@@ -1558,7 +1567,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     };
 
     const handleContentTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-        if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
+        if (!isMobile) return;
         if (isImmersiveSearch) return;
 
         // Single touch - for swipe
@@ -1578,7 +1587,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     };
 
     const handleContentTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-        if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
+        if (!isMobile) return;
 
         // Two finger pinch zoom
         if (e.touches.length === 2 && initialPinchDistanceRef.current !== null) {
@@ -1603,7 +1612,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     };
 
     const handleContentTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-        if (typeof window !== 'undefined' && window.innerWidth >= 768) return;
+        if (!isMobile) return;
 
         // Reset pinch tracking
         if (e.touches.length < 2) {
@@ -2449,11 +2458,19 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                                 activeView === 'favorites' ? 'Favorites' :
                                                     activeView === 'products' ? 'Marketplace' : 'Eibpo'}
                                     </h1>
+                                    {/* Full Smart Bar in Header - Including Magic Card */}
+                                    <div className="flex-1 max-w-2xl relative">
+                                        <div className="flex items-center bg-white/95 backdrop-blur-xl border border-gray-200 rounded-full px-2 py-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.08)] ring-1 ring-black/5 hover:shadow-[0_6px_25px_rgba(0,0,0,0.12)] transition-all">
+                                            {/* Magic Card Button - Pink Gradient */}
+                                            <button
+                                                onClick={() => setAddCardModalOpen(true)}
+                                                className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#ea4c89] to-[#ff8fab] flex items-center justify-center text-white shadow-lg shadow-[#ea4c89]/30 hover:scale-110 transition-transform flex-shrink-0"
+                                                title="Create Magic Card"
+                                            >
+                                                <MagicCardIcon />
+                                            </button>
 
-                                    {/* Inline Search Box - Pinterest Style */}
-                                    <div className="flex-1 max-w-xl relative">
-                                        <div className="flex items-center bg-gray-100 rounded-full px-4 py-2.5 border border-transparent hover:border-gray-200 focus-within:border-[#ea4c89] focus-within:bg-white focus-within:shadow-md transition-all">
-                                            <span className="text-lg mr-2">🐾</span>
+                                            {/* Search Input */}
                                             <input
                                                 type="text"
                                                 value={searchQuery}
@@ -2473,24 +2490,33 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                                                     }
                                                 }}
                                                 placeholder={language === 'th' ? 'ค้นหาหรือถาม AI...' : 'Search or ask AI...'}
-                                                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-[#0d0c22] placeholder:text-gray-400"
+                                                className="flex-1 mx-3 bg-transparent border-none outline-none text-sm font-medium text-[#0d0c22] placeholder:text-gray-400"
                                             />
-                                            <button
-                                                onClick={() => {
-                                                    if (searchQuery.trim()) handleSearch({ preventDefault: () => { } } as any);
-                                                }}
-                                                className="p-1.5 rounded-full hover:bg-[#ea4c89]/10 text-[#ea4c89] transition-colors"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                            </button>
-                                            <button
-                                                onClick={() => setActiveView('favorites')}
-                                                className="p-1.5 rounded-full hover:bg-gray-200 text-gray-400 hover:text-[#ea4c89] transition-colors ml-1"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                                </svg>
-                                            </button>
+
+                                            {/* Action Buttons */}
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={() => {
+                                                        if (searchQuery.trim()) handleSearch({ preventDefault: () => { } } as any);
+                                                    }}
+                                                    className="p-2 rounded-full hover:bg-gray-100 text-[#ea4c89] transition-colors"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                                </button>
+                                                <div className="w-px h-6 bg-gray-200 mx-1"></div>
+                                                <button
+                                                    onClick={() => setActiveView('favorites')}
+                                                    className="p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-[#ea4c89] transition-colors relative"
+                                                    title={language === 'th' ? 'รายการโปรด' : 'Favorites'}
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                                                    </svg>
+                                                    {favorites.length > 0 && (
+                                                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#ea4c89] text-white text-[10px] font-bold rounded-full flex items-center justify-center">{favorites.length}</span>
+                                                    )}
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -2572,7 +2598,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                         <div
                             className="max-w-[1800px] mx-auto transition-transform duration-100 ease-out md:transform-none"
                             style={{
-                                transform: typeof window !== 'undefined' && window.innerWidth < 768
+                                transform: isMobile
                                     ? `scale(${zoomLevel}) translate(${panOffset.x / zoomLevel}px, ${panOffset.y / zoomLevel}px)`
                                     : 'none',
                                 transformOrigin: 'center center',
@@ -2598,10 +2624,10 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
                 </main>
             </div >
 
-            {/* Fixed Bottom Smart Bar (Moved outside main wrapper to fix 'fixed' positioning) */}
+            {/* Fixed Bottom Smart Bar - HIDDEN for PC (moved to header) */}
             {
                 !isImmersiveSearch && (
-                    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-2xl z-40 animate-slide-up hidden md:flex flex-col justify-end">
+                    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-2xl z-40 animate-slide-up hidden flex-col justify-end">
 
                         {/* Smart Suggestions Popup - White Theme */}
                         {showSearchSuggestions && (
