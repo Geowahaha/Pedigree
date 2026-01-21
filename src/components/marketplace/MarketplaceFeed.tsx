@@ -168,7 +168,7 @@ const MarketplaceFeed: React.FC = () => {
 
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-xl font-bold text-[#050505]">{category === 'all' ? "Today's Picks" : CATEGORIES.find(c => c.id === category)?.label}</h3>
-                        <span className="text-sm text-gray-500">{listings.length} miles • {user?.user_metadata?.location || 'Bangkok'}</span>
+                        <span className="text-sm text-gray-500">{listings.length} miles • {(user as any)?.user_metadata?.location || 'Bangkok'}</span>
                     </div>
 
                     {loading ? (

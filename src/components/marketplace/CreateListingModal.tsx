@@ -43,7 +43,7 @@ const CreateListingModal: React.FC<CreateListingModalProps> = ({ isOpen, onClose
         category: 'pet_supplies',
         condition: 'new',
         description: '',
-        location: user?.user_metadata?.location || '',
+        location: (user as any)?.user_metadata?.location || '',
     });
 
     if (!isOpen) return null;
