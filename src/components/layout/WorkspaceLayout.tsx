@@ -666,16 +666,16 @@ const WorkspaceLayout: React.FC = () => {
         registrationNumber: dbPet.registration_number || undefined,
         healthCertified: dbPet.health_certified,
         location: dbPet.location || '',
-        owner: dbPet.owner?.full_name || dbPet.owner_name || 'Unknown',
+        owner: typeof dbPet.owner === 'object' && dbPet.owner !== null ? dbPet.owner.full_name : (dbPet.owner || dbPet.owner_name || 'Unknown'),
         owner_id: dbPet.owner_id,
         ownership_status: dbPet.ownership_status,
         claimed_by: dbPet.claimed_by,
         claim_date: dbPet.claim_date,
         verification_evidence: dbPet.verification_evidence,
-        parentIds: dbPet.pedigree ? {
-            sire: dbPet.pedigree.sire_id || undefined,
-            dam: dbPet.pedigree.dam_id || undefined
-        } : undefined
+        parentIds: {
+            sire: dbPet.father_id || undefined, // Use flat fields instead of non-existent .pedigree
+            dam: dbPet.mother_id || undefined
+        }
     });
 
     // ========== LOAD PETS ==========

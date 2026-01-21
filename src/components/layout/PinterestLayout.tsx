@@ -1532,22 +1532,22 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
         setFilteredPets(allPets);
     };
 
-    const mobileTabs: Array<{
-        key: MobileTabKey;
-        label: string;
-        view: ActiveView;
-        category?: MobileCategoryKey;
-        puppyFocus?: 'available' | 'coming';
-    }> = [
-            { key: 'all', label: 'All', view: 'home', category: 'all' },
-            { key: 'dogs', label: 'Dogs', view: 'home', category: 'dogs' },
-            { key: 'cats', label: 'Cats', view: 'home', category: 'cats' },
-            { key: 'puppy-available', label: 'Puppy Available', view: 'puppies', puppyFocus: 'available' },
-            { key: 'puppy-soon', label: 'Puppy Soon', view: 'puppies', puppyFocus: 'coming' },
-            { key: 'horses', label: 'Horses', view: 'home', category: 'horses' },
-            { key: 'cattle', label: 'Cattle', view: 'home', category: 'cattle' },
-            { key: 'exotic', label: 'Exotic', view: 'home', category: 'exotic' },
-        ];
+    // Safeguard: Ensure t is available
+    const safeT = t || ((k: string, f?: string) => f || k);
+    useEffect(() => {
+        if (!t) console.error('EibpoLayout: Translation function t is undefined!');
+    }, [t]);
+
+    const mobileTabs = React.useMemo(() => [
+        { key: 'all' as MobileTabKey, label: safeT('nav.all', 'All'), view: 'home' as ActiveView, category: 'all' as MobileCategoryKey },
+        { key: 'dogs' as MobileTabKey, label: safeT('nav.dogs', 'Dogs'), view: 'home' as ActiveView, category: 'dogs' as MobileCategoryKey },
+        { key: 'cats' as MobileTabKey, label: safeT('nav.cats', 'Cats'), view: 'home' as ActiveView, category: 'cats' as MobileCategoryKey },
+        { key: 'puppy-available' as MobileTabKey, label: safeT('nav.puppy_available', 'Puppy Available'), view: 'puppies' as ActiveView, puppyFocus: 'available' as const },
+        { key: 'puppy-soon' as MobileTabKey, label: safeT('nav.puppy_soon', 'Puppy Soon'), view: 'puppies' as ActiveView, puppyFocus: 'coming' as const },
+        { key: 'horses' as MobileTabKey, label: safeT('nav.horses', 'Horses'), view: 'home' as ActiveView, category: 'horses' as MobileCategoryKey },
+        { key: 'cattle' as MobileTabKey, label: safeT('nav.cattle', 'Cattle'), view: 'home' as ActiveView, category: 'cattle' as MobileCategoryKey },
+        { key: 'exotic' as MobileTabKey, label: safeT('nav.exotic', 'Exotic'), view: 'home' as ActiveView, category: 'exotic' as MobileCategoryKey },
+    ], [safeT]);
 
     const handleMobileTabSelect = (tabKey: MobileTabKey) => {
         const tab = mobileTabs.find((item) => item.key === tabKey);
