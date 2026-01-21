@@ -1750,12 +1750,11 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
         switch (activeView) {
             case 'products':
                 return (
-                    <div className="p-4 md:p-6">
-                        <button onClick={() => setActiveView('home')} className="mb-6 text-gray-400 hover:text-[#0d0c22] flex items-center gap-2 text-sm font-medium transition-colors">
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                            Back
+                    <div className="h-full bg-[#f9f8fd]">
+                        <button onClick={() => setActiveView('home')} className="absolute top-4 right-4 z-[60] bg-white/80 backdrop-blur rounded-full p-2 text-gray-600 hover:text-black shadow-sm lg:hidden">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
-                        <MarketplaceSection onAddToCart={addToCart} onQuickView={handleQuickView} />
+                        <MarketplaceFeed />
                     </div>
                 );
 
