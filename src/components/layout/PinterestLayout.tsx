@@ -132,7 +132,7 @@ const LazyModalFallback = () => (
 // ============ EIBPO LAYOUT (Pinterest + ChatGPT) ============
 const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const { user, savedCart, syncCart } = useAuth();
-    const { language, setLanguage } = useLanguage();
+    const { language, setLanguage, t } = useLanguage();
     const navigate = useNavigate();
     const location = useLocation();
 
