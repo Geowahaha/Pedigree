@@ -21,7 +21,7 @@ VALUES
 ('Ruffwear Front Range Dog Harness', 'Everyday harness that is easy to put on and comfortable for dogs to wear.', 1650, 'THB', 'apparel', 'new', ARRAY['https://images.unsplash.com/photo-1558235208-9df5977ba36e?q=80&w=800&auto=format&fit=crop'], 'Phuket', 'active', auth.uid()),
 ('Flexi New Classic Retractable Leash', 'Freedom for your dog, control for you. 5 meter cord.', 550, 'THB', 'apparel', 'new', ARRAY['https://images.unsplash.com/photo-1601758177266-bc599de87707?q=80&w=800&auto=format&fit=crop'], 'Bangkok', 'active', auth.uid()),
 ('Kurgo Loft Dog Jacket', 'Reversible, water-resistant dog coat. Keeps your pup warm without overheating.', 950, 'THB', 'apparel', 'new', ARRAY['https://images.unsplash.com/photo-1579213838058-c27e94f971c2?q=80&w=800&auto=format&fit=crop'], 'Chiang Rai', 'active', auth.uid()),
-('Sleepypod Clickit Sport Safety Harness', 'Crash-tested dog safety harness for car travel.', 3200, 'THB', 'vehicle', 'new', ARRAY['https://images.unsplash.com/photo-1537151625747-768eb6cf92b2?q=80&w=800&auto=format&fit=crop'], 'Bangkok', 'active', auth.uid()),
+('Sleepypod Clickit Sport Safety Harness', 'Crash-tested dog safety harness for car travel.', 3200, 'THB', 'vehicles', 'new', ARRAY['https://images.unsplash.com/photo-1537151625747-768eb6cf92b2?q=80&w=800&auto=format&fit=crop'], 'Bangkok', 'active', auth.uid()),
 ('Furminator Undercoat Deshedding Tool', 'Reduces loose hair from shedding up to 90%.', 1100, 'THB', 'pet_supplies', 'new', ARRAY['https://images.unsplash.com/photo-1516734212186-a967f81ad0d7?q=80&w=800&auto=format&fit=crop'], 'Pattaya', 'active', auth.uid()),
 
 -- TECH / GADGETS
