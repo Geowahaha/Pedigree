@@ -19,6 +19,7 @@ const VetAIProfilePage = lazy(() => import("./pages/VetAIProfilePage"));
 const PetDetailsPage = lazy(() => import("./pages/PetDetailsPage"));
 const BreederProfilePage = lazy(() => import("./pages/BreederProfilePage"));
 const BreedingMatchPage = lazy(() => import("./pages/BreedingMatchPage"));
+const MarketplacePage = lazy(() => import("./pages/MarketplacePage"));
 const PrivacyPolicyPage = lazy(() => import("./pages/PrivacyPolicyPage"));
 const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
 
@@ -50,6 +51,7 @@ const App = () => (
                     <Route path="/profile/:userId" element={<BreederProfilePage />} />
                     <Route path="/vet-profile/:petId" element={<VetAIProfilePage />} />
                     <Route path="/breeding/:petId" element={<BreedingMatchPage />} />
+                    <Route path="/marketplace" element={<MarketplacePage />} />
                     <Route path="/privacy" element={<PrivacyPolicyPage />} />
                     <Route path="/terms" element={<TermsOfServicePage />} />
                     <Route path="*" element={<NotFound />} />

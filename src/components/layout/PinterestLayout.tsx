@@ -117,6 +117,7 @@ interface ChatRoom {
 
 interface PinterestLayoutProps {
     initialPetId?: string; // For shared links - auto-open this pet's modal
+    initialView?: ActiveView; // For direct navigation (e.g., /marketplace)
 }
 
 const LazyModalFallback = () => (
@@ -138,7 +139,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const location = useLocation();
 
     // State
-    const [activeView, setActiveView] = useState<ActiveView>('home');
+    const [activeView, setActiveView] = useState<ActiveView>(initialView || 'home');
     const [activeCategory, setActiveCategory] = useState<MobileCategoryKey>('all');
     const [activeMobileTab, setActiveMobileTab] = useState<MobileTabKey>('all');
     const [cart, setCart] = useState<CartItem[]>([]);
