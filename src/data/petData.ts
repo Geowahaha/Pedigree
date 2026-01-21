@@ -3,19 +3,29 @@
 export interface Pet {
   id: string;
   name: string;
+  owner_name?: string; // Field from Supabase profiles join or manual input
   breed: string;
   type: 'dog' | 'cat' | 'horse';
   birthDate?: string;
+  birth_date?: string; // DB compatibility
   age?: string | number; // Added for Airtable
   gender: 'male' | 'female';
-  image: string;
+  image?: string;
   image_url?: string; // Sync with Supabase
   color?: string;
   weight?: number; // Added for Airtable
   registrationNumber?: string;
+  registration_number?: string; // DB compatibility
   healthCertified?: boolean;
+  health_certified?: boolean; // DB compatibility
   location: string;
-  owner?: string;
+  owner?: string | {
+    full_name: string;
+    email?: string;
+    verified_breeder?: boolean;
+    avatar_url?: string;
+    location?: string;
+  };
   available?: boolean; // Added for Airtable
   for_sale?: boolean; // Added for Supabase
   price?: number; // Added for Airtable
@@ -37,6 +47,7 @@ export interface Pet {
   verification_evidence?: Record<string, unknown> | null;
   boosted_until?: string | null; // VIP Promotion
   created_at?: string; // Sorting
+  updated_at?: string; // DB compatibility
   mother_id?: string | null;
   father_id?: string | null;
   // Media & External Card Support
@@ -46,6 +57,7 @@ export interface Pet {
   external_link?: string;
   is_sponsored?: boolean;
   likes?: number;
+  is_public?: boolean; // DB compatibility
 }
 
 export interface Product {

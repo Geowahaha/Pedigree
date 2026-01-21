@@ -132,9 +132,9 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                 videoUrl: pet.video_url || '',
                 externalLink: pet.external_link || '',
                 // Admin-only fields
-                ownerName: (pet as any).owner_name || pet.owner || '',
+                ownerName: pet.owner_name || (typeof pet.owner === 'string' ? pet.owner : pet.owner?.full_name) || '',
                 ownerId: pet.owner_id || null,
-                ownershipStatus: (pet as any).ownership_status || 'waiting_owner',
+                ownershipStatus: pet.ownership_status || 'waiting_owner',
             });
         }
     }, [pet]);
@@ -340,8 +340,19 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
             if (isAdmin) {
                 updateData.external_link = editForm.externalLink.trim() || null;
                 updateData.owner_name = editForm.ownerName.trim() || null;
-                updateData.owner_id = editForm.ownerId || null;
-                updateData.ownership_status = editForm.ownershipStatus || 'waiting_owner';
+
+                // Validate ownerId is a UUID before sending to pet update
+                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                if (editForm.ownerId && uuidRegex.test(editForm.ownerId)) {
+                    updateData.owner_id = editForm.ownerId;
+                } else if (!editForm.ownerId) {
+                    updateData.owner_id = null;
+                } else {
+                    console.warn('Invalid Owner ID skipped to prevent 400 error');
+                    // We don't set owner_id if it's invalid name string
+                }
+
+                updateData.ownership_status = editForm.ownershipStatus as any || 'waiting_owner';
             }
 
             // Update pet profile
@@ -869,7 +880,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex-shrink-0" />
                             <div className="min-w-0 flex-1">
                                 <p className={`font-semibold text-gray-900 truncate ${pet.owner_id ? 'group-hover:text-[#ea4c89]' : ''}`}>
-                                    {pet.owner || t('Unknown Owner', 'ไม่ทราบชื่อเจ้าของ')}
+                                    {(typeof pet.owner === 'string' ? pet.owner : pet.owner?.full_name) || pet.owner_name || t('Unknown Owner', 'ไม่ทราบชื่อเจ้าของ')}
                                 </p>
                                 <p className="text-sm text-gray-500 truncate">{pet.location || t('Location', 'สถานที่')}</p>
                             </div>

@@ -1,52 +1,8 @@
 import { supabase } from './supabase';
 
-// Types
-export interface Pet {
-  id: string;
-  owner_id: string;
-  name: string;
-  type: 'dog' | 'cat';
-  breed: string;
-  gender: 'male' | 'female';
-  birth_date: string;
-  color: string | null;
-  registration_number: string | null;
-  health_certified: boolean;
-  location: string | null;
-  image_url: string | null;
-  owner_name?: string | null; // Added for legacy Airtable sync
-  description: string | null;
-  is_public: boolean;
-  for_sale?: boolean;
-  price?: number;
-  ownership_status?: 'verified' | 'waiting_owner' | 'pending_claim' | 'disputed';
-  claimed_by?: string | null;
-  claim_date?: string | null;
-  verification_evidence?: any;
-  created_at: string;
-  updated_at: string;
-  mother_id: string | null;
-  father_id: string | null;
-  owner?: {
-    full_name: string;
-    email: string;
-    verified_breeder: boolean;
-  };
-  // Deprecated support for UI compat
-  pedigree?: {
-    sire_id: string | null;
-    dam_id: string | null;
-  };
-  father_verified_status?: 'pending' | 'verified' | 'rejected';
-  mother_verified_status?: 'pending' | 'verified' | 'rejected';
-  boosted_until?: string | null; // VIP Promotion
-  // Media & External Card Support
-  media_type?: 'image' | 'video';
-  video_url?: string;
-  source?: 'internal' | 'instagram' | 'pinterest' | 'youtube';
-  external_link?: string;
-  is_sponsored?: boolean;
-}
+import { Pet } from '@/data/petData';
+
+export { type Pet };
 
 export interface RelatedBreeder {
   id: string; // owner_id
@@ -137,6 +93,13 @@ async function checkPetDuplicates(params: {
   const name = normalizeText(params.name);
   const duplicates = { registration: [] as any[], name: [] as any[] };
 
+  // UUID validation regex
+  const isValidUUID = (id: string | null | undefined): boolean => {
+    if (!id) return false;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id);
+  };
+
   if (hasValue(registrationNumber)) {
     let query = supabase
       .from('pets')
@@ -147,15 +110,21 @@ async function checkPetDuplicates(params: {
     if (data && data.length) duplicates.registration = data;
   }
 
-  if (hasValue(name) && params.ownerId) {
+  // Only query by owner_id if it's a valid UUID (not a name string)
+  if (hasValue(name) && params.ownerId && isValidUUID(params.ownerId)) {
     let query = supabase
       .from('pets')
       .select('id, name, owner_id')
       .eq('owner_id', params.ownerId)
       .ilike('name', name);
     if (params.excludeId) query = query.neq('id', params.excludeId);
-    const { data } = await query.limit(5);
-    if (data && data.length) duplicates.name = data;
+    const { data, error } = await query.limit(5);
+
+    if (error) {
+      console.error('Error checking duplicate pet name:', error);
+    } else if (data && data.length) {
+      duplicates.name = data;
+    }
   }
 
   return duplicates;
@@ -207,7 +176,7 @@ async function validateParentAges(params: {
   if (!data) return;
 
   for (const parent of data) {
-    const parentDate = parseDateValue(parent.birthday || parent.birth_date);
+    const parentDate = parseDateValue(parent.birthday || (parent as any).birth_date);
     // Skip validation if parent has no birth date (can't determine age)
     if (!parentDate) continue;
 
@@ -595,14 +564,37 @@ export async function updatePet(petId: string, updates: Partial<Pet>) {
     delete payload.health_certified;
   }
 
+  // Prepare DB columns (these columns now exist)
+  const dbPayload: any = {
+    ...payload,
+    updated_at: new Date().toISOString()
+  };
+
   if (duplicateCheckNeeded) {
     const ownerId = updates.owner_id ?? existingRecord?.owner_id ?? null;
     const name = updates.name ?? existingRecord?.name ?? null;
+
+    // UUID validation
+    const isValidUUID = (id: string | null | undefined): boolean => {
+      if (!id) return false;
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(id);
+    };
+
+    // Only set owner_id if it's a valid UUID, otherwise it causes 400 Bad Request
+    if (updates.owner_id !== undefined) {
+      if (updates.owner_id && !isValidUUID(updates.owner_id)) {
+        console.warn(`Invalid owner_id format ignored: ${updates.owner_id}`);
+        delete dbPayload.owner_id;
+        delete payload.owner_id;
+      }
+    }
+
     const registrationNumber = updates.registration_number ?? existingRecord?.registration_number ?? null;
     const duplicates = await checkPetDuplicates({
       registrationNumber,
       name,
-      ownerId,
+      ownerId: isValidUUID(ownerId) ? ownerId : null,
       excludeId: petId
     });
 
@@ -681,36 +673,19 @@ export async function updatePet(petId: string, updates: Partial<Pet>) {
     payload.description = updates.description;
   }
 
-  // Remove fields that don't satisfy DB schema
-  delete payload.owner_name;
-  delete payload.pedigree;
-  delete payload.id; // DB PK, no update
-  delete payload.created_at;
-  delete payload.owner; // Relation object, not a column
-  delete payload.source;
-  delete payload.is_sponsored;
-
-  // Prepare DB columns (these columns now exist)
-  const dbPayload: any = {
-    ...payload,
-    updated_at: new Date().toISOString()
-  };
-
-  // Add media columns if provided
-  if (updates.media_type !== undefined) {
-    dbPayload.media_type = updates.media_type;
-  }
-  if (updates.video_url !== undefined) {
-    dbPayload.video_url = updates.video_url || null;
-  }
-  if (updates.external_link !== undefined) {
-    dbPayload.external_link = updates.external_link || null;
-  }
-
   // Clean up payload fields that were used for column updates
   delete dbPayload.media_type_temp;
   delete dbPayload.video_url_temp;
   delete dbPayload.external_link_temp;
+
+  // Remove fields that don't satisfy DB schema
+  delete dbPayload.owner_name;
+  delete dbPayload.pedigree;
+  delete dbPayload.id; // DB PK, no update
+  delete dbPayload.created_at;
+  delete dbPayload.owner; // Relation object, not a column
+  delete dbPayload.source;
+  delete dbPayload.is_sponsored;
 
   const { data, error } = await supabase
     .from('pets')
