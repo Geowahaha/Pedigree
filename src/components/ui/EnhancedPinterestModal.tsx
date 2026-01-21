@@ -92,6 +92,10 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
         damId: null as string | null,
         videoUrl: '',
         externalLink: '',
+        // Admin-only fields
+        ownerName: '',
+        ownerId: '' as string | null,
+        ownershipStatus: '' as string,
     });
 
     const [comments, setComments] = useState<Comment[]>([]);
@@ -127,6 +131,10 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                 damId: pet.parentIds?.dam || null,
                 videoUrl: pet.video_url || '',
                 externalLink: pet.external_link || '',
+                // Admin-only fields
+                ownerName: (pet as any).owner_name || pet.owner || '',
+                ownerId: pet.owner_id || null,
+                ownershipStatus: (pet as any).ownership_status || 'waiting_owner',
             });
         }
     }, [pet]);
@@ -328,9 +336,12 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                 video_url: trimmedVideoUrl || undefined,
             };
 
-            // Only admin can update external_link
+            // Only admin can update external_link and ownership fields
             if (isAdmin) {
                 updateData.external_link = editForm.externalLink.trim() || null;
+                updateData.owner_name = editForm.ownerName.trim() || null;
+                updateData.owner_id = editForm.ownerId || null;
+                updateData.ownership_status = editForm.ownershipStatus || 'waiting_owner';
             }
 
             // Update pet profile
@@ -355,7 +366,14 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                 parentIds: {
                     sire: editForm.sireId || undefined,
                     dam: editForm.damId || undefined,
-                }
+                },
+                // Admin fields
+                ...(isAdmin ? {
+                    owner: editForm.ownerName || undefined,
+                    owner_name: editForm.ownerName || undefined,
+                    owner_id: editForm.ownerId || undefined,
+                    ownership_status: editForm.ownershipStatus || 'waiting_owner',
+                } : {})
             });
 
             setIsEditingFull(false);
@@ -602,12 +620,12 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                             src={displayImage}
                             petId={pet.id}
                             alt={pet.name}
-                            className={`w-full h-full object-contain ${isEditingFull && isOwner ? 'cursor-pointer' : ''}`}
+                            className={`w-full h-full object-contain ${isEditingFull && (isOwner || isAdmin) ? 'cursor-pointer' : ''}`}
                             onClick={handleCoverImageClick}
                         />
                     ) : (
                         <div
-                            className={`flex flex-col items-center text-white/50 ${isEditingFull && isOwner ? 'cursor-pointer' : ''}`}
+                            className={`flex flex-col items-center text-white/50 ${isEditingFull && (isOwner || isAdmin) ? 'cursor-pointer' : ''}`}
                             onClick={handleCoverImageClick}
                         >
                             <svg className="w-20 h-20 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -618,7 +636,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                         </div>
                     )}
 
-                    {isEditingFull && isOwner && !isVideo && (
+                    {isEditingFull && (isOwner || isAdmin) && !isVideo && (
                         <div
                             className={`absolute inset-0 flex items-center justify-center bg-black/35 transition-opacity pointer-events-none ${imageUploading ? 'opacity-100' : 'opacity-0 hover:opacity-100'}`}
                         >
@@ -782,7 +800,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                 {t('Download image', 'ดาวน์โหลดรูปภาพ')}
                                             </button>
                                         )}
-                                        {isOwner && (
+                                        {(isOwner || isAdmin) && (
                                             <button
                                                 onClick={() => {
                                                     setIsEditingFull(true);
@@ -814,7 +832,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                         </div>
 
                         {/* Save Button (Pinterest Red) */}
-                        {isEditingFull && isOwner && (
+                        {isEditingFull && (isOwner || isAdmin) && (
                             <button
                                 type="button"
                                 onClick={handleSaveFullEdit}
@@ -898,7 +916,7 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                         )}
 
                         {/* Full Edit Mode */}
-                        {isEditingFull && isOwner ? (
+                        {isEditingFull && (isOwner || isAdmin) ? (
                             <div className="my-6 p-6 bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl border border-blue-100">
                                 <h3 className="font-bold text-lg mb-4">{t('Edit Pet Profile', 'แก้ไขโปรไฟล์สัตว์เลี้ยง')}</h3>
 
@@ -1028,6 +1046,61 @@ export const EnhancedPinterestModal: React.FC<EnhancedPinterestModalProps> = ({
                                                 <p className="text-[11px] text-amber-600 mt-1">
                                                     {t('This URL will be used for "Visit Site" button. Leave empty to auto-detect from video URL.', 'URL นี้จะใช้สำหรับปุ่ม "เยี่ยมชมเว็บไซต์" เว้นว่างเพื่อใช้ลิงก์จากวิดีโอ')}
                                                 </p>
+                                            </div>
+                                        )}
+
+                                        {/* Admin-Only Ownership Management */}
+                                        {isAdmin && (
+                                            <div className="p-4 bg-red-50 rounded-xl border border-red-200 space-y-4">
+                                                <h4 className="text-sm font-bold text-red-700 uppercase flex items-center gap-2">
+                                                    🔐 {t('Admin: Ownership Management', 'แอดมิน: จัดการความเป็นเจ้าของ')}
+                                                </h4>
+
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div>
+                                                        <label className="text-xs font-bold text-red-600 uppercase block mb-1.5">
+                                                            {t('Owner Name', 'ชื่อเจ้าของ')}
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={editForm.ownerName}
+                                                            onChange={(e) => setEditForm({ ...editForm, ownerName: e.target.value })}
+                                                            className="w-full px-3 py-2.5 border-2 border-red-200 rounded-xl text-sm focus:border-red-500 outline-none bg-white"
+                                                            placeholder={t('Enter owner name', 'ระบุชื่อเจ้าของ')}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-bold text-red-600 uppercase block mb-1.5">
+                                                            {t('Ownership Status', 'สถานะความเป็นเจ้าของ')}
+                                                        </label>
+                                                        <select
+                                                            value={editForm.ownershipStatus}
+                                                            onChange={(e) => setEditForm({ ...editForm, ownershipStatus: e.target.value })}
+                                                            className="w-full px-3 py-2.5 border-2 border-red-200 rounded-xl text-sm focus:border-red-500 outline-none bg-white"
+                                                        >
+                                                            <option value="waiting_owner">{t('Waiting Owner', 'รอเจ้าของยืนยัน')}</option>
+                                                            <option value="pending_claim">{t('Pending Claim', 'กำลังตรวจสอบคำขอ')}</option>
+                                                            <option value="verified">{t('Verified', 'ยืนยันแล้ว')}</option>
+                                                            <option value="disputed">{t('Disputed', 'มีข้อโต้แย้ง')}</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <label className="text-xs font-bold text-red-600 uppercase block mb-1.5">
+                                                        {t('Owner ID (UUID)', 'รหัสเจ้าของ (UUID)')}
+                                                    </label>
+                                                    <input
+                                                        type="text"
+                                                        value={editForm.ownerId || ''}
+                                                        onChange={(e) => setEditForm({ ...editForm, ownerId: e.target.value || null })}
+                                                        className="w-full px-3 py-2.5 border-2 border-red-200 rounded-xl text-sm focus:border-red-500 outline-none bg-white font-mono"
+                                                        placeholder={t('Leave empty for "waiting owner"', 'เว้นว่างสำหรับ "รอเจ้าของยืนยัน"')}
+                                                    />
+                                                    <p className="text-[11px] text-red-500 mt-1">
+                                                        ⚠️ {t('Changing owner ID will affect ownership. Use with caution.', 'การเปลี่ยน Owner ID จะมีผลต่อความเป็นเจ้าของ ใช้ด้วยความระมัดระวัง')}
+                                                    </p>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
