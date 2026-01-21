@@ -21,7 +21,15 @@ export const translations = {
             myPets: 'My Pets',
             admin: 'Admin Panel',
             notifications: 'Notifications',
-            settings: 'Settings'
+            settings: 'Settings',
+            all: 'All',
+            dogs: 'Dogs',
+            cats: 'Cats',
+            puppy_available: 'Puppy Available',
+            puppy_soon: 'Puppy Soon',
+            horses: 'Horses',
+            cattle: 'Cattle',
+            exotic: 'Exotic'
         },
         hero: {
             headline: "Your Pet's Legacy Starts Here",
@@ -257,7 +265,15 @@ export const translations = {
             myPets: 'สัตว์เลี้ยงของฉัน',
             admin: 'Admin Panel',  // Keep English
             notifications: 'การแจ้งเตือน',
-            settings: 'ตั้งค่า'
+            settings: 'ตั้งค่า',
+            all: 'ทั้งหมด',
+            dogs: 'สุนัข',
+            cats: 'แมว',
+            puppy_available: 'มีลูกสุนัข',
+            puppy_soon: 'เร็วๆ นี้',
+            horses: 'ม้า',
+            cattle: 'ปศุสัตว์',
+            exotic: 'สัตว์แปลก'
         },
         hero: {
             headline: 'เริ่มต้นตำนานสัตว์เลี้ยงของคุณที่นี่',

@@ -27,6 +27,7 @@ import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
 import { ExpandablePetCard } from '../ui/ExpandablePetCard';
 import SearchSection from '../SearchSection';
 import MarketplaceSection from '../MarketplaceSection';
+import MarketplaceFeed from '../marketplace/MarketplaceFeed';
 import PuppyComingSoonSection from '../PuppyComingSoonSection';
 import NotificationPanel from '../NotificationPanel';
 import { boostPet, BOOST_COST } from '@/lib/wallet';
