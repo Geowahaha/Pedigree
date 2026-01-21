@@ -263,9 +263,9 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
     // Helper function to display owner name - show "Awaiting Owner" for system/admin accounts
     const getDisplayOwnerName = () => {
         if (isAwaitingOwner) {
-            return `🔔 ${t('Claim Ownership', 'รอเจ้าของยืนยัน')}`;
+            return `🔔 ${t('ownership.claimOwnership')}`;
         }
-        return pet.owner || t('Unknown Owner', 'ไม่ทราบเจ้าของ');
+        return pet.owner || t('ownership.unknownOwner');
     };
     const displayOwnerName = getDisplayOwnerName();
 
@@ -551,27 +551,27 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
                                 ? 'cursor-pointer hover:bg-amber-50/50 border-amber-200'
                                 : 'disabled:cursor-default hover:bg-gray-50/50'
                                 }`}
-                            title={isAwaitingOwner ? t('Click to verify ownership', 'คลิกเพื่อยืนยันความเป็นเจ้าของ') : canOpenOwnerProfile ? t('View profile', 'ดูโปรไฟล์') : undefined}
+                            title={isAwaitingOwner ? t('ownership.clickToVerify') : canOpenOwnerProfile ? t('ownership.viewProfile') : undefined}
                             aria-label={isAwaitingOwner ? 'Verify ownership' : canOpenOwnerProfile ? `View profile for ${pet.owner || 'owner'}` : undefined}
                         >
                             <div className={`w-10 h-10 rounded-full ${isAwaitingOwner ? 'bg-gradient-to-tr from-amber-200 to-amber-300' : 'bg-gradient-to-tr from-gray-200 to-gray-300'}`} />
                             <div className="flex-1">
                                 <p className={`text-sm font-medium ${isAwaitingOwner ? 'text-amber-600' : ''}`}>{displayOwnerName}</p>
-                                <p className="text-xs text-gray-400">{pet.location || t('Location', 'สถานที่')}</p>
+                                <p className="text-xs text-gray-400">{pet.location || t('ownership.location')}</p>
                             </div>
                             {isAwaitingOwner ? (
                                 <span className="ml-auto flex items-center gap-1 text-xs text-amber-500 font-medium">
                                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                                     </svg>
-                                    <span className="hidden sm:inline">{t('Verify', 'ยืนยัน')}</span>
+                                    <span className="hidden sm:inline">{t('ownership.verify')}</span>
                                 </span>
                             ) : canOpenOwnerProfile && (
                                 <span className="ml-auto flex items-center gap-1 text-xs text-gray-400">
                                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12h.01M12 12h.01M9 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                     </svg>
-                                    <span className="hidden sm:inline">{t('View profile', 'ดูโปรไฟล์')}</span>
+                                    <span className="hidden sm:inline">{t('ownership.viewProfile')}</span>
                                 </span>
                             )}
                         </button>
@@ -784,7 +784,7 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
                                     ? 'cursor-pointer hover:opacity-80'
                                     : 'disabled:cursor-default hover:opacity-70'
                                     }`}
-                                title={isAwaitingOwner ? t('Click to verify', 'คลิกเพื่อยืนยัน') : canOpenOwnerProfile ? t('View profile', 'ดูโปรไฟล์') : undefined}
+                                title={isAwaitingOwner ? t('ownership.clickToVerify') : canOpenOwnerProfile ? t('ownership.viewProfile') : undefined}
                                 aria-label={isAwaitingOwner ? 'Verify ownership' : canOpenOwnerProfile ? `View profile for ${pet.owner || 'owner'}` : undefined}
                             >
                                 <div className={`w-5 h-5 rounded-full overflow-hidden ${isAwaitingOwner ? 'bg-amber-100' : 'bg-gray-100'}`}>

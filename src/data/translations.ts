@@ -88,6 +88,24 @@ export const translations = {
             warning: 'Warning',
             info: 'Info'
         },
+        filters: {
+            all: 'All',
+            video: 'Video',
+            image: 'Image',
+            recent: 'Recent'
+        },
+        ownership: {
+            claimOwnership: 'Claim Ownership',
+            waitingOwner: 'Waiting Owner',
+            verified: 'Verified',
+            pendingClaim: 'Pending Claim',
+            disputed: 'Disputed',
+            clickToVerify: 'Click to verify ownership',
+            verify: 'Verify',
+            viewProfile: 'View profile',
+            unknownOwner: 'Unknown Owner',
+            location: 'Location'
+        },
         pet: {
             name: 'Name',
             breed: 'Breed',
@@ -305,6 +323,24 @@ export const translations = {
             error: 'เกิดข้อผิดพลาด',
             warning: 'คำเตือน',
             info: 'ข้อมูล'
+        },
+        filters: {
+            all: 'ทั้งหมด',
+            video: 'วิดีโอ',
+            image: 'รูปภาพ',
+            recent: 'ล่าสุด'
+        },
+        ownership: {
+            claimOwnership: 'รอเจ้าของยืนยัน',
+            waitingOwner: 'รอเจ้าของยืนยัน',
+            verified: 'ยืนยันแล้ว',
+            pendingClaim: 'กำลังตรวจสอบคำขอ',
+            disputed: 'มีข้อโต้แย้ง',
+            clickToVerify: 'คลิกเพื่อยืนยันความเป็นเจ้าของ',
+            verify: 'ยืนยัน',
+            viewProfile: 'ดูโปรไฟล์',
+            unknownOwner: 'ไม่ทราบเจ้าของ',
+            location: 'สถานที่'
         },
         pet: {
             name: 'ชื่อ',
