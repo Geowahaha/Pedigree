@@ -40,10 +40,24 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, onClick }) => {
                     {listing.title}
                 </h3>
 
-                <div className="flex items-center justify-between mt-1 text-[13px] text-gray-500">
-                    <span className="truncate max-w-[70%]">{listing.location || 'Bangkok'}</span>
-                    <span>{formatDistanceToNow(new Date(listing.created_at), { addSuffix: true })}</span>
-                </div>
+                {listing.external_link ? (
+                    <div className="mt-2">
+                        <a
+                            href={listing.external_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center w-full px-4 py-2 bg-[#ee4d2d] hover:bg-[#d73211] text-white text-sm font-bold rounded-lg transition-colors"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            Buy Now ↗
+                        </a>
+                    </div>
+                ) : (
+                    <div className="flex items-center justify-between mt-1 text-[13px] text-gray-500">
+                        <span className="truncate max-w-[70%]">{listing.location || 'Bangkok'}</span>
+                        <span>{formatDistanceToNow(new Date(listing.created_at), { addSuffix: true })}</span>
+                    </div>
+                )}
             </div>
         </div>
     );
