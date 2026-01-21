@@ -144,6 +144,8 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
     const [breedingMatchPet, setBreedingMatchPet] = useState<Pet | null>(null);
     const [allPets, setAllPets] = useState<Pet[]>([]);
     const [filteredPets, setFilteredPets] = useState<Pet[]>([]);
+    const [mediaFilter, setMediaFilter] = useState<'all' | 'video' | 'image' | 'recent'>('all');
+    const [showMediaFilterMenu, setShowMediaFilterMenu] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
     const [isAiTyping, setIsAiTyping] = useState(false);
@@ -2544,12 +2546,49 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId }) => {
 
                             {/* Filter Tags - Clean Dribbble Pills */}
                             <div className="flex items-center gap-3 mt-4 overflow-x-auto no-scrollbar pb-2">
-                                <button
-                                    onClick={() => setActiveView('home')}
-                                    className={`px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all shadow-sm ${activeView === 'home' ? 'bg-[#0d0c22] text-white' : 'bg-white text-gray-500 hover:text-[#0d0c22] hover:shadow-md'}`}
-                                >
-                                    All
-                                </button>
+                                {/* All Dropdown with Video/Image/Recent options */}
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setShowMediaFilterMenu(!showMediaFilterMenu)}
+                                        className={`px-5 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all shadow-sm flex items-center gap-1.5 ${activeView === 'home' && mediaFilter !== 'all' ? 'bg-[#ea4c89] text-white' : activeView === 'home' ? 'bg-[#0d0c22] text-white' : 'bg-white text-gray-500 hover:text-[#0d0c22] hover:shadow-md'}`}
+                                    >
+                                        {mediaFilter === 'all' && t('All', 'ทั้งหมด')}
+                                        {mediaFilter === 'video' && `🎬 ${t('Video', 'วิดีโอ')}`}
+                                        {mediaFilter === 'image' && `🖼️ ${t('Image', 'รูปภาพ')}`}
+                                        {mediaFilter === 'recent' && `🕐 ${t('Recent', 'ล่าสุด')}`}
+                                        <svg className={`w-3.5 h-3.5 transition-transform ${showMediaFilterMenu ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    {showMediaFilterMenu && (
+                                        <div className="absolute top-full left-0 mt-2 w-40 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+                                            <button
+                                                onClick={() => { setMediaFilter('all'); setShowMediaFilterMenu(false); setActiveView('home'); }}
+                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 ${mediaFilter === 'all' ? 'text-[#ea4c89] font-bold' : 'text-gray-700'}`}
+                                            >
+                                                ✨ {t('All', 'ทั้งหมด')}
+                                            </button>
+                                            <button
+                                                onClick={() => { setMediaFilter('video'); setShowMediaFilterMenu(false); setActiveView('home'); }}
+                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 ${mediaFilter === 'video' ? 'text-[#ea4c89] font-bold' : 'text-gray-700'}`}
+                                            >
+                                                🎬 {t('Video', 'วิดีโอ')}
+                                            </button>
+                                            <button
+                                                onClick={() => { setMediaFilter('image'); setShowMediaFilterMenu(false); setActiveView('home'); }}
+                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 ${mediaFilter === 'image' ? 'text-[#ea4c89] font-bold' : 'text-gray-700'}`}
+                                            >
+                                                🖼️ {t('Image', 'รูปภาพ')}
+                                            </button>
+                                            <button
+                                                onClick={() => { setMediaFilter('recent'); setShowMediaFilterMenu(false); setActiveView('home'); }}
+                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 ${mediaFilter === 'recent' ? 'text-[#ea4c89] font-bold' : 'text-gray-700'}`}
+                                            >
+                                                🕐 {t('Recent', 'ล่าสุด')}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                                 {[
                                     { key: 'dogs', label: '🐕 Dogs', icon: '🐕' },
                                     { key: 'cats', label: '🐱 Cats', icon: '🐱' },
