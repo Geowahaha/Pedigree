@@ -334,7 +334,7 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
                     } border border-gray-100`}
             >
                 {/* Media Content */}
-                <div className={`w-full ${isExpanded ? 'h-[300px]' : 'aspect-[4/5] md:aspect-[3/4]'} relative bg-black`}>
+                <div className={`w-full ${isExpanded ? 'h-[300px]' : ''} relative bg-black text-0`}>
                     {isVideo && pet.video_url ? (
                         <VideoPlayer
                             src={pet.video_url}
@@ -351,12 +351,12 @@ export const ExpandablePetCard: React.FC<ExpandablePetCardProps> = ({
                             src={pet.image}
                             petId={pet.id}
                             alt={pet.name}
-                            className={`w-full h-full object-cover transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'
+                            className={`w-full ${isExpanded ? 'h-full object-cover' : 'h-auto'} transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'
                                 }`}
                             onLoad={() => setImageLoaded(true)}
                         />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-50">
+                        <div className="w-full aspect-[4/5] flex items-center justify-center bg-gray-50">
                             <span className="text-4xl opacity-30">🐕</span>
                         </div>
                     )}

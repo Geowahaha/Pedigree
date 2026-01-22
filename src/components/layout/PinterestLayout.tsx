@@ -28,6 +28,8 @@ import { ExpandablePetCard } from '../ui/ExpandablePetCard';
 import SearchSection from '../SearchSection';
 import MarketplaceSection from '../MarketplaceSection';
 import MarketplaceFeed from '../marketplace/MarketplaceFeed';
+import MagicAdCard from '../marketplace/MagicAdCard';
+import CreateMagicAdModal from '../modals/CreateMagicAdModal';
 import PuppyComingSoonSection from '../PuppyComingSoonSection';
 import NotificationPanel from '../NotificationPanel';
 import { boostPet, BOOST_COST } from '@/lib/wallet';
@@ -222,6 +224,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId, initialView
     // Wallet State
     const [walletModalOpen, setWalletModalOpen] = useState(false);
     const [addCardModalOpen, setAddCardModalOpen] = useState(false);
+    const [magicAdModalOpen, setMagicAdModalOpen] = useState(false);
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [petToDelete, setPetToDelete] = useState<Pet | null>(null);
     const [boostConfirmPet, setBoostConfirmPet] = useState<Pet | null>(null);
@@ -2077,35 +2080,55 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId, initialView
                             </div>
                         )}
 
-                        {/* Masonry Grid - Click Opens Pinterest Modal */}
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-[clamp(8px,2vw,12px)] sm:gap-4 md:gap-6">
+
+
+                        {/* Masonry Grid - Pinterest Style (CSS Columns) */}
+                        <div className="columns-2 sm:columns-3 md:columns-3 lg:columns-4 xl:columns-5 gap-[clamp(8px,2vw,12px)] sm:gap-4 md:gap-6 space-y-[clamp(8px,2vw,12px)] sm:space-y-4 md:space-y-6">
+
+                            {/* Insert Magic Ad Card as the 2nd item (visual only) */}
+                            {visiblePets.length > 0 && (
+                                <div className="break-inside-avoid mb-[clamp(8px,2vw,12px)] sm:mb-4 md:mb-6">
+                                    <MagicAdCard onClick={() => setMagicAdModalOpen(true)} />
+                                </div>
+                            )}
+
                             {visiblePets.map((pet) => (
-                                <ExpandablePetCard
-                                    key={pet.id}
-                                    pet={pet}
-                                    isExpanded={false} // Never expand inline
-                                    onToggle={() => handleViewPetDetails(pet)} // Open Pinterest modal!
-                                    isLiked={favorites.includes(pet.id)}
-                                    isOwner={user?.id === (pet as any).owner_id}
-                                    isAdmin={Boolean(user && (user.email === 'geowahaha@gmail.com' || user.email === 'truesaveus@hotmail.com' || user.profile?.is_admin))}
-                                    allPets={allPets}
-                                    onUpdateParents={async (sireId, damId) => {
-                                        // Update in database (implement this)
-                                        console.log('Updating parents:', { petId: pet.id, sireId, damId });
-                                        // TODO: Call Supabase API to update
-                                    }}
-                                    onPedigreeClick={() => handleViewPedigree(pet)}
-                                    onChatClick={() => handleChatWithOwner(pet)}
-                                    onLikeClick={() => handleAddToFavorites(pet.id)}
-                                    onCommentClick={() => handleViewPetDetails(pet, 'comments')}
-                                    onEditClick={() => handleViewPetDetails(pet, 'edit')}
-                                    onMatchClick={() => navigate(`/breeding/${pet.id}`)}
-                                    onVetClick={() => navigate(`/vet-profile/${pet.id}`)}
-                                    onMagicCardClick={() => setAddCardModalOpen(true)}
-                                    onDeleteClick={() => handleDeleteClick(pet)}
-                                />
+                                <div key={pet.id} className="break-inside-avoid mb-[clamp(8px,2vw,12px)] sm:mb-4 md:mb-6">
+                                    <ExpandablePetCard
+                                        pet={pet}
+                                        isExpanded={false} // Never expand inline
+                                        // ... existing props ...
+                                        onToggle={() => handleViewPetDetails(pet)}
+                                        isLiked={favorites.includes(pet.id)}
+                                        isOwner={user?.id === (pet as any).owner_id}
+                                        isAdmin={Boolean(user && (user.email === 'geowahaha@gmail.com' || user.email === 'truesaveus@hotmail.com' || user.profile?.is_admin))}
+                                        allPets={allPets}
+                                        onUpdateParents={async (sireId, damId) => {
+                                            console.log('Updating parents:', { petId: pet.id, sireId, damId });
+                                        }}
+                                        onPedigreeClick={() => handleViewPedigree(pet)}
+                                        onChatClick={() => handleChatWithOwner(pet)}
+                                        onLikeClick={() => handleAddToFavorites(pet.id)}
+                                        onCommentClick={() => handleViewPetDetails(pet, 'comments')}
+                                        onEditClick={() => handleViewPetDetails(pet, 'edit')}
+                                        onMatchClick={() => navigate(`/breeding/${pet.id}`)}
+                                        onVetClick={() => navigate(`/vet-profile/${pet.id}`)}
+                                        onMagicCardClick={() => setAddCardModalOpen(true)}
+                                        onDeleteClick={() => handleDeleteClick(pet)}
+                                    />
+                                </div>
                             ))}
                         </div>
+
+                        {/* Modals */}
+                        <CreateMagicAdModal
+                            isOpen={magicAdModalOpen}
+                            onClose={() => setMagicAdModalOpen(false)}
+                            // Passing ALL pets for demo so user can find "กระทิง" even if not logged in as the owner
+                            userPets={allPets}
+                        />
+
+
 
                         {/* Load more */}
                         {hasMore && (

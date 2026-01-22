@@ -432,19 +432,20 @@ const BreederProfileModal: React.FC<BreederProfileModalProps> = ({ isOpen, onClo
                             {activeTab === 'pets' && (
                                 <div className="columns-2 md:columns-3 xl:columns-4 gap-4 space-y-4">
                                     {pets.length > 0 ? pets.map(pet => (
-                                        <PetCard
-                                            key={pet.id}
-                                            pet={pet}
-                                            isOwner={isOwnProfile}
-                                            onClick={() => { onClose(); onViewPet?.(pet); }}
-                                            onPedigreeClick={() => { onClose(); onViewPet?.(pet); }}
-                                            onChatClick={() => { }} // Handle chat if viewing other's profile
-                                            onLikeClick={() => { }} // Handle like
-                                            onCommentClick={() => { onClose(); onViewPet?.(pet, 'comments'); }}
-                                            onEditClick={() => { onClose(); onViewPet?.(pet, 'edit'); }}
-                                            onBoostClick={() => window.dispatchEvent(new CustomEvent('openBoostModal', { detail: { pet } }))} // Hacky but works if modal matches
-                                            onDeleteClick={() => handleDeletePet(pet.id, pet.name)}
-                                        />
+                                        <div key={pet.id} className="break-inside-avoid mb-4">
+                                            <PetCard
+                                                pet={pet}
+                                                isOwner={isOwnProfile}
+                                                onClick={() => { onClose(); onViewPet?.(pet); }}
+                                                onPedigreeClick={() => { onClose(); onViewPet?.(pet); }}
+                                                onChatClick={() => { }} // Handle chat if viewing other's profile
+                                                onLikeClick={() => { }} // Handle like
+                                                onCommentClick={() => { onClose(); onViewPet?.(pet, 'comments'); }}
+                                                onEditClick={() => { onClose(); onViewPet?.(pet, 'edit'); }}
+                                                onBoostClick={() => window.dispatchEvent(new CustomEvent('openBoostModal', { detail: { pet } }))} // Hacky but works if modal matches
+                                                onDeleteClick={() => handleDeletePet(pet.id, pet.name)}
+                                            />
+                                        </div>
                                     )) : (
                                         <div className="col-span-full py-12 text-center text-[#B8B8B8]/40 italic">No pets found.</div>
                                     )}
