@@ -38,20 +38,31 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
 
         // Mock Generation
         setTimeout(() => {
+            const mockUrl = "https://replicate.delivery/pbxt/MockVideoResult.mp4";
+            setResultVideoUrl(mockUrl); // Set content for the Result Popup
             const mockResult = {
                 id: Math.random().toString(),
                 pet: selectedPet,
                 product: selectedProduct,
-                videoUrl: "https://replicate.delivery/pbxt/MockVideoResult.mp4",
+                videoUrl: mockUrl,
                 timestamp: new Date().toISOString()
             };
 
-            // Auto-Post / Callback
+            // Auto-Post / Callback (but we stay open)
             if (onAdGenerated) onAdGenerated(mockResult);
 
             setIsGenerating(false);
-            onClose(); // Auto close as requested ("automatic to home page")
+            // onClose(); // <-- REMOVED auto-close. Result Popup rendered by returned logic.
         }, 3000);
+    };
+
+    const handleDownload = () => {
+        const link = document.createElement('a');
+        link.href = resultVideoUrl || "";
+        link.download = `MagicAd-${selectedPet?.name}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,6 +127,54 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
                                 <div className="text-[10px] text-green-400 font-bold">+50 TRD Reward</div>
                             </div>
                         ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    }
+
+    // Sub-Screen: Result View (Floating Popup)
+    if (resultVideoUrl) {
+        return (
+            <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+                <DialogContent className="sm:max-w-md bg-transparent border-none shadow-none p-0 flex flex-col items-center justify-center focus:outline-none">
+                    {/* Floating Card */}
+                    <div className="bg-[#0D0D0D] border border-purple-500/50 rounded-3xl overflow-hidden shadow-2xl shadow-purple-500/20 w-full relative animate-in zoom-in-95 duration-300">
+                        {/* Success Badge */}
+                        <div className="absolute top-4 right-4 z-20 bg-green-500/90 text-black text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 shadow-lg animate-bounce">
+                            <span>🚀</span> Posted to Feed
+                        </div>
+
+                        {/* Video */}
+                        <div className="aspect-[9/16] w-full bg-black relative">
+                            {/* In a real app we would play the video here */}
+                            <video
+                                src={resultVideoUrl}
+                                className="w-full h-full object-cover"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                            />
+                            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-6 pt-20 text-center">
+                                <h3 className="text-2xl font-bold text-white mb-1">✨ Magic Ad Ready!</h3>
+                                <p className="text-gray-300 text-sm">Everyone is watching {selectedPet?.name}!</p>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="p-4 bg-[#1A1A1A] flex gap-3">
+                            <button onClick={handleDownload} className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
+                                <Upload className="rotate-180" size={18} /> Download
+                            </button>
+                            <button className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-lg shadow-purple-600/20">
+                                <span>🔗</span> Share Link
+                            </button>
+                        </div>
+
+                        <button onClick={onClose} className="absolute top-4 left-4 z-20 bg-black/50 hover:bg-black/70 p-2 rounded-full text-white/70 hover:text-white transition-colors">
+                            ✕
+                        </button>
                     </div>
                 </DialogContent>
             </Dialog>
