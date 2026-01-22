@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Pet } from '@/data/petData';
-import { SmartImage } from '@/components/ui/SmartImage';
+import SmartImage from '@/components/ui/SmartImage';
 import { supabase } from '@/lib/supabase';
 import { MarketplaceListing } from '../marketplace/MarketplaceFeed';
 
