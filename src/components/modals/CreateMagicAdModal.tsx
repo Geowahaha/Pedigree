@@ -48,6 +48,27 @@ const PROMPT_PRESETS = [
     'Problem and solution, warm ending',
     'Cozy, calm, family-friendly vibe'
 ];
+const TEMPLATE_PROMPT = [
+    'PROMPT:',
+    '8s ultra-photoreal vertical 9:16 smartphone POV, single continuous shot, no cuts, daylight at an open side door of a vintage VW van.',
+    "STRICT IDENTITY LOCK: The dog must be the exact same Thai Ridgeback as the reference image, no reinterpretation. Preserve the dog's stern/serious/alert facial expression exactly like the reference. Preserve upright pointed ears (ears up, rigid, alert), identical ear size and ear angle, identical head proportions, identical brow ridge and forehead wrinkle pattern, identical eye shape and eye spacing, identical muzzle length and nose size.",
+    'Do not change emotion: keep the same confident, focused, slightly intense look-not sad, not gentle-smiling, not submissive.',
+    '',
+    'Anti-jitter continuity rule: maintain consistent facial geometry frame-to-frame; no morphing, no wobble, no drifting proportions; smooth natural motion only.',
+    '',
+    'Timeline (no cuts):',
+    '0-1s dog holds eye contact; tiny ear twitch.',
+    '1-3s slow careful step down from van.',
+    '3-4.2s 1-2 steps closer, sits facing owner.',
+    '4.2-6.2s owner hands enter; dog places one paw slowly onto hand, hold contact.',
+    '6.2-7.2s dog stares into camera (\\u0e08\\u0e49\\u0e2d\\u0e07\\u0e21\\u0e32\\u0e17\\u0e35\\u0e48\\u0e01\\u0e25\\u0e49\\u0e2d\\u0e07), blinks exactly once.',
+    '7.2-8s simple soft dissolve fade-out (no particles, no glow, no glitch), hands remain trembling.',
+    '',
+    'Smartphone realism: subtle handheld micro-shake, mild autofocus breathing once, natural daylight shadows, realistic fur detail, no dramatic grading, no text.',
+    '',
+    'NEGATIVE:',
+    'sad, droopy ears, ears down, floppy ears, submissive eyes, different wrinkles, fewer wrinkles, different head shape, different muzzle, identity drift, morphing, jitter, wobble, inconsistent anatomy, CGI, cartoon, glitch, particles, magic.'
+].join('\n');
 
 const shuffleArray = <T,>(items: T[]): T[] => {
     const copy = [...items];
@@ -222,7 +243,7 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
     const [audioStatus, setAudioStatus] = useState<'idle' | 'fetching' | 'ready' | 'error'>('idle');
 
     const [showAdvanced, setShowAdvanced] = useState(false);
-    const [promptText, setPromptText] = useState('');
+    const [promptText, setPromptText] = useState(TEMPLATE_PROMPT);
     const isAdmin = user?.profile?.role === 'admin';
     const canUseAnyAffiliate = Boolean(isAdmin || user?.profile?.verified_breeder);
     const canGenerateVideo = Boolean(isAdmin || user?.profile?.verified_breeder);
@@ -273,7 +294,7 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
             setIsSearching(false);
             setSearchError(null);
             setShowAdvanced(false);
-            setPromptText('');
+            setPromptText(TEMPLATE_PROMPT);
             setAudioMode('auto');
             setSunoLink('');
             setAudioFile(null);
@@ -542,9 +563,10 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
             return;
         }
 
-        const fallbackPrompt = promptText.trim().length > 0
-            ? promptText.trim()
-            : `Short 10-12s vertical ad featuring ${selectedPet.name} with ${selectedProduct.title}.`;
+        const trimmedPrompt = promptText.trim();
+        const fallbackPrompt = trimmedPrompt.length > 0
+            ? trimmedPrompt
+            : TEMPLATE_PROMPT;
 
         const pollPrediction = async (predictionId: string) => {
             const maxAttempts = 40;
