@@ -2126,6 +2126,12 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId, initialView
                             onClose={() => setMagicAdModalOpen(false)}
                             // Passing ALL pets for demo so user can find "กระทิง" even if not logged in as the owner
                             userPets={allPets}
+                            onAdGenerated={(adData) => {
+                                console.log("Ad Generated & Auto-Posted:", adData);
+                                setMagicAdModalOpen(false); // Auto close
+                                // In real app: Add `adData` to `visiblePets` or a separate `ads` state to display immediately
+                                alert("Success! Your Magic Ad has been created and posted to the feed.");
+                            }}
                         />
 
 

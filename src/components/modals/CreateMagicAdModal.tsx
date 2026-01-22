@@ -4,221 +4,218 @@ import { Pet } from '@/data/petData';
 import SmartImage from '@/components/ui/SmartImage';
 import { supabase } from '@/lib/supabase';
 import { MarketplaceListing } from '../marketplace/MarketplaceFeed';
+import { Loader2, Upload, Plus } from 'lucide-react';
 
 interface CreateMagicAdModalProps {
     isOpen: boolean;
     onClose: () => void;
     userPets: Pet[];
+    onAdGenerated?: (adData: any) => void;
 }
 
-const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose, userPets }) => {
-    const [step, setStep] = useState<1 | 2 | 3>(1);
+const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose, userPets, onAdGenerated }) => {
     const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
-    const [uploadedImage, setUploadedImage] = useState<string | null>(null); // Kept as it was in original, not explicitly removed
     const [selectedProduct, setSelectedProduct] = useState<MarketplaceListing | null>(null);
     const [products, setProducts] = useState<MarketplaceListing[]>([]);
-    const [loadingProducts, setLoadingProducts] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [resultVideoUrl, setResultVideoUrl] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
+
+    // Selecting Mode
+    const [isSelectingPet, setIsSelectingPet] = useState(false);
+    const [isSelectingProduct, setIsSelectingProduct] = useState(false);
 
     useEffect(() => {
-        if (isOpen && step === 2) {
-            fetchProducts();
-        }
-    }, [isOpen, step]);
+        if (isOpen) fetchProducts();
+    }, [isOpen]);
 
     const fetchProducts = async () => {
-        setLoadingProducts(true);
-        const { data, error } = await supabase
-            .from('marketplace_listings')
-            .select('*')
-            .limit(20);
-
-        if (data) {
-            setProducts(data);
-        }
-        if (error) {
-            console.error("Error fetching marketplace listings:", error);
-        }
-        setLoadingProducts(false);
+        const { data } = await supabase.from('marketplace_listings').select('*').limit(20);
+        if (data) setProducts(data);
     };
 
     const handleGenerate = async () => {
+        if (!selectedPet || !selectedProduct) return;
         setIsGenerating(true);
-        setStep(3);
 
-        // TODO: Call actual Replicate API (via Edge Function)
-        // For now, mock success after 4 seconds
+        // Mock Generation
         setTimeout(() => {
-            setResultVideoUrl("https://replicate.delivery/pbxt/MockVideoResult.mp4");
+            const mockResult = {
+                id: Math.random().toString(),
+                pet: selectedPet,
+                product: selectedProduct,
+                videoUrl: "https://replicate.delivery/pbxt/MockVideoResult.mp4",
+                timestamp: new Date().toISOString()
+            };
+
+            // Auto-Post / Callback
+            if (onAdGenerated) onAdGenerated(mockResult);
+
             setIsGenerating(false);
-        }, 4000);
+            onClose(); // Auto close as requested ("automatic to home page")
+        }, 3000);
     };
 
-    // Filter pets based on search
-    const filteredPets = userPets.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.breed?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Mock: Auto-add to "My Pets"
+            const newPet: Pet = {
+                id: `new-${Date.now()}`,
+                name: "New Pet", // Prompt for name in real app
+                breed: "Unknown",
+                type: "dog",
+                gender: "male",
+                image: URL.createObjectURL(file),
+                location: "Bangkok",
+                owner_id: "current-user",
+            };
+            // In real app: await uploadToSupabase(file) -> await insertPet(newPet)
+            setSelectedPet(newPet);
+            setIsSelectingPet(false);
+        }
+    };
 
+    // Sub-Screen: Pet Selector
+    if (isSelectingPet) {
+        return (
+            <Dialog open={isOpen} onOpenChange={() => setIsSelectingPet(false)}>
+                <DialogContent className="max-w-2xl bg-[#0D0D0D] text-white border-purple-500/20 h-[80vh] flex flex-col">
+                    <DialogHeader><DialogTitle>Select Your Star</DialogTitle></DialogHeader>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-4 overflow-y-auto flex-1 p-1">
+                        <label className="aspect-square rounded-xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-colors">
+                            <Upload className="mb-2 text-purple-400" />
+                            <span className="text-xs text-center text-gray-400">Upload New</span>
+                            <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                        </label>
+                        {userPets.map(pet => (
+                            <div key={pet.id} onClick={() => { setSelectedPet(pet); setIsSelectingPet(false); }}
+                                className="aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-white/10 hover:border-purple-500 relative group">
+                                <SmartImage src={pet.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                                <div className="absolute bottom-0 inset-x-0 bg-black/60 p-1 text-xs truncate text-center">{pet.name}</div>
+                            </div>
+                        ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    }
+
+    // Sub-Screen: Product Selector
+    if (isSelectingProduct) {
+        return (
+            <Dialog open={isOpen} onOpenChange={() => setIsSelectingProduct(false)}>
+                <DialogContent className="max-w-2xl bg-[#0D0D0D] text-white border-purple-500/20 h-[80vh] flex flex-col">
+                    <DialogHeader><DialogTitle>Select Product</DialogTitle></DialogHeader>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 overflow-y-auto flex-1 p-1">
+                        {products.map(prod => (
+                            <div key={prod.id} onClick={() => { setSelectedProduct(prod); setIsSelectingProduct(false); }}
+                                className="p-3 rounded-xl border border-white/10 bg-white/5 hover:border-purple-500 cursor-pointer flex flex-col gap-2">
+                                <div className="aspect-square bg-white rounded-lg overflow-hidden">
+                                    {prod.image_url ? <img src={prod.image_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-2xl">📦</div>}
+                                </div>
+                                <div className="text-xs font-bold line-clamp-1">{prod.title}</div>
+                                <div className="text-[10px] text-green-400 font-bold">+50 TRD Reward</div>
+                            </div>
+                        ))}
+                    </div>
+                </DialogContent>
+            </Dialog>
+        );
+    }
+
+    // Main Dashboard
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-2xl bg-[#0D0D0D] border border-purple-500/20 text-white p-0 overflow-hidden h-[80vh] sm:h-auto flex flex-col">
+            <DialogContent className="sm:max-w-3xl bg-[#0D0D0D] border border-purple-500/20 text-white p-0 overflow-hidden shadow-2xl">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
 
-                <div className="p-6 flex-1 overflow-y-auto">
-                    <DialogHeader className="mb-6">
-                        <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                            <span className="text-3xl">✨</span>
+                <div className="p-8 flex flex-col items-center">
+                    <DialogHeader className="mb-8 text-center">
+                        <DialogTitle className="text-3xl font-bold flex items-center justify-center gap-3">
+                            <span className="text-4xl">✨</span>
                             <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
                                 Magic Ad Creator
                             </span>
                         </DialogTitle>
-                        <p className="text-gray-400 text-sm">
-                            Turn '{selectedPet?.name || 'your pet'}' into a superstar.
-                        </p>
+                        <p className="text-gray-400 mt-2">Create viral ads in one click. Auto-posts to feed.</p>
                     </DialogHeader>
 
-                    {/* Step 1: Select Pet */}
-                    {step === 1 && (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h3 className="text-sm font-bold uppercase tracking-wider text-purple-400">1. Choose your Star</h3>
-                                <input
-                                    type="text"
-                                    placeholder="Search pets..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-xs focus:border-purple-500 outline-none w-40"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
-                                {filteredPets.map(pet => (
-                                    <div
-                                        key={pet.id}
-                                        className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${selectedPet?.id === pet.id ? 'border-purple-500 ring-2 ring-purple-500/30' : 'border-white/10 hover:border-white/30'}`}
-                                        onClick={() => setSelectedPet(pet)}
-                                    >
-                                        <SmartImage src={pet.image} className="w-full h-full object-cover" />
-                                        <div className="absolute bottom-0 inset-x-0 bg-black/60 p-2 text-xs font-bold truncate">
-                                            {pet.name}
-                                        </div>
+                    {/* Split View */}
+                    <div className="flex flex-col sm:flex-row gap-6 w-full mb-8">
+                        {/* Left: Pet */}
+                        <div
+                            onClick={() => setIsSelectingPet(true)}
+                            className={`flex-1 aspect-[4/5] sm:aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all group relative overflow-hidden ${selectedPet ? 'border-purple-500 bg-purple-500/10' : 'border-white/20 hover:border-white/40 hover:bg-white/5'}`}
+                        >
+                            {selectedPet ? (
+                                <>
+                                    <SmartImage src={selectedPet.image} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity" />
+                                    <div className="relative z-10 text-center">
+                                        <div className="text-2xl font-bold drop-shadow-lg">{selectedPet.name}</div>
+                                        <div className="text-xs text-purple-200 uppercase tracking-widest mt-1">Star</div>
                                     </div>
-                                ))}
-                                {/* Upload Option */}
-                                <div className="aspect-square rounded-xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 hover:border-purple-500/50 transition-colors">
-                                    <span className="text-2xl mb-2">📸</span>
-                                    <span className="text-xs text-center text-gray-400 px-2">Upload Photo</span>
-                                </div>
-                            </div>
-
-                            <button
-                                disabled={!selectedPet && !uploadedImage}
-                                onClick={() => setStep(2)}
-                                className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold mt-4 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
-                            >
-                                Next: Choose Product
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Step 2: Select Product */}
-                    {step === 2 && (
-                        <div className="space-y-4">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-purple-400">2. Choose Product to Promote</h3>
-
-                            {loadingProducts ? (
-                                <div className="py-10 text-center text-gray-400">Loading products...</div>
+                                    <div className="absolute bottom-3 right-3 bg-black/50 p-2 rounded-full hover:bg-black/70"><Upload size={14} /></div>
+                                </>
                             ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-1">
-                                    {products.map((prod) => (
-                                        <div
-                                            key={prod.id}
-                                            className={`p-3 rounded-xl border bg-white/5 cursor-pointer transition-all flex flex-col ${selectedProduct?.id === prod.id ? 'border-purple-500 bg-purple-500/10' : 'border-white/10 hover:border-white/20'}`}
-                                            onClick={() => setSelectedProduct(prod)}
-                                        >
-                                            <div className="aspect-square bg-white rounded-lg mb-2 overflow-hidden relative">
-                                                {prod.image_url ? (
-                                                    <img src={prod.image_url} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-2xl bg-gray-800">📦</div>
-                                                )}
-                                                {selectedProduct?.id === prod.id && (
-                                                    <div className="absolute inset-0 bg-purple-500/20 flex items-center justify-center">
-                                                        <div className="bg-purple-500 text-white rounded-full p-1">
-                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <p className="text-xs font-bold text-gray-200 line-clamp-2 mb-1">{prod.title}</p>
-                                            <div className="mt-auto flex justify-between items-center">
-                                                <span className="text-[10px] text-gray-400">฿{prod.price}</span>
-                                                <span className="text-[10px] text-green-400 font-bold">+50 TRD</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className="flex gap-3 mt-4 pt-4 border-t border-white/10">
-                                <button onClick={() => setStep(1)} className="px-4 py-3 bg-white/10 rounded-xl text-sm font-bold hover:bg-white/20">Back</button>
-                                <button
-                                    disabled={!selectedProduct}
-                                    onClick={handleGenerate}
-                                    className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                                >
-                                    <span>🎥</span> Generate Magic Ad
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Step 3: Generating / Result */}
-                    {step === 3 && (
-                        <div className="text-center py-10 flex flex-col items-center justify-center h-full">
-                            {isGenerating ? (
-                                <div className="flex flex-col items-center">
-                                    <div className="relative w-24 h-24 mb-8">
-                                        <div className="absolute inset-0 border-4 border-purple-500/30 rounded-full"></div>
-                                        <div className="absolute inset-0 border-4 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <span className="text-2xl animate-bounce">✨</span>
-                                        </div>
+                                <>
+                                    <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                        <span className="text-3xl">🐶</span>
                                     </div>
-                                    <h3 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent animate-pulse mb-2">
-                                        Creating Magic...
-                                    </h3>
-                                    <p className="text-gray-400 text-sm max-w-xs mx-auto">
-                                        AI is analyzing <b>{selectedPet?.name}</b> and animating them with <b>{selectedProduct?.title}</b>...
-                                    </p>
-                                    <div className="mt-8 text-xs text-gray-500">Estimated time: ~2 minutes</div>
-                                </div>
-                            ) : (
-                                <div className="space-y-6 w-full max-w-md">
-                                    <h3 className="text-2xl font-bold text-white">Your Ad is Ready! 🎉</h3>
-                                    <div className="aspect-video bg-black rounded-xl overflow-hidden relative group shadow-2xl shadow-purple-500/20 border border-purple-500/30">
-                                        {/* Placeholder Video Result */}
-                                        <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
-                                            {/* In real app, use <video> here */}
-                                            <span className="text-6xl">▶️</span>
-                                        </div>
-                                        <p className="absolute bottom-4 left-0 right-0 text-center text-xs text-white/70">Mock Video Result</p>
-                                    </div>
-
-                                    <div className="flex gap-3">
-                                        <button className="flex-1 py-3 bg-gray-800 rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors">Download</button>
-                                        <button className="flex-1 py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl text-sm font-bold hover:shadow-lg shadow-green-500/20 transition-all flex items-center justify-center gap-2">
-                                            <span>🚀</span> Post (+100 TRD)
-                                        </button>
-                                    </div>
-                                    <button onClick={() => setStep(1)} className="text-xs text-gray-500 underline hover:text-white">Create Another</button>
-                                </div>
+                                    <span className="font-bold text-lg">Select Pet</span>
+                                    <span className="text-xs text-gray-500 mt-1">or upload new photo</span>
+                                </>
                             )}
                         </div>
-                    )}
+
+                        {/* Center: Plus Icon */}
+                        <div className="hidden sm:flex items-center justify-center">
+                            <Plus className="text-white/20" size={32} />
+                        </div>
+
+                        {/* Right: Product */}
+                        <div
+                            onClick={() => setIsSelectingProduct(true)}
+                            className={`flex-1 aspect-[4/5] sm:aspect-square rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all group relative overflow-hidden ${selectedProduct ? 'border-pink-500 bg-pink-500/10' : 'border-white/20 hover:border-white/40 hover:bg-white/5'}`}
+                        >
+                            {selectedProduct ? (
+                                <>
+                                    {selectedProduct.image_url && <img src={selectedProduct.image_url} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity" />}
+                                    <div className="relative z-10 text-center px-4">
+                                        <div className="text-xl font-bold drop-shadow-lg line-clamp-2">{selectedProduct.title}</div>
+                                        <div className="text-xs text-pink-200 uppercase tracking-widest mt-1">Product</div>
+                                    </div>
+                                    <div className="absolute bottom-3 right-3 bg-black/50 p-2 rounded-full hover:bg-black/70"><Upload size={14} /></div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                        <span className="text-3xl">📦</span>
+                                    </div>
+                                    <span className="font-bold text-lg">Select Product</span>
+                                    <span className="text-xs text-gray-500 mt-1">to promote</span>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Generate Button */}
+                    <button
+                        disabled={!selectedPet || !selectedProduct || isGenerating}
+                        onClick={handleGenerate}
+                        className="w-full sm:w-auto px-12 py-4 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full font-bold text-lg shadow-lg hover:shadow-purple-500/25 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
+                    >
+                        {isGenerating ? (
+                            <>
+                                <Loader2 className="animate-spin" />
+                                Creating Magic...
+                            </>
+                        ) : (
+                            <>
+                                <span>✨</span> Generate Magic Ad
+                            </>
+                        )}
+                    </button>
+
+                    {isGenerating && <p className="text-xs text-gray-500 mt-4 animate-pulse">AI is dreaming up your video...</p>}
                 </div>
             </DialogContent>
         </Dialog>
