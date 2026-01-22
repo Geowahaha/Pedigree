@@ -194,6 +194,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
             if (isPlaying && !showPoster) {
                 videoRef.current.play().catch((err) => {
                     console.log('Video play failed:', err);
+                    if (err?.name === 'NotSupportedError') {
+                        setHasError(true);
+                        return;
+                    }
                     // Try playing muted if unmuted play failed
                     if (videoRef.current) {
                         videoRef.current.muted = true;

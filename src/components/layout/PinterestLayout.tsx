@@ -2128,8 +2128,22 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId, initialView
                             userPets={allPets}
                             onAdGenerated={(adData) => {
                                 console.log("Ad Generated & Auto-Posted:", adData);
-                                // Modal stays OPEN to show Result Popup
-                                // In real app: Add `adData` to `visiblePets` here
+                                if (!adData?.videoUrl || !adData?.pet) return;
+                                const productTitle = adData.product?.title || 'Sponsored';
+                                const productLink = adData.product?.external_link || null;
+                                const heroImage = adData.pet?.image || adData.pet?.image_url || adData.product?.images?.[0];
+                                const sponsoredPet: Pet = {
+                                    ...adData.pet,
+                                    id: `magic-ad-${adData.id}`,
+                                    name: `${adData.pet?.name || 'Pet'} Ad`,
+                                    breed: productTitle,
+                                    image: heroImage,
+                                    media_type: 'video',
+                                    video_url: adData.videoUrl,
+                                    external_link: productLink,
+                                    is_sponsored: true
+                                };
+                                setAllPets(prev => [sponsoredPet, ...prev]);
                             }}
                         />
 
