@@ -1530,3 +1530,91 @@ export async function deletePetStory(id: string) {
 
   if (error) throw error;
 }
+
+export interface AncestorNode {
+  id: string;
+  name: string;
+  birth_date: string | null;
+  role: string;
+  generation: number;
+  sire_id?: string | null;
+  dam_id?: string | null;
+}
+
+// Update signature to accept overrides
+export async function getAncestors(params: { petId?: string, sireId?: string, damId?: string }, maxDepth: number = 5): Promise<AncestorNode[]> {
+  const results: AncestorNode[] = [];
+  const visited = new Set<string>();
+
+  // Helper to fetch valid date string or null
+  const getBirthDate = (p: any) => p.birthday || p.birth_date || null;
+
+  async function fetchLevel(currentIds: { id: string, role: string }[], currentDepth: number) {
+    if (currentDepth > maxDepth || currentIds.length === 0) return;
+
+    // Filter out already visited
+    const idsToFetch = currentIds.filter(item => !visited.has(item.id)).map(i => i.id);
+    if (idsToFetch.length === 0) return;
+
+    idsToFetch.forEach(id => visited.add(id));
+
+    const { data, error } = await supabase
+      .from('pets')
+      .select('id, name, birthday, father_id, mother_id')
+      .in('id', idsToFetch);
+
+    if (error || !data) return;
+
+    const nextLevel: { id: string, role: string }[] = [];
+
+    for (const pet of data) {
+      // Find role from parent request
+      const role = currentIds.find(c => c.id === pet.id)?.role || 'Ancestor';
+
+      results.push({
+        id: pet.id,
+        name: pet.name,
+        birth_date: getBirthDate(pet),
+        role: role,
+        generation: currentDepth,
+        sire_id: pet.father_id,
+        dam_id: pet.mother_id
+      });
+
+      if (pet.father_id) nextLevel.push({ id: pet.father_id, role: 'Sire' });
+      if (pet.mother_id) nextLevel.push({ id: pet.mother_id, role: 'Dam' });
+    }
+
+    if (nextLevel.length > 0) {
+      await fetchLevel(nextLevel, currentDepth + 1);
+    }
+  }
+
+  // Determine starting parents
+  const parents: { id: string, role: string }[] = [];
+
+  // If explicit parents provided (Form mode), use them
+  if (params.sireId || params.damId) {
+    if (params.sireId && params.sireId !== 'unknown') parents.push({ id: params.sireId, role: 'Sire' });
+    if (params.damId && params.damId !== 'unknown') parents.push({ id: params.damId, role: 'Dam' });
+  }
+  // Otherwise if valid petId provided (View mode), fetch from DB
+  else if (params.petId) {
+    const { data: startPet } = await supabase
+      .from('pets')
+      .select('father_id, mother_id')
+      .eq('id', params.petId)
+      .single();
+
+    if (startPet) {
+      if (startPet.father_id) parents.push({ id: startPet.father_id, role: 'Sire' });
+      if (startPet.mother_id) parents.push({ id: startPet.mother_id, role: 'Dam' });
+    }
+  }
+
+  if (parents.length > 0) {
+    await fetchLevel(parents, 1);
+  }
+
+  return results.sort((a, b) => a.generation - b.generation);
+}

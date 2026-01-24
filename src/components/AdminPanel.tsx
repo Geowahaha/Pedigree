@@ -19,10 +19,12 @@ import { supabase } from '@/lib/supabase';
 import { uploadPetImage } from '@/lib/storage';
 import { UserProfile } from '@/lib/auth';
 import { reindexAllPets, indexPet, generatePetDescription } from '@/lib/ai/vectorService';
+import { BloodlineInspector } from './admin/BloodlineInspector';
 
 interface AdminPanelProps {
     isOpen: boolean;
     onClose: () => void;
+    initialPetId?: string | null;
 }
 
 type BreedingMatchAdmin = {
@@ -105,11 +107,11 @@ type DuplicateGroup = {
     items: Pet[];
 };
 
-const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
+const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose, initialPetId }) => {
     const { t } = useTranslation();
     const fallbackPetImage = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNjAiIGhlaWdodD0iMTYwIj48cmVjdCB3aWR0aD0iMTYwIiBoZWlnaHQ9IjE2MCIgZmlsbD0iI2YzZjRmNiIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMjAiIGZpbGw9IiM5Y2EzYWYiPlBldDwvdGV4dD48L3N2Zz4=';
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState<'pets' | 'verifications' | 'ownership' | 'puppy' | 'users' | 'notifications' | 'moderation' | 'ai' | 'duplicates'>('pets');
+    const [activeTab, setActiveTab] = useState<'pets' | 'verifications' | 'ownership' | 'puppy' | 'users' | 'notifications' | 'moderation' | 'ai' | 'duplicates' | 'lineage'>('pets');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [editingPet, setEditingPet] = useState<Pet | null>(null);
     const [isCreating, setIsCreating] = useState(false);
@@ -140,6 +142,14 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const [duplicateFilter, setDuplicateFilter] = useState<'all' | 'registration' | 'name'>('all');
     const [duplicateScanAt, setDuplicateScanAt] = useState<string | null>(null);
     const [duplicateLoading, setDuplicateLoading] = useState(false);
+
+    // Lineage Scan State
+    const [lineageIssues, setLineageIssues] = useState<{
+        pet: Pet;
+        issues: string[];
+    }[]>([]);
+    const [lineageLoading, setLineageLoading] = useState(false);
+    const [lastLineageScan, setLastLineageScan] = useState<string | null>(null);
     const [faqForm, setFaqForm] = useState({
         id: '',
         status: 'draft' as 'draft' | 'approved' | 'archived',
@@ -234,6 +244,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
             scanDuplicatePets();
         }
     }, [activeTab, petList.length]);
+
+    // Auto-open edit if initialPetId provided
+    useEffect(() => {
+        if (isOpen && initialPetId && petList.length > 0) {
+            const petToEdit = petList.find(p => p.id === initialPetId);
+            if (petToEdit) {
+                // Determine if we need to switch tab?
+                // Assuming pets tab is fine or we are opening edit modal regardless of tab?
+                // The edit modal is conditional on `editingPet`.
+                setActiveTab('pets');
+                setTimeout(() => {
+                    setEditingPet(petToEdit);
+                }, 100);
+            }
+        }
+    }, [isOpen, initialPetId, petList]);
 
     const refreshData = async () => {
         setLoading(true);
@@ -532,17 +558,17 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         registrationNumber: dbPet.registration_number || '',
         healthCertified: dbPet.health_certified,
         location: dbPet.location || 'Bangkok',
-        owner: dbPet.owner_name || 'System',
+        owner: (typeof dbPet.owner_name === 'object' ? (dbPet.owner_name as any)?.full_name : dbPet.owner_name) || 'System',
         owner_id: dbPet.owner_id,
         ownership_status: dbPet.ownership_status,
         claimed_by: dbPet.claimed_by,
         claim_date: dbPet.claim_date,
         verification_evidence: dbPet.verification_evidence,
         parentIds: {
-            sire: dbPet.pedigree?.sire_id || '',
-            dam: dbPet.pedigree?.dam_id || '',
-            sireStatus: (dbPet.father_verified_status as any) || 'verified',
-            damStatus: (dbPet.mother_verified_status as any) || 'verified'
+            sire: (dbPet as any).pedigree?.sire_id || '',
+            dam: (dbPet as any).pedigree?.dam_id || '',
+            sireStatus: (dbPet as any).father_verified_status || 'verified',
+            damStatus: (dbPet as any).mother_verified_status || 'verified'
         }
     });
 
@@ -682,6 +708,81 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         }
     };
 
+    const scanLineage = async () => {
+        setLineageLoading(true);
+        try {
+            const issues: { pet: Pet; issues: string[] }[] = [];
+
+            // Re-fetch latest to be safe
+            // In real app, might want to paginate or optimize this
+            const dbPets = await getPublicPets();
+            const allPets = dbPets.map(convertDbPet);
+
+            // Create quick lookup map
+            const petMap = new Map<string, Pet>();
+            allPets.forEach(p => petMap.set(p.id, p));
+
+            allPets.forEach(pet => {
+                const currentIssues: string[] = [];
+
+                // 1. Check Missing Parents (if ID exists but not in DB, OR simple "unknown" logic)
+                if (pet.parentIds) {
+                    if (pet.parentIds.sire && pet.parentIds.sire !== 'unknown') {
+                        const sire = petMap.get(pet.parentIds.sire);
+                        if (!sire) {
+                            currentIssues.push(`Father ID referenced (${formatShortId(pet.parentIds.sire)}) check failed: Pet not found in database.`);
+                        } else if (!isMalePet(sire)) {
+                            currentIssues.push(`Father (${sire.name}) is listed as Female/Unknown gender.`);
+                        }
+                    }
+                    if (pet.parentIds.dam && pet.parentIds.dam !== 'unknown') {
+                        const dam = petMap.get(pet.parentIds.dam);
+                        if (!dam) {
+                            currentIssues.push(`Mother ID referenced (${formatShortId(pet.parentIds.dam)}) check failed: Pet not found in database.`);
+                        } else if (!isFemalePet(dam)) {
+                            currentIssues.push(`Mother (${dam.name}) is listed as Male/Unknown gender.`);
+                        }
+                    }
+                }
+
+                // 2. Date Logic (Child born before Parent)
+                if (pet.birthDate) {
+                    const childDate = new Date(pet.birthDate);
+                    if (pet.parentIds?.sire) {
+                        const sire = petMap.get(pet.parentIds.sire);
+                        if (sire && sire.birthDate) {
+                            const sireDate = new Date(sire.birthDate);
+                            if (childDate <= sireDate) {
+                                currentIssues.push(`Born before Father (${sire.name}): ${pet.birthDate} vs ${sire.birthDate}`);
+                            }
+                        }
+                    }
+                    if (pet.parentIds?.dam) {
+                        const dam = petMap.get(pet.parentIds.dam);
+                        if (dam && dam.birthDate) {
+                            const damDate = new Date(dam.birthDate);
+                            if (childDate <= damDate) {
+                                currentIssues.push(`Born before Mother (${dam.name}): ${pet.birthDate} vs ${dam.birthDate}`);
+                            }
+                        }
+                    }
+                }
+
+                if (currentIssues.length > 0) {
+                    issues.push({ pet, issues: currentIssues });
+                }
+            });
+
+            setLineageIssues(issues);
+            setLastLineageScan(new Date().toISOString());
+        } catch (error) {
+            console.error("Lineage scan failed:", error);
+            alert("Failed to scan lineage.");
+        } finally {
+            setLineageLoading(false);
+        }
+    };
+
     const handleOpenDuplicatePet = (pet: Pet) => {
         setIsCreating(false);
         setEditingPet(pet);
@@ -778,7 +879,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
     const handleSavePet = async (pet: Pet) => {
         try {
             // Mapping UI 'owner' state (which is now ID or 'Admin') to owner_id
-            const ownerId = pet.owner && pet.owner !== 'Admin' ? pet.owner : undefined;
+            let ownerId: string | undefined = pet.owner_id;
+
+            // Fallback for legacy behavior or manual override strings that aren't IDs
+            if (!ownerId && pet.owner && pet.owner !== 'Admin' && pet.owner !== 'System') {
+                // It might be an ID disguised as a string if logic failed elsewhere, 
+                // but primary source is now owner_id
+                if (pet.owner.length > 20) { // Simple UUID check heuristic
+                    ownerId = pet.owner;
+                }
+            }
 
             // Handle "unknown" parents as null
             const motherId = pet.parentIds?.dam && pet.parentIds.dam !== 'unknown' ? pet.parentIds.dam : undefined;
@@ -818,7 +928,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
                 if (!pet.birthDate && ownerId) {
                     await createUserNotification({
-                        user_id: ownerId,
+                        user_id: ownerId as string,
                         type: 'verification',
                         title: 'Birth date missing',
                         message: `Please update the birth date for ${pet.name}.`
@@ -1401,6 +1511,28 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                             System Administration
                         </DialogTitle>
                     </div>
+
+                    {/* Close Button */}
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-white hover:bg-white/10 gap-2 hidden md:flex"
+                        >
+                            <span className="text-xs uppercase tracking-wider font-semibold">Exit Admin</span>
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={onClose}
+                            className="text-gray-400 hover:text-white hover:bg-white/10"
+                        >
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-hidden flex">
@@ -1524,6 +1656,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                     <span className="ml-auto bg-red-500 text-white py-0.5 px-2 rounded-full text-xs">{notifications.filter(n => n.status === 'unread').length}</span>
                                 )}
                             </button>
+                            <Button
+                                variant="ghost"
+                                onClick={() => setActiveTab('lineage')}
+                                className={`w-full justify-start gap-3 px-2 ${activeTab === 'lineage' ? 'bg-[#C5A059]/10 text-[#C5A059]' : 'text-[#B8B8B8] hover:text-[#F5F5F0] hover:bg-white/5'}`}
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                </svg>
+                                Lineage Scan
+                            </Button>
                         </nav>
                     </div>
 
@@ -1629,7 +1771,16 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">
                                                     <Label>Birth Date</Label>
-                                                    <Input type="date" value={editingPet.birthDate} onChange={e => setEditingPet({ ...editingPet, birthDate: e.target.value })} />
+                                                    <div className="space-y-1">
+                                                        <Input type="date" value={editingPet.birthDate} onChange={e => setEditingPet({ ...editingPet, birthDate: e.target.value })} />
+                                                        <BloodlineInspector
+                                                            childId={editingPet.id}
+                                                            childName={editingPet.name}
+                                                            childBirthDate={editingPet.birthDate}
+                                                            sireId={editingPet.parentIds?.sire}
+                                                            damId={editingPet.parentIds?.dam}
+                                                        />
+                                                    </div>
                                                 </div>
                                                 <div className="space-y-2">
                                                     <Label>Color</Label>
@@ -1702,8 +1853,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                 <div className="space-y-2">
                                                     <Label>Owner (Admin Override)</Label>
                                                     <Select
-                                                        value={editingPet.owner}
-                                                        onValueChange={(val) => setEditingPet({ ...editingPet, owner: val })}
+                                                        value={editingPet.owner_id || 'Admin'}
+                                                        onValueChange={(val) => {
+                                                            const selectedUser = userList.find(u => u.id === val);
+                                                            setEditingPet({
+                                                                ...editingPet,
+                                                                owner_id: val === 'Admin' ? undefined : val,
+                                                                owner: selectedUser ? (selectedUser.full_name || selectedUser.email) : 'Admin'
+                                                            });
+                                                        }}
                                                     >
                                                         <SelectTrigger className="bg-white">
                                                             <SelectValue placeholder="Select Owner" />
@@ -2797,7 +2955,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                                                 <div>
                                                                     <div className="font-semibold text-gray-900">{item.name || 'Unnamed'}</div>
                                                                     <div className="text-xs text-gray-500">
-                                                                        Reg: {item.registrationNumber || 'None'} | Owner: {item.owner || getUserLabel(item.owner_id)}
+                                                                        Reg: {item.registrationNumber || 'None'} | Owner: {(typeof item.owner === 'object' ? (item.owner as any).full_name : item.owner) || getUserLabel(item.owner_id)}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -2811,6 +2969,75 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
                                         ))}
                                     </div>
                                 )}
+                            </div>
+                        ) : activeTab === 'lineage' ? (
+                            /* LINEAGE SCAN TAB */
+                            <div className="flex-1 overflow-y-auto p-6 bg-gray-50/30">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
+                                    <div>
+                                        <h2 className="text-xl font-bold">Lineage Health Scan</h2>
+                                        <p className="text-xs text-gray-500">Detect missing parents, gender conflicts, and impossible birth dates.</p>
+                                    </div>
+                                    <Button
+                                        onClick={scanLineage}
+                                        disabled={lineageLoading}
+                                        className="bg-[#C5A059] text-[#0A0A0A] hover:bg-[#D4C4B5]"
+                                    >
+                                        {lineageLoading ? 'Scanning...' : 'Run Scan'}
+                                    </Button>
+                                </div>
+
+                                {lastLineageScan && (
+                                    <div className="mb-4 text-xs text-gray-500">
+                                        Last scan: {new Date(lastLineageScan).toLocaleString()} • Found {lineageIssues.length} pets with issues.
+                                    </div>
+                                )}
+
+                                <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
+                                    {lineageIssues.length === 0 ? (
+                                        <div className="p-8 text-center text-gray-500">
+                                            {lastLineageScan ? "✅ No lineage issues found. Great job!" : "Click 'Run Scan' to check database integrity."}
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y">
+                                            {lineageIssues.map(({ pet, issues }) => (
+                                                <div key={pet.id} className="p-4 hover:bg-red-50/10 transition">
+                                                    <div className="flex items-start gap-4">
+                                                        <img
+                                                            src={pet.image || fallbackPetImage}
+                                                            alt={pet.name}
+                                                            className="w-12 h-12 rounded-lg object-cover"
+                                                        />
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <h4 className="font-bold text-gray-900">{pet.name}</h4>
+                                                                <span className="text-xs text-gray-500 px-2 py-0.5 bg-gray-100 rounded-full">{pet.breed}</span>
+                                                            </div>
+                                                            <div className="mt-2 space-y-1">
+                                                                {issues.map((issue, idx) => (
+                                                                    <div key={idx} className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-2 rounded-md">
+                                                                        <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                                                        {issue}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            <div className="mt-2">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="text-xs h-7"
+                                                                    onClick={() => handleOpenDuplicatePet(pet)}
+                                                                >
+                                                                    Edit Pet
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         ) : activeTab === 'notifications' ? (
                             /* 5. NOTIFICATIONS TAB */

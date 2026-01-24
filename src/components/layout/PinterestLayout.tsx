@@ -21,6 +21,7 @@ import { think as aiThink } from '@/lib/ai/petdegreeBrain';
 import { supabase } from '@/lib/supabase';
 import { triggerSocialAutomation } from '@/lib/socialAutomation';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll';
+import { updatePet } from '@/lib/petsService';
 // import { useRealtimePets } from '@/hooks/useRealtimePets'; // DISABLED - circular dependency
 
 // Import modals
@@ -441,6 +442,35 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId, initialView
             alert(error.message || "Failed to boost");
         } finally {
             setIsBoosting(false);
+        }
+    };
+
+    // Hide Pet Handler
+    const handleHidePet = async (pet: Pet) => {
+        if (!user) {
+            alert("Please login to manage pets");
+            return;
+        }
+
+        const confirmHide = confirm("Hide this pet from Home Page? It will still be visible in your profile.");
+        if (!confirmHide) return;
+
+        // Optimistic UI update
+        const updatedPets = allPets.filter(p => p.id !== pet.id);
+        const updatedFiltered = filteredPets.filter(p => p.id !== pet.id);
+
+        setAllPets(updatedPets);
+        setFilteredPets(updatedFiltered);
+
+        try {
+            // Update in DB - using type assertion
+            await updatePet(pet.id, { is_public: false } as any);
+        } catch (err) {
+            console.error("Hide failed", err);
+            alert("Failed to hide pet. Please try again.");
+            // Revert on error
+            setAllPets(allPets);
+            setFilteredPets(filteredPets);
         }
     };
 
@@ -2114,6 +2144,7 @@ const EibpoLayout: React.FC<PinterestLayoutProps> = ({ initialPetId, initialView
                                         onMatchClick={() => navigate(`/breeding/${pet.id}`)}
                                         onVetClick={() => navigate(`/vet-profile/${pet.id}`)}
                                         onMagicCardClick={() => setAddCardModalOpen(true)}
+                                        onHideClick={() => handleHidePet(pet)}
                                         onDeleteClick={() => handleDeleteClick(pet)}
                                     />
                                 </div>

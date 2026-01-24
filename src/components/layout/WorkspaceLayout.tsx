@@ -636,6 +636,20 @@ const WorkspaceLayout: React.FC = () => {
     const [adminPanelOpen, setAdminPanelOpen] = useState(false);
     const [breederProfileOpen, setBreederProfileOpen] = useState(false);
     const [currentBreederId, setCurrentBreederId] = useState<string | null>(null);
+    const [adminInitialPetId, setAdminInitialPetId] = useState<string | null>(null);
+
+    // Listen for Admin Edit requests from child components
+    useEffect(() => {
+        const handleAdminEdit = (e: CustomEvent<{ petId: string }>) => {
+            console.log("Admin edit requested for:", e.detail.petId);
+            setAdminInitialPetId(e.detail.petId);
+            setPedigreeModalOpen(false); // Close pedigree modal so Admin Panel is visible
+            setAdminPanelOpen(true);
+        };
+
+        window.addEventListener('OPEN_ADMIN_PET_EDIT', handleAdminEdit as EventListener);
+        return () => window.removeEventListener('OPEN_ADMIN_PET_EDIT', handleAdminEdit as EventListener);
+    }, []);
 
     // Selected items
     const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
@@ -1274,7 +1288,17 @@ const WorkspaceLayout: React.FC = () => {
             <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
             <ProductModal isOpen={productModalOpen} onClose={() => setProductModalOpen(false)} product={selectedProduct} onAddToCart={(p, q) => addToCart(p, q)} />
             <PetDetailsModal isOpen={petDetailsModalOpen} onClose={() => setPetDetailsModalOpen(false)} pet={selectedPet} onViewPedigree={handleViewPedigree} />
-            <AdminPanel isOpen={adminPanelOpen} onClose={() => setAdminPanelOpen(false)} />
+            {/* Admin Panel */}
+            {adminPanelOpen && (
+                <AdminPanel
+                    isOpen={adminPanelOpen}
+                    onClose={() => {
+                        setAdminPanelOpen(false);
+                        setAdminInitialPetId(null);
+                    }}
+                    initialPetId={adminInitialPetId}
+                />
+            )}
             <BreederProfileModal isOpen={breederProfileOpen} onClose={() => setBreederProfileOpen(false)} userId={currentBreederId} currentUserId={user?.id} />
             <ChatManager />
         </div>

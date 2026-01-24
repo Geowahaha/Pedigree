@@ -24,6 +24,7 @@ export interface CreatePetInput {
     description?: string;
     price?: number;
     for_sale?: boolean;
+    is_public?: boolean;
 }
 
 /**

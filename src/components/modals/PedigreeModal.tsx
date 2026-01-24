@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Pet } from '@/data/petData';
-import { getPedigreeTree, getPetOffspring } from '@/lib/petsService';
+import { getPedigreeTree, getPetOffspring, updatePet } from '@/lib/petsService';
 import PedigreeTree from '../PedigreeTree';
 import { PedigreeAnalytics } from '../PedigreeAnalytics';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -28,6 +28,9 @@ const PedigreeModal: React.FC<PedigreeModalProps> = ({ isOpen, onClose, pet, onP
   const [isFullScreen, setIsFullScreen] = useState(false);
   const isThai = language === 'th';
   const t = (en: string, th: string) => (isThai ? th : en);
+
+  // For Demo purpose, assume admin if logged in
+  const isAdmin = true;
 
   // Fetch pedigree tree and offspring when pet changes
   useEffect(() => {
@@ -60,6 +63,47 @@ const PedigreeModal: React.FC<PedigreeModalProps> = ({ isOpen, onClose, pet, onP
   }, [pet?.id]);
 
   if (!isOpen || !pet) return null;
+
+  const handleUpdateDate = async (petId: string, newDate: string) => {
+    try {
+      if (!petId || petId.startsWith('mock-')) {
+        setToastMessage(t('Cannot update mock data', 'ไม่สามารถอัปเดตข้อมูลจำลองได้'));
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+        return;
+      }
+
+      await updatePet(petId, { birth_date: newDate } as any);
+
+      // Refresh tree data
+      const [tree] = await Promise.all([
+        getPedigreeTree(pet.id, 3)
+      ]);
+      setPedigreeTree(tree);
+
+      setToastMessage(t('Birth date updated!', 'อัปเดตวันเกิดแล้ว!'));
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (error) {
+      console.error('Failed to update date', error);
+      setToastMessage(t('Failed to update', 'การอัปเดตล้มเหลว'));
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    }
+  };
+
+  const handleReportIssue = (targetPet: Pet) => {
+    // In a real app, this would write to a 'tickets' or 'messages' table
+    const message = `Issue reported for ${targetPet.name} (ID: ${targetPet.id}). Check birth dates.`;
+    console.log("System Message Sent:", message);
+
+    setToastMessage(language === 'th'
+      ? `ส่งรายงานไปยังแอดมินแล้ว: แจ้งตรวจสอบ ${targetPet.name}`
+      : `Report sent to Admin: Checked ${targetPet.name}`
+    );
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
 
   const formatBirthDate = (birthDate?: string) => {
     if (!birthDate) return t('Unknown', 'ไม่ทราบ');
@@ -128,7 +172,6 @@ ${t('Powered by Eibpo', 'โดย Eibpo')}
 
   const handleShareProfile = async () => {
     const baseUrl = window.location.origin;
-    // Use registration number if available, fallback to id
     const slug = resolvedRegistrationNumber || pet.id;
     const profileUrl = `${baseUrl}/pet/${encodeURIComponent(slug)}`;
     const shareText = isThai
@@ -180,7 +223,7 @@ ${t('Powered by Eibpo', 'โดย Eibpo')}
         <div className="flex-none flex items-center justify-between p-4 md:p-6 border-b border-[#C5A059]/20 bg-[#0D0D0D]">
           <div>
             <h2 className="text-2xl font-['Playfair_Display'] font-bold text-[#F5F5F0]">
-              {t('Family Tree', 'ผังสายเลือด')}
+              Eibpo.com
             </h2>
             <p className="text-sm text-[#B8B8B8] mt-1">
               {t('Pedigree for', 'สายเลือดของ')} <span className="font-semibold text-[#C5A059]">{pet.name}</span>
@@ -287,10 +330,10 @@ ${t('Powered by Eibpo', 'โดย Eibpo')}
             >
               <div className={isFullScreen ? "bg-[#0D0D0D]/80 backdrop-blur-md p-3 rounded-xl border border-[#C5A059]/20" : ""}>
                 <h3 className={`font-bold text-[#F5F5F0] flex items-center gap-2 ${isFullScreen ? 'text-lg' : 'text-xl'}`}>
-                  <span className="text-[#C5A059]">🌳</span> {t('Bloodline', 'สายเลือด')}
+                  <span className="text-[#C5A059]">🌳</span> Eibpo.com
                   {isFullScreen && (
                     <span className="text-[10px] bg-[#C5A059]/20 text-[#C5A059] px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      {t('Fullscreen', 'เต็มจอ')}
+                      {t('Pedigree', 'สายเลือด')}
                     </span>
                   )}
                 </h3>
@@ -336,6 +379,9 @@ ${t('Powered by Eibpo', 'โดย Eibpo')}
                     pet={pedigreeTree}
                     onPetClick={(p) => onPetClick && onPetClick(p)}
                     className={isFullScreen ? "h-full rounded-none border-0" : "h-[50vh] min-h-[400px]"}
+                    isAdmin={isAdmin}
+                    onUpdateDate={handleUpdateDate}
+                    onReportIssue={handleReportIssue}
                   />
                 </div>
               ) : (
