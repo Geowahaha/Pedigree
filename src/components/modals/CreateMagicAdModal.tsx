@@ -21,6 +21,17 @@ type AudioMode = 'auto' | 'suno' | 'upload' | 'none';
 type SuggestionItem =
     | { type: 'pet'; pet: Pet }
     | { type: 'product'; product: MagicAdProduct };
+type ReferenceImage = {
+    id: string;
+    url: string;
+    name: string;
+    source: 'upload' | 'link';
+};
+type PromptTemplate = {
+    id: string;
+    label: string;
+    prompt: string;
+};
 
 interface MagicAdResult {
     id: string;
@@ -43,11 +54,99 @@ interface MagicAdResult {
 
 const SUNO_AFFILIATE_URL = 'https://suno.com/invite/@vivifyingwhistle723';
 
-const PROMPT_PRESETS = [
-    'Cute moment, playful energy, 10-12s',
-    'Problem and solution, warm ending',
-    'Cozy, calm, family-friendly vibe'
+const MAX_IDENTITY_IMAGES = 6;
+const MAX_SCENE_IMAGES = 4;
+const DEFAULT_IMAGE_PROMPT = 'Natural editorial portrait of {subject}, 4:5 vertical, professional photography, sharp focus, realistic fur detail, soft studio lighting, clean background, high resolution.';
+const IDENTITY_LOCK_PROMPT = [
+    'STRICT IDENTITY LOCK: The animal must be the exact same {subject} as the reference images. Preserve unique markings, fur patterns, eye color, eye shape, muzzle length, ear shape, and proportions.',
+    'Do not change the pet identity. No breed change, no redesign, no stylization that alters anatomy.',
+    'Prioritize identity consistency over scene or styling references.',
+    'Keep the expression natural and true to the reference.'
+].join('\n');
+const PROMPT_TEMPLATES: PromptTemplate[] = [
+    {
+        id: 'thai_ridgeback_editorial',
+        label: 'Thai Ridgeback Editorial',
+        prompt: 'Editorial studio portrait of a Thai Ridgeback, 4:5 vertical, crisp fur detail, softbox key light, clean background, premium magazine cover, ultra realistic.'
+    },
+    {
+        id: 'hero_poster',
+        label: 'Hero Poster',
+        prompt: 'Hero poster of {subject}, dramatic rim light, rain bokeh, neon city glow, cinematic contrast, 4:5 vertical, ultra detailed.'
+    },
+    {
+        id: 'streetwear_glow',
+        label: 'Streetwear Glow Up',
+        prompt: 'High-fashion streetwear portrait of {subject}, bold attitude, glossy eyes, textured background, soft rim light, editorial vibe.'
+    },
+    {
+        id: 'cozy_cafe',
+        label: 'Cozy Cafe',
+        prompt: 'Cozy cafe morning scene with {subject} by a window, warm light, candid moment, gentle film grain, shallow depth of field.'
+    },
+    {
+        id: 'sunset_backlight',
+        label: 'Sunset Backlight',
+        prompt: 'Golden hour backlit portrait of {subject}, warm rim light, natural bokeh, cinematic sunset atmosphere, 4:5 vertical.'
+    },
+    {
+        id: 'fashion_studio_flash',
+        label: 'Fashion Studio Flash',
+        prompt: 'High-fashion studio flash portrait of {subject}, crisp shadows, glossy highlights, clean backdrop, editorial magazine look.'
+    },
+    {
+        id: 'sticker_pack',
+        label: 'Sticker Pack',
+        prompt: 'Sticker pack of {subject}, bold outlines, vibrant colors, clean white background, 6 different poses, playful style.'
+    },
+    {
+        id: 'fantasy_guardian',
+        label: 'Fantasy Guardian',
+        prompt: '{subject} as an ancient guardian, ornate armor accents, glowing runes, misty ruins, epic cinematic lighting.'
+    }
 ];
+
+const THAI_PROMPT_TEMPLATES: PromptTemplate[] = [
+    {
+        id: 'thai_tiny_finger',
+        label: 'ย่อส่วนบนปลายนิ้ว',
+        prompt: 'ภาพมาโครโคลสอัป {subject} ย่อส่วนอยู่บนปลายนิ้วคนจริงๆ สเกลสมจริง ผิวหนังละเอียด แสงธรรมชาติ โฟกัสตื้น'
+    },
+    {
+        id: 'thai_mountain_hike',
+        label: 'เดินป่าบนเขา',
+        prompt: '{subject} อยู่บนทางเดินป่าบนเขา หมอกบางยามเช้า แสงอาทิตย์ลอดต้นไม้ สีธรรมชาติ สมจริงแบบภาพถ่ายสารคดี'
+    },
+    {
+        id: 'thai_sunset_backlight',
+        label: 'ย้อนแสงพระอาทิตย์ตก',
+        prompt: 'พอร์ตเทรต {subject} ย้อนแสงพระอาทิตย์ตก แสงทองริมเส้น ขนเปล่งประกาย โบเก้ละลาย โทนอุ่นแบบภาพยนตร์'
+    },
+    {
+        id: 'thai_fashion_flash',
+        label: 'สตูดิโอแฟลชแฟชั่น',
+        prompt: '{subject} ถ่ายสตูดิโอแฟลชแฟชั่น แสงแฟลชคม เงาคมเป็นรูปทรง ฉากหลังเรียบหรู สไตล์นิตยสารแฟชั่น'
+    }
+];
+
+const TREND_PROMPT_TEMPLATES: PromptTemplate[] = [
+    {
+        id: 'thai_street_flash',
+        label: 'สตรีทแฟลช',
+        prompt: 'แฟลชสตรีทพอร์ตเทรตของ {subject} ฉากถนนกลางคืน พื้นเปียกสะท้อนแสง แฟลชคมชัด รายละเอียดขนชัดมาก'
+    },
+    {
+        id: 'thai_prism_glow',
+        label: 'แสงพริซึมว้าว',
+        prompt: 'พอร์ตเทรต {subject} แสงพริซึมและเลนส์แฟลร์นุ่มๆ โบเก้ละลาย ฉากหลังใช้ภาพสถานที่อ้างอิงอย่างเป็นธรรมชาติ'
+    },
+    {
+        id: 'thai_mini_diorama',
+        label: 'ดิโอราม่าโลกจิ๋ว',
+        prompt: '{subject} ในฉากดิโอราม่าโลกจิ๋วสมจริง รายละเอียดสิ่งของรอบตัวคมชัด มุมมองเหมือนช่างภาพถ่ายโมเดลระดับโลก'
+    }
+];
+// Legacy video prompt (kept for later video revival).
 const TEMPLATE_PROMPT = [
     'PROMPT:',
     '8s ultra-photoreal vertical 9:16 smartphone POV, single continuous shot, no cuts, daylight at an open side door of a vintage VW van.',
@@ -69,6 +168,49 @@ const TEMPLATE_PROMPT = [
     'NEGATIVE:',
     'sad, droopy ears, ears down, floppy ears, submissive eyes, different wrinkles, fewer wrinkles, different head shape, different muzzle, identity drift, morphing, jitter, wobble, inconsistent anatomy, CGI, cartoon, glitch, particles, magic.'
 ].join('\n');
+
+const TEMPLATE_STYLES = [
+    {
+        id: 'ancient_guardian',
+        name: 'Ancient Guardian',
+        description: 'Mystical, powerful, protecting ancient ruins.',
+        prompt: 'Epic cinematic shot, ancient temple guardian dog, golden armor parts, glowing runes background, mystical atmosphere, 8k resolution, unreal engine 5 render style, hyper-realistic fur.',
+        icon: '🏛️',
+        mockImage: 'https://images.unsplash.com/photo-1552053831-71594a27632d?q=80&w=1000&auto=format&fit=crop' // Placeholder: Dog in nature
+    },
+    {
+        id: 'royal_portrait',
+        name: 'Royal Portrait',
+        description: 'Victorian era royalty oil painting.',
+        prompt: 'Oil painting style, victorian royal dog portrait, wearing ornate velvet robe and golden crown, dramatic lighting, rich textures, classic art style.',
+        icon: '👑',
+        mockImage: 'https://images.unsplash.com/photo-1541364983171-a8ba01e95cfc?q=80&w=1000&auto=format&fit=crop' // Placeholder: Serious dog
+    },
+    {
+        id: 'cyberpunk',
+        name: 'Cyberpunk 2077',
+        description: 'Neon-lit futuristic city vibe.',
+        prompt: 'Cyberpunk style, neon city background, futuristic dog armor, glowing collar, rain slicked streets, pink and blue lighting, high contrast.',
+        icon: '🤖',
+        mockImage: 'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=1000&auto=format&fit=crop' // Placeholder: Dog with attitude
+    },
+    {
+        id: 'pixar',
+        name: 'Pixar 3D',
+        description: 'Cute, expressive, animated movie style.',
+        prompt: 'Pixar 3D animation style, big expressive eyes, soft fur texture, bright cheerful lighting, simple clean background, cute and lovable.',
+        icon: '🎬',
+        mockImage: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?q=80&w=1000&auto=format&fit=crop' // Placeholder: Cute dog
+    },
+    {
+        id: 'glow_up',
+        name: 'Studio Glow Up',
+        description: 'Professional magazine cover shoot.',
+        prompt: 'Professional studio photography, fashion magazine cover style, perfect lighting, bokeh background, sharp focus, glamour shot.',
+        icon: '✨',
+        mockImage: 'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?q=80&w=1000&auto=format&fit=crop' // Placeholder: Studio dog
+    }
+];
 
 const shuffleArray = <T,>(items: T[]): T[] => {
     const copy = [...items];
@@ -221,8 +363,14 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
     const { user } = useAuth();
     const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<MagicAdProduct | null>(null);
+    const [selectedStyle, setSelectedStyle] = useState<typeof TEMPLATE_STYLES[0] | null>(null);
+    const [identityImages, setIdentityImages] = useState<ReferenceImage[]>([]);
+    const [sceneImages, setSceneImages] = useState<ReferenceImage[]>([]);
+    const [subjectText, setSubjectText] = useState('');
+    const [identityLock, setIdentityLock] = useState(true);
     const [products, setProducts] = useState<MagicAdProduct[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [resultImageUrl, setResultImageUrl] = useState<string | null>(null); // Changed from videoUrl
     const [resultVideoUrl, setResultVideoUrl] = useState<string | null>(null);
     const [generationError, setGenerationError] = useState<string | null>(null);
     const generationTokenRef = useRef(0);
@@ -242,50 +390,50 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
     const [audioFile, setAudioFile] = useState<File | null>(null);
     const [audioStatus, setAudioStatus] = useState<'idle' | 'fetching' | 'ready' | 'error'>('idle');
 
-    const [showAdvanced, setShowAdvanced] = useState(false);
-    const [promptText, setPromptText] = useState(TEMPLATE_PROMPT);
+    const [showAdvanced, setShowAdvanced] = useState(true);
+    const [promptText, setPromptText] = useState(DEFAULT_IMAGE_PROMPT);
+    const [selectedPromptTemplateId, setSelectedPromptTemplateId] = useState('default');
+    // Video flow is paused while we focus on image generation.
+    const enableVideoFlow = false;
     const isAdmin = user?.profile?.role === 'admin';
     const canUseAnyAffiliate = Boolean(isAdmin || user?.profile?.verified_breeder);
     const canGenerateVideo = Boolean(isAdmin || user?.profile?.verified_breeder);
     const searchInputRef = useRef<HTMLInputElement>(null);
-    const selectionStep: 'pet' | 'product' | 'ready' = selectedPet ? (selectedProduct ? 'ready' : 'product') : 'pet';
-    const searchPlaceholder = selectionStep === 'pet'
-        ? 'Search pets or paste a pet link'
-        : selectionStep === 'product'
-            ? 'Search products or paste an affiliate link'
-            : 'Search pets/products or paste a link';
-    const suggestedLabel = selectionStep === 'pet' ? 'Pet picks' : selectionStep === 'product' ? 'Product picks' : 'Suggested for you';
-    const stepHint = selectionStep === 'pet'
-        ? 'Step 1: choose a pet'
-        : selectionStep === 'product'
-            ? 'Step 2: choose a product'
-            : 'Ready to generate';
-    const searchStatusLabel = selectionStep === 'pet'
-        ? 'Searching pets...'
-        : selectionStep === 'product'
-            ? 'Searching products...'
-            : 'Searching pets and products...';
-    const permissionHint = !user
-        ? 'Sign in to use AI video generation.'
-        : !canGenerateVideo
-            ? 'AI video generation is available for Pro/Admin accounts only.'
-            : null;
-    const actionHint = permissionHint ?? (!selectedPet
-        ? 'Select a pet to continue.'
-        : !selectedProduct
-            ? 'Select a product to continue.'
+    const searchPlaceholder = 'Search pets or paste a pet image link';
+    const suggestedLabel = 'Pet picks';
+    const hasIdentityImages = identityImages.length > 0;
+    const stepHint = !hasIdentityImages
+        ? 'Step 1: Add at least 1 identity photo.'
+        : !selectedStyle
+            ? 'Step 2: Choose a style.'
+            : 'Ready to generate.';
+    const searchStatusLabel = enableVideoFlow ? 'Searching pets and products...' : 'Searching pets...';
+    const permissionHint = enableVideoFlow
+        ? !user
+            ? 'Sign in to use AI video generation.'
+            : !canGenerateVideo
+                ? 'AI video generation is available for Pro/Admin accounts only.'
+                : null
+        : null;
+    const actionHint = permissionHint ?? (!hasIdentityImages
+        ? 'Add at least 1 identity photo.'
+        : !selectedStyle
+            ? 'Select a style to continue.'
             : 'Ready to generate.');
+    const canGenerateImage = Boolean(selectedStyle && hasIdentityImages);
 
     useEffect(() => {
-        if (isOpen) fetchProducts();
-    }, [isOpen]);
+        if (isOpen && enableVideoFlow) fetchProducts();
+    }, [isOpen, enableVideoFlow]);
 
     useEffect(() => {
         if (!isOpen) {
             setSelectedPet(null);
             setSelectedProduct(null);
+            setSelectedStyle(null);
             setIsGenerating(false);
             setResultVideoUrl(null);
+            setResultImageUrl(null);
             setGenerationError(null);
             setSearchQuery('');
             setLastDetection(null);
@@ -293,8 +441,23 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
             setRemoteProductResults([]);
             setIsSearching(false);
             setSearchError(null);
-            setShowAdvanced(false);
-            setPromptText(TEMPLATE_PROMPT);
+            setShowAdvanced(true);
+            setPromptText(DEFAULT_IMAGE_PROMPT);
+            setSubjectText('');
+            setIdentityLock(true);
+            setSelectedPromptTemplateId('default');
+            setIdentityImages((prev) => {
+                prev.forEach((image) => {
+                    if (image.source === 'upload') URL.revokeObjectURL(image.url);
+                });
+                return [];
+            });
+            setSceneImages((prev) => {
+                prev.forEach((image) => {
+                    if (image.source === 'upload') URL.revokeObjectURL(image.url);
+                });
+                return [];
+            });
             setAudioMode('auto');
             setSunoLink('');
             setAudioFile(null);
@@ -302,6 +465,14 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
             generationTokenRef.current += 1;
         }
     }, [isOpen]);
+
+    useEffect(() => {
+        if (!selectedPet) {
+            setSubjectText('');
+            return;
+        }
+        setSubjectText(selectedPet.breed || selectedPet.name || selectedPet.type || 'pet');
+    }, [selectedPet]);
 
     useEffect(() => {
         if (audioMode !== 'upload') setAudioFile(null);
@@ -318,12 +489,6 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
         return () => clearTimeout(timer);
     }, [audioMode, sunoLink]);
 
-    useEffect(() => {
-        if (selectionStep === 'product') {
-            searchInputRef.current?.focus();
-        }
-    }, [selectionStep]);
-
     const fetchProducts = async () => {
         const { data, error } = await supabase.from('marketplace_listings').select('*').limit(30);
         if (error) {
@@ -334,13 +499,29 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
     };
 
     const allPets = useMemo(() => [...localPets, ...userPets], [localPets, userPets]);
+    const promptTokens = useMemo(() => {
+        const subject = subjectText.trim() || selectedPet?.breed || selectedPet?.name || selectedPet?.type || 'pet';
+        return {
+            subject,
+            petName: selectedPet?.name || subject,
+            breed: selectedPet?.breed || subject,
+            animal: selectedPet?.type || 'pet'
+        };
+    }, [subjectText, selectedPet]);
+    const applyPromptTemplate = (template: string) => (
+        template.replace(/\{(subject|petName|breed|animal)\}/g, (match, token) => {
+            const replacement = promptTokens[token as keyof typeof promptTokens];
+            return replacement || match;
+        })
+    );
+
     useEffect(() => {
         const mixed: SuggestionItem[] = [
             ...allPets.map((pet) => ({ type: 'pet', pet })),
-            ...products.map((product) => ({ type: 'product', product }))
+            ...(enableVideoFlow ? products.map((product) => ({ type: 'product', product })) : [])
         ];
         setSuggestions(shuffleArray(mixed).slice(0, 6));
-    }, [allPets, products, suggestionSeed]);
+    }, [allPets, products, suggestionSeed, enableVideoFlow]);
 
     useEffect(() => {
         const query = searchQuery.trim();
@@ -361,7 +542,7 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
             try {
                 const [petsResult, productsResult] = await Promise.all([
                     searchPets(query),
-                    searchMarketplaceProducts(query)
+                    enableVideoFlow ? searchMarketplaceProducts(query) : Promise.resolve([])
                 ]);
                 if (!active) return;
                 setRemotePetResults(petsResult);
@@ -379,7 +560,7 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
             active = false;
             window.clearTimeout(timeoutId);
         };
-    }, [searchQuery]);
+    }, [searchQuery, enableVideoFlow]);
 
     const localPetMatches = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -390,12 +571,13 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
     }, [searchQuery, allPets]);
 
     const localProductMatches = useMemo(() => {
+        if (!enableVideoFlow) return [] as MagicAdProduct[];
         const query = searchQuery.trim().toLowerCase();
         if (!query) return [] as MagicAdProduct[];
         return products.filter((product) =>
             [product.title, product.description, product.category].some((val) => val?.toLowerCase().includes(query))
         );
-    }, [searchQuery, products]);
+    }, [searchQuery, products, enableVideoFlow]);
 
     const searchResults = useMemo(() => {
         const query = searchQuery.trim();
@@ -411,27 +593,35 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
 
         localPetMatches.slice(0, 6).forEach(addPet);
         remotePetResults.forEach(addPet);
-        localProductMatches.slice(0, 6).forEach(addProduct);
-        remoteProductResults.forEach(addProduct);
+        if (enableVideoFlow) {
+            localProductMatches.slice(0, 6).forEach(addProduct);
+            remoteProductResults.forEach(addProduct);
+        }
 
         return Array.from(map.values()).slice(0, 12);
-    }, [searchQuery, localPetMatches, localProductMatches, remotePetResults, remoteProductResults]);
+    }, [searchQuery, localPetMatches, localProductMatches, remotePetResults, remoteProductResults, enableVideoFlow]);
 
     const filteredSuggestions = useMemo(() => {
-        if (selectionStep === 'pet') return suggestions.filter((item) => item.type === 'pet');
-        if (selectionStep === 'product') return suggestions.filter((item) => item.type === 'product');
+        if (!enableVideoFlow) return suggestions.filter((item) => item.type === 'pet');
         return suggestions;
-    }, [suggestions, selectionStep]);
+    }, [suggestions, enableVideoFlow]);
 
     const filteredSearchResults = useMemo(() => {
-        if (selectionStep === 'pet') return searchResults.filter((item) => item.type === 'pet');
-        if (selectionStep === 'product') return searchResults.filter((item) => item.type === 'product');
+        if (!enableVideoFlow) return searchResults.filter((item) => item.type === 'pet');
         return searchResults;
-    }, [searchResults, selectionStep]);
+    }, [searchResults, enableVideoFlow]);
 
     const handleSelectPet = (pet: Pet) => {
         setSelectedPet(pet);
         setSearchQuery('');
+        const petImage = getPetImage(pet);
+        if (!petImage) {
+            setGenerationError('Selected pet has no photo. Add at least 1 identity image.');
+            return;
+        }
+        setGenerationError(null);
+        const source: ReferenceImage['source'] = isBlobUrl(petImage) ? 'upload' : 'link';
+        addIdentityImage(petImage, `${pet.name || 'Pet'} photo`, source);
     };
 
     const handleSelectProduct = (product: MagicAdProduct) => {
@@ -441,16 +631,70 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
 
     const handleDetectedUrl = (url: URL, forcedType?: UrlType) => {
         const type = forcedType ?? classifyUrl(url);
+        const isVideoLinkDetected = isVideoLink(url);
+
+        if (!enableVideoFlow && (type === 'audio' || type === 'product')) {
+            setLastDetection({
+                type,
+                url: url.href,
+                label: 'Video tools are paused. Link ignored.'
+            });
+            setSearchQuery('');
+            window.setTimeout(() => setLastDetection(null), 2500);
+            return;
+        }
 
         if (type === 'audio') {
             setAudioMode('suno');
             setSunoLink(url.href);
             setSearchQuery('');
         } else if (type === 'pet') {
-            const newPet = buildPetFromUrl(url.href, isVideoLink(url) ? 'video' : 'image');
-            setLocalPets((prev) => [newPet, ...prev]);
-            handleSelectPet(newPet);
+            if (!enableVideoFlow && isVideoLinkDetected) {
+                setLastDetection({
+                    type,
+                    url: url.href,
+                    label: 'Video links are paused for now.'
+                });
+                setSearchQuery('');
+                window.setTimeout(() => setLastDetection(null), 2500);
+                return;
+            }
+
+            if (identityImages.length < MAX_IDENTITY_IMAGES) {
+                addIdentityImage(url.href, 'Identity link', 'link');
+                setLastDetection({
+                    type,
+                    url: url.href,
+                    label: 'Identity image added.'
+                });
+            } else if (sceneImages.length < MAX_SCENE_IMAGES) {
+                addSceneImage(url.href, 'Scene link', 'link');
+                setLastDetection({
+                    type,
+                    url: url.href,
+                    label: 'Scene image added.'
+                });
+            } else {
+                setLastDetection({
+                    type,
+                    url: url.href,
+                    label: 'Image slots full.'
+                });
+            }
+            setSearchQuery('');
+            window.setTimeout(() => setLastDetection(null), 2500);
+            return;
         } else {
+            if (!enableVideoFlow) {
+                setLastDetection({
+                    type,
+                    url: url.href,
+                    label: 'Unsupported link. Paste an image URL instead.'
+                });
+                setSearchQuery('');
+                window.setTimeout(() => setLastDetection(null), 2500);
+                return;
+            }
             if (type === 'unknown' && !canUseAnyAffiliate) {
                 setLastDetection({
                     type,
@@ -509,23 +753,118 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
     const handlePetUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        if (file.type.startsWith('video/')) {
+            setGenerationError('Video uploads are paused for now.');
+            e.target.value = '';
+            return;
+        }
         const previewUrl = URL.createObjectURL(file);
-        const isVideo = file.type.startsWith('video/');
         const newPet: Pet = {
             id: `new-${Date.now()}`,
             name: 'New Pet',
             breed: 'Unknown',
             type: 'dog',
             gender: 'male',
-            image: isVideo ? undefined : previewUrl,
-            media_type: isVideo ? 'video' : 'image',
-            video_url: isVideo ? previewUrl : undefined,
+            image: previewUrl,
+            media_type: 'image',
+            video_url: undefined,
             location: 'Bangkok',
             owner_id: 'current-user'
         };
         setLocalPets((prev) => [newPet, ...prev]);
-        setSelectedPet(newPet);
+        handleSelectPet(newPet);
         e.target.value = '';
+    };
+
+    const buildImageEntry = (url: string, name: string, source: ReferenceImage['source']) => ({
+        id: `ref-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        url,
+        name,
+        source
+    });
+
+    const addIdentityImage = (url: string, name: string, source: ReferenceImage['source']) => {
+        setIdentityImages((prev) => {
+            if (prev.some((item) => item.url === url)) return prev;
+            if (prev.length >= MAX_IDENTITY_IMAGES) {
+                setGenerationError(`Up to ${MAX_IDENTITY_IMAGES} identity images.`);
+                return prev;
+            }
+            return [...prev, buildImageEntry(url, name, source)];
+        });
+    };
+
+    const addSceneImage = (url: string, name: string, source: ReferenceImage['source']) => {
+        setSceneImages((prev) => {
+            if (prev.some((item) => item.url === url)) return prev;
+            if (prev.length >= MAX_SCENE_IMAGES) {
+                setGenerationError(`Up to ${MAX_SCENE_IMAGES} scene images.`);
+                return prev;
+            }
+            return [...prev, buildImageEntry(url, name, source)];
+        });
+    };
+
+    const handleIdentityUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        if (!files.length) return;
+        setIdentityImages((prev) => {
+            const remaining = MAX_IDENTITY_IMAGES - prev.length;
+            if (remaining <= 0) {
+                setGenerationError(`Up to ${MAX_IDENTITY_IMAGES} identity images.`);
+                return prev;
+            }
+            const additions = files.slice(0, remaining).map((file) => ({
+                id: `ref-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                url: URL.createObjectURL(file),
+                name: file.name,
+                source: 'upload' as const
+            }));
+            if (files.length > remaining) {
+                setGenerationError(`Only ${MAX_IDENTITY_IMAGES} identity images were added.`);
+            }
+            return [...prev, ...additions];
+        });
+        e.target.value = '';
+    };
+
+    const handleSceneUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files ?? []);
+        if (!files.length) return;
+        setSceneImages((prev) => {
+            const remaining = MAX_SCENE_IMAGES - prev.length;
+            if (remaining <= 0) {
+                setGenerationError(`Up to ${MAX_SCENE_IMAGES} scene images.`);
+                return prev;
+            }
+            const additions = files.slice(0, remaining).map((file) => ({
+                id: `ref-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                url: URL.createObjectURL(file),
+                name: file.name,
+                source: 'upload' as const
+            }));
+            if (files.length > remaining) {
+                setGenerationError(`Only ${MAX_SCENE_IMAGES} scene images were added.`);
+            }
+            return [...prev, ...additions];
+        });
+        e.target.value = '';
+    };
+
+    const handleRemoveIdentity = (id: string) => {
+        setIdentityImages((prev) => {
+            const target = prev.find((item) => item.id === id);
+            if (target?.source === 'upload') URL.revokeObjectURL(target.url);
+            return prev.filter((item) => item.id !== id);
+        });
+    };
+
+    const handleRemoveScene = (id: string) => {
+        setSceneImages((prev) => {
+            const target = prev.find((item) => item.id === id);
+            if (target?.source === 'upload') URL.revokeObjectURL(target.url);
+            return prev.filter((item) => item.id !== id);
+        });
     };
 
     const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -537,36 +876,17 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
     };
 
     const handleGenerate = async () => {
-        if (!selectedPet || !selectedProduct) return;
-        if (!canGenerateVideo) {
-            setGenerationError(permissionHint || 'AI video generation is available for Pro/Admin accounts only.');
+        if (!selectedStyle || !hasIdentityImages) {
+            setGenerationError(!selectedStyle ? 'Select a style to continue.' : 'Add at least 1 identity photo.');
             return;
         }
-        const petImage = getPetImage(selectedPet);
-        if (!petImage) {
-            setGenerationError('Please choose a pet with a photo to generate the video.');
-            return;
-        }
-        const productImage = getProductImage(selectedProduct);
-
         const generationToken = generationTokenRef.current + 1;
         generationTokenRef.current = generationToken;
+
         setIsGenerating(true);
-        setResultVideoUrl(null);
         setGenerationError(null);
-
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData?.session?.access_token;
-        if (!accessToken) {
-            setIsGenerating(false);
-            setGenerationError('Please sign in again to generate the video.');
-            return;
-        }
-
-        const trimmedPrompt = promptText.trim();
-        const fallbackPrompt = trimmedPrompt.length > 0
-            ? trimmedPrompt
-            : TEMPLATE_PROMPT;
+        setResultVideoUrl(null);
+        setResultImageUrl(null);
 
         const pollPrediction = async (predictionId: string) => {
             const maxAttempts = 40;
@@ -574,12 +894,10 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
                 if (generationTokenRef.current !== generationToken) {
                     throw new Error('Generation canceled.');
                 }
-                const response = await fetch(`/api/ai/video?id=${encodeURIComponent(predictionId)}`, {
-                    headers: { Authorization: `Bearer ${accessToken}` }
-                });
+                const response = await fetch(`/api/ai/image?id=${encodeURIComponent(predictionId)}`);
                 const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    const message = data?.error ? String(data.error) : `Video error (HTTP ${response.status})`;
+                    const message = data?.error ? String(data.error) : `Image error (HTTP ${response.status})`;
                     throw new Error(message);
                 }
 
@@ -587,199 +905,346 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
                     return data.output;
                 }
                 if (data.status === 'failed' || data.status === 'canceled') {
-                    throw new Error(data?.error ? String(data.error) : 'Video generation failed.');
+                    throw new Error(data?.error ? String(data.error) : 'Image generation failed.');
                 }
-                await sleep(2000);
+                await sleep(1500);
             }
 
-            throw new Error('Video generation timed out. Please try again.');
+            throw new Error('Image generation timed out. Please try again.');
         };
 
         try {
-            const resolvedImage = await normalizeImageForReplicate(petImage);
-            const referenceImages: string[] = [resolvedImage];
-            if (productImage) {
-                try {
-                    const normalizedProduct = await normalizeImageForReplicate(productImage);
-                    if (normalizedProduct) referenceImages.push(normalizedProduct);
-                } catch (error) {
-                    console.warn('Unable to attach product image reference.', error);
-                }
-            }
-            const uniqueReferences = Array.from(new Set(referenceImages));
-            const response = await fetch('/api/ai/video', {
+            const basePrompt = promptText.trim() || DEFAULT_IMAGE_PROMPT;
+            const resolvedPrompt = applyPromptTemplate(basePrompt);
+            const identityPrompt = identityLock ? applyPromptTemplate(IDENTITY_LOCK_PROMPT) : '';
+            const identityReferenceCount = identityImages.length;
+            const identityHint = identityReferenceCount > 0
+                ? `Use the first ${identityReferenceCount} reference images strictly for pet identity.`
+                : '';
+            const sceneHint = sceneImages.length > 0
+                ? `Use the last ${sceneImages.length} reference images only for owner, location, or props. Allow creative variation in composition. Do not change the pet.`
+                : '';
+            const promptParts = [
+                resolvedPrompt,
+                selectedStyle?.prompt,
+                identityPrompt,
+                identityHint,
+                sceneHint
+            ].filter(Boolean);
+            const prompt = promptParts.join('\n');
+
+            const identitySources = identityImages.map((image) => image.url);
+            const sceneSources = sceneImages.map((image) => image.url);
+            const baseImages = [...identitySources, ...sceneSources];
+
+            const normalizedImages = await Promise.all(
+                baseImages.map((imageUrl) => normalizeImageForReplicate(imageUrl))
+            );
+            const uniqueImages = Array.from(new Set(normalizedImages.filter(Boolean)));
+
+            const response = await fetch('/api/ai/image', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${accessToken}`
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    referenceImages: uniqueReferences,
-                    prompt: fallbackPrompt,
-                    petName: selectedPet.name,
-                    productTitle: selectedProduct.title,
-                    aspectRatio: '9:16',
-                    durationSeconds: 12
+                    prompt,
+                    referenceImages: uniqueImages.length > 0 ? uniqueImages : undefined
                 })
             });
 
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
-                const message = data?.error ? String(data.error) : `Video error (HTTP ${response.status})`;
+                const message = data?.error ? String(data.error) : `Image error (HTTP ${response.status})`;
                 throw new Error(message);
             }
 
             const predictionId = data?.id;
             if (!predictionId) {
-                throw new Error('Video generation did not return a prediction id.');
+                throw new Error('Image generation did not return a prediction id.');
             }
 
             const output = data.output ?? await pollPrediction(predictionId);
-            const videoUrl = pickOutputUrl(output);
-            if (!videoUrl) {
-                throw new Error('Video generation finished without a playable video.');
+            const imageUrl = pickOutputUrl(output);
+            if (!imageUrl) {
+                throw new Error('Image generation finished without an image.');
             }
 
-            setResultVideoUrl(videoUrl);
-            const resultPayload = {
-                id: predictionId,
-                pet: selectedPet,
-                product: selectedProduct,
-                videoUrl,
-                prompt: fallbackPrompt || null,
-                audio: {
-                    mode: audioMode,
-                    sunoLink: sunoLink || null,
-                    fileName: audioFile?.name || null
-                },
-                adSpec: {
-                    format: '9:16',
-                    duration: '10-12s',
-                    fps: 30
-                },
-                timestamp: new Date().toISOString()
-            };
-
-            if (onAdGenerated) onAdGenerated(resultPayload);
+            if (generationTokenRef.current !== generationToken) return;
+            setResultImageUrl(imageUrl);
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Video generation failed.';
+            const message = error instanceof Error ? error.message : 'Image generation failed.';
             setGenerationError(message);
         } finally {
             if (generationTokenRef.current === generationToken) {
                 setIsGenerating(false);
             }
         }
-    };
+        return;
 
+    // Legacy Video Generation Code (Disabled for now)
+    /*
+    if (!canGenerateVideo) {
+        setGenerationError(permissionHint || 'AI video generation is available for Pro/Admin accounts only.');
+        return;
+    }
+    const petImage = getPetImage(selectedPet);
+    if (!petImage) {
+        setGenerationError('Please choose a pet with a photo to generate the video.');
+        return;
+    }
+    const productImage = getProductImage(selectedProduct);
+    
+    const generationToken = generationTokenRef.current + 1;
+    generationTokenRef.current = generationToken;
+    setIsGenerating(true);
+    setResultVideoUrl(null);
+    setGenerationError(null);
+    
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) {
+        setIsGenerating(false);
+        setGenerationError('Please sign in again to generate the video.');
+        return;
+    }
+    
+    const trimmedPrompt = promptText.trim();
+    const fallbackPrompt = trimmedPrompt.length > 0
+        ? trimmedPrompt
+        : TEMPLATE_PROMPT;
+    
+    const pollPrediction = async (predictionId: string) => {
+        const maxAttempts = 40;
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            if (generationTokenRef.current !== generationToken) {
+                throw new Error('Generation canceled.');
+            }
+            const response = await fetch(`/api/ai/video?id=${encodeURIComponent(predictionId)}`, {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const message = data?.error ? String(data.error) : `Video error (HTTP ${response.status})`;
+                throw new Error(message);
+            }
+    
+            if (data.status === 'succeeded') {
+                return data.output;
+            }
+            if (data.status === 'failed' || data.status === 'canceled') {
+                throw new Error(data?.error ? String(data.error) : 'Video generation failed.');
+            }
+            await sleep(2000);
+        }
+    
+        throw new Error('Video generation timed out. Please try again.');
+    };
+    
+    try {
+        const resolvedImage = await normalizeImageForReplicate(petImage);
+        const referenceImages: string[] = [resolvedImage];
+        if (productImage) {
+            try {
+                const normalizedProduct = await normalizeImageForReplicate(productImage);
+                if (normalizedProduct) referenceImages.push(normalizedProduct);
+            } catch (error) {
+                console.warn('Unable to attach product image reference.', error);
+            }
+        }
+        const uniqueReferences = Array.from(new Set(referenceImages));
+        const response = await fetch('/api/ai/video', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({
+                referenceImages: uniqueReferences,
+                prompt: fallbackPrompt,
+                petName: selectedPet.name,
+                productTitle: selectedProduct.title,
+                aspectRatio: '9:16',
+                durationSeconds: 12
+            })
+        });
+    
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            const message = data?.error ? String(data.error) : `Video error (HTTP ${response.status})`;
+            throw new Error(message);
+        }
+    
+        const predictionId = data?.id;
+        if (!predictionId) {
+            throw new Error('Video generation did not return a prediction id.');
+        }
+    
+        const output = data.output ?? await pollPrediction(predictionId);
+        const videoUrl = pickOutputUrl(output);
+        if (!videoUrl) {
+            throw new Error('Video generation finished without a playable video.');
+        }
+    
+        setResultVideoUrl(videoUrl);
+        const resultPayload = {
+            id: predictionId,
+            pet: selectedPet,
+            product: selectedProduct,
+            videoUrl,
+            prompt: fallbackPrompt || null,
+            audio: {
+                mode: audioMode,
+                sunoLink: sunoLink || null,
+                fileName: audioFile?.name || null
+            },
+            adSpec: {
+                format: '9:16',
+                duration: '10-12s',
+                fps: 30
+            },
+            timestamp: new Date().toISOString()
+        };
+    
+        if (onAdGenerated) onAdGenerated(resultPayload);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Video generation failed.';
+        setGenerationError(message);
+    } finally {
+        if (generationTokenRef.current === generationToken) {
+            setIsGenerating(false);
+        }
+    }
+    */
+    };
+    
     const handleDownload = () => {
+        const fileUrl = resultImageUrl || resultVideoUrl;
+        if (!fileUrl) return;
         const link = document.createElement('a');
-        link.href = resultVideoUrl || '';
-        link.download = `MagicAd-${selectedPet?.name || 'Pet'}.mp4`;
+        link.href = fileUrl;
+        link.download = resultImageUrl
+            ? `MagicImage-${selectedPet?.name || subjectText || 'Pet'}.jpg`
+            : `MagicAd-${selectedPet?.name || 'Pet'}.mp4`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
     };
 
     const handleShare = async () => {
-        if (!resultVideoUrl) return;
+        const shareUrl = resultImageUrl || resultVideoUrl;
+        if (!shareUrl) return;
         try {
-            await navigator.clipboard?.writeText(resultVideoUrl);
+            await navigator.clipboard?.writeText(shareUrl);
         } catch (error) {
             console.error('Unable to copy link:', error);
         }
     };
-
-    if (resultVideoUrl) {
-        return (
-            <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-                <DialogContent className="sm:max-w-md bg-transparent border-none shadow-none p-0 flex flex-col items-center justify-center focus:outline-none">
-                    <div className="bg-[#0D0D0D] border border-purple-500/50 rounded-3xl overflow-hidden shadow-2xl shadow-purple-500/20 w-full relative animate-in zoom-in-95 duration-300">
-                        <div className="absolute top-4 right-4 z-20 bg-green-500/90 text-black text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                            Sponsored live
-                        </div>
-
-                        <div className="aspect-[9/16] w-full bg-black relative">
+    
+    if (resultImageUrl || resultVideoUrl) {
+    return (
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="sm:max-w-md bg-transparent border-none shadow-none p-0 flex flex-col items-center justify-center focus:outline-none">
+                <div className="bg-[#101210] border border-white/10 rounded-3xl overflow-hidden shadow-2xl shadow-black/40 w-full relative animate-in zoom-in-95 duration-300">
+                    <div className="absolute top-4 right-4 z-20 bg-[#A7C4B0] text-[#0F1110] text-xs font-semibold px-3 py-1 rounded-full">
+                        {resultImageUrl ? 'Image Ready' : 'Render Ready'}
+                    </div>
+    
+                    <div className={`w-full bg-black relative ${resultImageUrl ? 'aspect-[4/5]' : 'aspect-[9/16]'}`}>
+                        {resultImageUrl ? (
+                            <img 
+                                src={resultImageUrl} 
+                                className="w-full h-full object-cover" 
+                                alt="Generated Magic Art"
+                            />
+                        ) : (
                             <video
-                                src={resultVideoUrl}
+                                src={resultVideoUrl!}
                                 className="w-full h-full object-cover"
                                 autoPlay
                                 loop
                                 muted
                                 playsInline
                             />
-                            <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-6 pt-20 text-center">
-                                <h3 className="text-2xl font-bold text-white mb-1">Magic Ad Ready</h3>
-                                <p className="text-gray-300 text-sm">Your sponsored card is live on the feed.</p>
-                            </div>
+                        )}
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-6 pt-20 text-center">
+                            <h3 className="text-2xl font-semibold text-white mb-1">
+                                {resultImageUrl ? selectedStyle?.name : 'Magic Render Ready'}
+                            </h3>
+                            <p className="text-white/70 text-sm">
+                                {resultImageUrl ? 'Your portrait is ready to share.' : 'Your render is ready.'}
+                            </p>
                         </div>
+                    </div>
 
-                        <div className="p-4 bg-[#1A1A1A] flex gap-3">
-                            <button onClick={handleDownload} className="flex-1 py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
-                                <Upload className="rotate-180" size={18} /> Download
-                            </button>
-                            <button onClick={handleShare} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors shadow-lg shadow-purple-600/20">
-                                Copy Link
-                            </button>
-                        </div>
-
-                        <button onClick={onClose} className="absolute top-4 left-4 z-20 bg-black/50 hover:bg-black/70 p-2 rounded-full text-white/70 hover:text-white transition-colors">
-                            <X size={16} />
+                    <div className="p-4 bg-[#151815] flex gap-3">
+                        <button onClick={handleDownload} className="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors">
+                            <Upload className="rotate-180" size={18} /> Save
+                        </button>
+                        <button onClick={handleShare} className="flex-1 py-3 bg-[#A7C4B0] hover:bg-[#B8D3C2] text-[#0F1110] rounded-xl font-semibold flex items-center justify-center gap-2 transition-colors">
+                            Share
                         </button>
                     </div>
-                </DialogContent>
-            </Dialog>
-        );
+
+                    <button onClick={onClose} className="absolute top-4 left-4 z-20 bg-black/50 hover:bg-black/70 p-2 rounded-full text-white/70 hover:text-white transition-colors">
+                        <X size={16} />
+                    </button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
     }
-
+    
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-5xl bg-[#0D0D0D] border border-purple-500/20 text-white p-0 shadow-2xl z-[60]">
-                <div className="relative max-h-[90vh] overflow-y-auto">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-5xl bg-[#101210] border border-white/10 text-white/90 p-0 shadow-2xl z-[60]">
+            <div className="relative max-h-[90vh] overflow-y-auto">
+                <div className="absolute top-0 left-0 w-full h-px bg-white/10" />
 
-                <DialogHeader className="px-6 pt-6">
-                    <DialogTitle className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
-                        <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-sm font-bold">AI</span>
-                        Magic Ad Creator
-                    </DialogTitle>
-                    <p className="text-gray-400 mt-2">Pick a pet, pick a product, and generate a 10-12s sponsored video.</p>
-                </DialogHeader>
+            <DialogHeader className="px-4 pt-5 sm:px-6">
+                <DialogTitle className="text-2xl sm:text-3xl font-semibold flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#A7C4B0] text-[#0F1110] text-xs font-semibold">AI</span>
+                    Magic Image Studio
+                </DialogTitle>
+                <p className="text-white/60 mt-2">Calm, mobile-first studio for viral pet portraits.</p>
+            </DialogHeader>
 
-                <div className="relative px-6 pb-8 mt-6">
-                    <div className="absolute left-6 right-6 -top-4 z-20">
-                        <div className="flex items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-3 shadow-lg backdrop-blur">
-                            <Search className="h-4 w-4 text-gray-400" />
-                            <input
-                                ref={searchInputRef}
-                                value={searchQuery}
-                                onChange={(e) => handleSearchChange(e.target.value)}
-                                onPaste={handleSearchPaste}
-                                onKeyDown={handleSearchKeyDown}
-                                placeholder={searchPlaceholder}
-                                className="flex-1 bg-transparent text-sm text-white placeholder:text-gray-500 focus:outline-none"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setSuggestionSeed((prev) => prev + 1)}
-                                className="flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-gray-200 hover:bg-white/20 transition-colors"
-                            >
-                                <Shuffle className="h-3 w-3" />
-                                Shuffle
-                            </button>
-                        </div>
-
-                        {lastDetection && (
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                                <span>{lastDetection.label}</span>
-                                {lastDetection.type === 'unknown' && (
-                                    <>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleManualRoute('pet')}
-                                            className="px-2 py-1 rounded-full border border-white/10 hover:border-white/30 text-white/80"
-                                        >
-                                            Use as pet
-                                        </button>
+            <div className="px-4 pb-6 sm:px-6 mt-4 space-y-4">
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#151815] px-4 py-3">
+                        <Search className="h-4 w-4 text-white/40" />
+                        <input
+                            ref={searchInputRef}
+                            value={searchQuery}
+                            onChange={(e) => handleSearchChange(e.target.value)}
+                            onPaste={handleSearchPaste}
+                            onKeyDown={handleSearchKeyDown}
+                            placeholder={searchPlaceholder}
+                            className="flex-1 bg-transparent text-sm text-white/90 placeholder:text-white/40 focus:outline-none"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setSuggestionSeed((prev) => prev + 1)}
+                            className="flex items-center gap-1 rounded-full bg-white/5 px-3 py-1 text-xs font-semibold text-white/70 hover:bg-white/10 transition-colors"
+                        >
+                            <Shuffle className="h-3 w-3" />
+                            Shuffle
+                        </button>
+                    </div>
+    
+                    {lastDetection && (
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-white/60">
+                            <span>{lastDetection.label}</span>
+                            {lastDetection.type === 'unknown' && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleManualRoute('pet')}
+                                        className="px-2 py-1 rounded-full border border-white/10 hover:border-white/30 text-white/80"
+                                    >
+                                        Use as pet
+                                    </button>
+                                    {enableVideoFlow && (
                                         <button
                                             type="button"
                                             onClick={() => handleManualRoute('audio')}
@@ -787,438 +1252,446 @@ const CreateMagicAdModal: React.FC<CreateMagicAdModalProps> = ({ isOpen, onClose
                                         >
                                             Use as audio
                                         </button>
-                                    </>
-                                )}
-                            </div>
-                        )}
-
-                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                            <div className={`flex items-center justify-between rounded-xl border px-3 py-2 ${selectedPet ? 'border-purple-500/60 bg-purple-500/10' : 'border-white/10 bg-white/5 text-gray-400'}`}>
-                                <div>
-                                    <div className="text-[10px] uppercase tracking-widest text-gray-500">Pet</div>
-                                    <div className="text-sm font-semibold text-white">{selectedPet ? selectedPet.name : 'Choose a pet'}</div>
-                                </div>
-                                {selectedPet ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedPet(null)}
-                                        className="text-[10px] uppercase tracking-widest text-gray-300 hover:text-white"
-                                    >
-                                        Change
-                                    </button>
-                                ) : (
-                                    <span className="text-[10px] text-gray-500">Step 1</span>
-                                )}
-                            </div>
-                            <div className={`flex items-center justify-between rounded-xl border px-3 py-2 ${selectedProduct ? 'border-pink-500/60 bg-pink-500/10' : 'border-white/10 bg-white/5 text-gray-400'} ${!selectedPet && !selectedProduct ? 'opacity-70' : ''}`}>
-                                <div>
-                                    <div className="text-[10px] uppercase tracking-widest text-gray-500">Product</div>
-                                    <div className="text-sm font-semibold text-white">
-                                        {selectedProduct ? selectedProduct.title : selectedPet ? 'Choose a product' : 'Select a pet first'}
-                                    </div>
-                                </div>
-                                {selectedProduct ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedProduct(null)}
-                                        className="text-[10px] uppercase tracking-widest text-gray-300 hover:text-white"
-                                    >
-                                        Change
-                                    </button>
-                                ) : (
-                                    <span className="text-[10px] text-gray-500">{selectedPet ? 'Step 2' : 'Locked'}</span>
-                                )}
-                            </div>
-                        </div>
-                        <div className="mt-2 text-xs text-gray-500">{stepHint}</div>
-                    </div>
-
-                    <div className={`pt-24 transition ${searchQuery ? 'opacity-40' : 'opacity-100'}`}>
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs uppercase tracking-widest text-gray-500">{suggestedLabel}</span>
-                            <span className="text-[10px] text-gray-500">{selectionStep === 'pet' ? 'Pets' : selectionStep === 'product' ? 'Products' : 'Mixed'}</span>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {filteredSuggestions.map((item, index) => (
-                                item.type === 'pet' ? (
-                                    <button
-                                        key={`pet-${item.pet.id}-${index}`}
-                                        type="button"
-                                        onClick={() => handleSelectPet(item.pet)}
-                                        className={`group rounded-2xl border bg-[#121212] p-2 text-left transition-all ${selectedPet?.id === item.pet.id ? 'border-purple-500/70 ring-2 ring-purple-500/40' : 'border-white/10 hover:border-white/30 hover:-translate-y-0.5'} shadow-[0_8px_24px_-18px_rgba(0,0,0,0.9)]`}
-                                    >
-                                        <div className="aspect-square rounded-lg bg-black/40 overflow-hidden">
-                                            <SmartImage src={item.pet.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                        </div>
-                                        <div className="mt-2 text-xs font-semibold text-white line-clamp-1">{item.pet.name}</div>
-                                        <div className="text-[10px] uppercase tracking-widest text-gray-500">{item.pet.breed || 'Pet'}</div>
-                                    </button>
-                                ) : (
-                                    <button
-                                        key={`product-${item.product.id}-${index}`}
-                                        type="button"
-                                        onClick={() => handleSelectProduct(item.product)}
-                                        className={`group rounded-2xl border bg-[#121212] p-2 text-left transition-all ${selectedProduct?.id === item.product.id ? 'border-pink-500/70 ring-2 ring-pink-500/40' : 'border-white/10 hover:border-white/30 hover:-translate-y-0.5'} shadow-[0_8px_24px_-18px_rgba(0,0,0,0.9)]`}
-                                    >
-                                        <div className="aspect-square rounded-lg bg-black/40 overflow-hidden">
-                                            {getProductImage(item.product) ? (
-                                                <img src={getProductImage(item.product)} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">No image</div>
-                                            )}
-                                        </div>
-                                        <div className="mt-2 text-xs font-semibold text-white line-clamp-1">{item.product.title}</div>
-                                        <div className="text-[10px] uppercase tracking-widest text-gray-500">
-                                            {item.product.price > 0 ? `${item.product.currency} ${item.product.price}` : 'Affiliate'}
-                                        </div>
-                                    </button>
-                                )
-                            ))}
-                        </div>
-                    </div>
-
-                    {searchQuery && (
-                        <div className="absolute left-6 right-6 top-20 z-30">
-                            <div className="rounded-2xl border border-white/10 bg-[#111111] p-3 shadow-2xl">
-                                {isSearching && (
-                                    <div className="px-4 py-2 text-xs text-gray-500">
-                                        {searchStatusLabel}
-                                    </div>
-                                )}
-                                {searchError && (
-                                    <div className="px-4 py-2 text-xs text-red-300">
-                                        {searchError}
-                                    </div>
-                                )}
-                                {filteredSearchResults.length > 0 ? (
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                        {filteredSearchResults.map((item, index) => (
-                                            item.type === 'pet' ? (
-                                                <button
-                                                    key={`result-pet-${item.pet.id}-${index}`}
-                                                    type="button"
-                                                    onClick={() => handleSelectPet(item.pet)}
-                                                    className={`group rounded-2xl border bg-[#121212] p-2 text-left transition-all ${selectedPet?.id === item.pet.id ? 'border-purple-500/70 ring-2 ring-purple-500/40' : 'border-white/10 hover:border-white/30 hover:-translate-y-0.5'} shadow-[0_8px_24px_-18px_rgba(0,0,0,0.9)]`}
-                                                >
-                                                    <div className="aspect-square rounded-lg bg-black/40 overflow-hidden">
-                                                        <SmartImage src={item.pet.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                                    </div>
-                                                    <div className="mt-2 text-xs font-semibold text-white line-clamp-1">{item.pet.name}</div>
-                                                    <div className="text-[10px] uppercase tracking-widest text-gray-500">{item.pet.breed || 'Pet'}</div>
-                                                </button>
-                                            ) : (
-                                                <button
-                                                    key={`result-product-${item.product.id}-${index}`}
-                                                    type="button"
-                                                    onClick={() => handleSelectProduct(item.product)}
-                                                    className={`group rounded-2xl border bg-[#121212] p-2 text-left transition-all ${selectedProduct?.id === item.product.id ? 'border-pink-500/70 ring-2 ring-pink-500/40' : 'border-white/10 hover:border-white/30 hover:-translate-y-0.5'} shadow-[0_8px_24px_-18px_rgba(0,0,0,0.9)]`}
-                                                >
-                                                    <div className="aspect-square rounded-lg bg-black/40 overflow-hidden">
-                                                        {getProductImage(item.product) ? (
-                                                            <img src={getProductImage(item.product)} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">No image</div>
-                                                        )}
-                                                    </div>
-                                                    <div className="mt-2 text-xs font-semibold text-white line-clamp-1">{item.product.title}</div>
-                                                    <div className="text-[10px] uppercase tracking-widest text-gray-500">
-                                                        {item.product.price > 0 ? `${item.product.currency} ${item.product.price}` : 'Affiliate'}
-                                                    </div>
-                                                </button>
-                                            )
-                                        ))}
-                                    </div>
-                                ) : (
-                                    !isSearching && (
-                                        <div className="px-4 py-6 text-center text-sm text-gray-400">
-                                            No matches yet. Paste a link or try another keyword.
-                                        </div>
-                                    )
-                                )}
-                            </div>
+                                    )}
+                                </>
+                            )}
                         </div>
                     )}
-                </div>
-                <div className="px-6 pb-24 grid gap-6">
-                    <div className="grid md:grid-cols-[1fr_auto_1fr] gap-4 items-stretch">
-                        <div className={`rounded-2xl border bg-[#121212] p-4 shadow-[0_12px_30px_-24px_rgba(0,0,0,0.9)] ${selectedPet ? 'border-purple-500/70 ring-1 ring-purple-500/40' : 'border-white/10'}`}>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <div className="text-xs uppercase tracking-widest text-gray-500">Pet</div>
-                                    <div className="text-sm font-semibold">Select your star</div>
-                                </div>
-                                {selectedPet ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedPet(null)}
-                                        className="text-xs text-gray-400 hover:text-white"
-                                    >
-                                        Clear
-                                    </button>
-                                ) : (
-                                    <label className="text-xs font-semibold uppercase text-purple-300 hover:text-purple-200 cursor-pointer">
-                                        <Upload className="inline-block mr-1" size={12} />
-                                        Upload
-                                        <input type="file" className="hidden" accept="image/*,video/*" onChange={handlePetUpload} />
-                                    </label>
-                                )}
+    
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        <div className={`flex items-center justify-between rounded-xl border px-3 py-2 ${selectedPet ? 'border-[#A7C4B0]/60 bg-[#1A1F1B]' : 'border-white/10 bg-[#151815] text-white/50'}`}>
+                            <div>
+                                <div className="text-[10px] uppercase tracking-widest text-white/50">Pet</div>
+                                <div className="text-sm font-semibold text-white/90">{selectedPet ? selectedPet.name : 'Choose a pet'}</div>
                             </div>
-
-                            {selectedPet ? (
-                                <div className="mt-4 flex items-center gap-3">
-                                    <div className="h-16 w-16 rounded-xl overflow-hidden bg-black/40">
-                                        <SmartImage src={selectedPet.image || selectedPet.video_url} className="w-full h-full object-cover" />
-                                    </div>
-                                    <div>
-                                        <div className="text-lg font-semibold">{selectedPet.name}</div>
-                                        <div className="text-xs text-gray-400">{selectedPet.breed || 'Unknown breed'}</div>
-                                        {selectedPet.media_type === 'video' && (
-                                            <div className="text-[10px] uppercase tracking-widest text-purple-300 mt-1">Video</div>
-                                        )}
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="mt-4 text-sm text-gray-400">
-                                    Use search or upload a new pet photo.
-                                </div>
-                            )}
-
-                            {!selectedPet && allPets.length > 0 && (
-                                <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-                                    {allPets.slice(0, 6).map((pet) => (
-                                        <button
-                                            key={`quick-pet-${pet.id}`}
-                                            type="button"
-                                            onClick={() => handleSelectPet(pet)}
-                                            className="h-12 w-12 rounded-xl overflow-hidden border border-white/10 hover:border-purple-500 transition-colors flex-shrink-0"
-                                        >
-                                            <SmartImage src={pet.image} className="w-full h-full object-cover" />
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            {selectedPet && <div className="h-2 w-2 rounded-full bg-[#A7C4B0]" />}
                         </div>
-
-                        <div className="hidden md:flex items-center justify-center">
-                            <Plus className="text-white/20" size={28} />
-                        </div>
-
-                        <div className={`rounded-2xl border bg-[#121212] p-4 shadow-[0_12px_30px_-24px_rgba(0,0,0,0.9)] ${selectedProduct ? 'border-pink-500/70 ring-1 ring-pink-500/40' : 'border-white/10'}`}>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <div className="text-xs uppercase tracking-widest text-gray-500">Product</div>
-                                    <div className="text-sm font-semibold">Select a product</div>
-                                </div>
-                                {selectedProduct ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedProduct(null)}
-                                        className="text-xs text-gray-400 hover:text-white"
-                                    >
-                                        Clear
-                                    </button>
-                                ) : (
-                                    <span className="text-xs text-gray-400">
-                                        {canUseAnyAffiliate ? 'Paste any affiliate link or search' : 'Paste Shopee/Lazada/Clickbank link or search'}
-                                    </span>
-                                )}
+                        <div className={`flex items-center justify-between rounded-xl border px-3 py-2 ${selectedStyle ? 'border-[#A7C4B0]/60 bg-[#1A1F1B]' : 'border-white/10 bg-[#151815] text-white/50'}`}>
+                            <div>
+                                <div className="text-[10px] uppercase tracking-widest text-white/50">Style</div>
+                                <div className="text-sm font-semibold text-white/90">{selectedStyle ? selectedStyle.name : 'Choose a style'}</div>
                             </div>
-
-                            {selectedProduct ? (
-                                <div className="mt-4 flex items-center gap-3">
-                                    <div className="h-16 w-16 rounded-xl overflow-hidden bg-black/40">
-                                        {getProductImage(selectedProduct) ? (
-                                            <img src={getProductImage(selectedProduct)} className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">No image</div>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <div className="text-lg font-semibold line-clamp-1">{selectedProduct.title}</div>
-                                        <div className="text-xs text-gray-400">
-                                            {selectedProduct.price > 0 ? `${selectedProduct.currency} ${selectedProduct.price}` : 'Affiliate link ready'}
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="mt-4 text-sm text-gray-400">
-                                    Pick a product to promote with your pet video.
-                                </div>
-                            )}
-
-                            {!selectedProduct && products.length > 0 && (
-                                <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-                                    {products.slice(0, 6).map((product) => (
-                                        <button
-                                            key={`quick-product-${product.id}`}
-                                            type="button"
-                                            onClick={() => handleSelectProduct(product)}
-                                            className="h-12 w-12 rounded-xl overflow-hidden border border-white/10 hover:border-pink-500 transition-colors flex-shrink-0"
-                                        >
-                                            {getProductImage(product) ? (
-                                                <img src={getProductImage(product)} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-[10px] text-gray-500">No</div>
-                                            )}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            {selectedStyle && <div className="text-lg">{selectedStyle.icon}</div>}
                         </div>
                     </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <div className="text-xs uppercase tracking-widest text-gray-500">Audio</div>
-                                    <div className="text-sm font-semibold">Music and sound</div>
-                                </div>
-                                <span className="text-[10px] uppercase text-gray-500">Auto default</span>
+                    <div className="text-xs text-white/50">{stepHint}</div>
+                </div>
+    
+                {searchQuery && (
+                    <div className="rounded-2xl border border-white/10 bg-[#151815] p-3 shadow-lg shadow-black/40">
+                        {isSearching && (
+                            <div className="px-4 py-2 text-xs text-white/50">
+                                {searchStatusLabel}
                             </div>
+                        )}
+                        {searchError && (
+                            <div className="px-4 py-2 text-xs text-red-300">
+                                {searchError}
+                            </div>
+                        )}
+                        {filteredSearchResults.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {filteredSearchResults.map((item, index) => (
+                                    item.type === 'pet' ? (
+                                        <button
+                                            key={`result-pet-${item.pet.id}-${index}`}
+                                            type="button"
+                                            onClick={() => handleSelectPet(item.pet)}
+                                            className={`group rounded-2xl border bg-[#151815] p-2 text-left transition-all ${selectedPet?.id === item.pet.id ? 'border-[#A7C4B0]/70 ring-1 ring-[#A7C4B0]/30' : 'border-white/10 hover:border-white/30'} shadow-sm shadow-black/30`}
+                                        >
+                                            <div className="aspect-square rounded-lg bg-black/30 overflow-hidden">
+                                                <SmartImage src={item.pet.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                            </div>
+                                            <div className="mt-2 text-xs font-semibold text-white/90 line-clamp-1">{item.pet.name}</div>
+                                            <div className="text-[10px] uppercase tracking-widest text-white/50">{item.pet.breed || 'Pet'}</div>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            key={`result-product-${item.product.id}-${index}`}
+                                            type="button"
+                                            onClick={() => handleSelectProduct(item.product)}
+                                            className={`group rounded-2xl border bg-[#151815] p-2 text-left transition-all ${selectedProduct?.id === item.product.id ? 'border-[#A7C4B0]/70 ring-1 ring-[#A7C4B0]/30' : 'border-white/10 hover:border-white/30'} shadow-sm shadow-black/30`}
+                                        >
+                                            <div className="aspect-square rounded-lg bg-black/30 overflow-hidden">
+                                                {getProductImage(item.product) ? (
+                                                    <img src={getProductImage(item.product)} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-xs text-white/50">No image</div>
+                                                )}
+                                            </div>
+                                            <div className="mt-2 text-xs font-semibold text-white/90 line-clamp-1">{item.product.title}</div>
+                                            <div className="text-[10px] uppercase tracking-widest text-white/50">
+                                                {item.product.price > 0 ? `${item.product.currency} ${item.product.price}` : 'Affiliate'}
+                                            </div>
+                                        </button>
+                                    )
+                                ))}
+                            </div>
+                        ) : (
+                            !isSearching && (
+                                <div className="px-4 py-6 text-center text-sm text-white/50">
+                                    No matches yet. Paste a pet image link or try another keyword.
+                                </div>
+                            )
+                        )}
+                    </div>
+                )}
 
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                {['auto', 'suno', 'upload', 'none'].map((mode) => (
+                <div className={`transition ${searchQuery ? 'opacity-40' : 'opacity-100'}`}>
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs uppercase tracking-widest text-white/50">{suggestedLabel}</span>
+                        <span className="text-[10px] text-white/50">Pets</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {filteredSuggestions.map((item, index) => (
+                            item.type === 'pet' ? (
+                                <button
+                                    key={`pet-${item.pet.id}-${index}`}
+                                    type="button"
+                                    onClick={() => handleSelectPet(item.pet)}
+                                    className={`group rounded-2xl border bg-[#151815] p-2 text-left transition-all ${selectedPet?.id === item.pet.id ? 'border-[#A7C4B0]/70 ring-1 ring-[#A7C4B0]/30' : 'border-white/10 hover:border-white/30'} shadow-sm shadow-black/30`}
+                                >
+                                    <div className="aspect-square rounded-lg bg-black/30 overflow-hidden">
+                                        <SmartImage src={item.pet.image} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                    </div>
+                                    <div className="mt-2 text-xs font-semibold text-white/90 line-clamp-1">{item.pet.name}</div>
+                                    <div className="text-[10px] uppercase tracking-widest text-white/50">{item.pet.breed || 'Pet'}</div>
+                                </button>
+                            ) : (
+                                <button
+                                    key={`product-${item.product.id}-${index}`}
+                                    type="button"
+                                    onClick={() => handleSelectProduct(item.product)}
+                                    className={`group rounded-2xl border bg-[#151815] p-2 text-left transition-all ${selectedProduct?.id === item.product.id ? 'border-[#A7C4B0]/70 ring-1 ring-[#A7C4B0]/30' : 'border-white/10 hover:border-white/30'} shadow-sm shadow-black/30`}
+                                >
+                                    <div className="aspect-square rounded-lg bg-black/30 overflow-hidden">
+                                        {getProductImage(item.product) ? (
+                                            <img src={getProductImage(item.product)} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-xs text-white/50">No image</div>
+                                        )}
+                                    </div>
+                                    <div className="mt-2 text-xs font-semibold text-white/90 line-clamp-1">{item.product.title}</div>
+                                    <div className="text-[10px] uppercase tracking-widest text-white/50">
+                                        {item.product.price > 0 ? `${item.product.currency} ${item.product.price}` : 'Affiliate'}
+                                    </div>
+                                </button>
+                            )
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <div className="px-4 pb-20 sm:px-6 grid gap-6">
+                <div className="grid md:grid-cols-[1fr_auto_1fr] gap-4 items-stretch">
+                    <div className={`rounded-2xl border bg-[#151815] p-4 ${selectedPet ? 'border-[#A7C4B0]/70 ring-1 ring-[#A7C4B0]/30' : 'border-white/10'}`}>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="text-xs uppercase tracking-widest text-white/50">Pet</div>
+                                <div className="text-sm font-semibold text-white/90">Select your star</div>
+                            </div>
+                            {selectedPet ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedPet(null)}
+                                    className="text-xs text-white/60 hover:text-white"
+                                >
+                                    Clear
+                                </button>
+                            ) : (
+                                <label className="text-xs font-semibold uppercase text-[#A7C4B0] hover:text-[#B8D3C2] cursor-pointer">
+                                    <Upload className="inline-block mr-1" size={12} />
+                                    Upload
+                                    <input type="file" className="hidden" accept="image/*" onChange={handlePetUpload} />
+                                </label>
+                            )}
+                        </div>
+    
+                        {selectedPet ? (
+                            <div className="mt-4 flex items-center gap-3">
+                                <div className="h-16 w-16 rounded-xl overflow-hidden bg-black/30">
+                                    <SmartImage src={selectedPet.image || selectedPet.video_url} className="w-full h-full object-cover" />
+                                </div>
+                                <div>
+                                    <div className="text-lg font-semibold text-white/90">{selectedPet.name}</div>
+                                    <div className="text-xs text-white/60">{selectedPet.breed || 'Unknown breed'}</div>
+                                    {selectedPet.media_type === 'video' && (
+                                        <div className="text-[10px] uppercase tracking-widest text-white/50 mt-1">Video</div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="mt-4 text-sm text-white/60">
+                                Use search or upload a pet photo. It will appear in Identity.
+                            </div>
+                        )}
+    
+                        {!selectedPet && allPets.length > 0 && (
+                            <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+                                {allPets.slice(0, 6).map((pet) => (
                                     <button
-                                        key={mode}
+                                        key={`quick-pet-${pet.id}`}
                                         type="button"
-                                        onClick={() => setAudioMode(mode as typeof audioMode)}
-                                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${audioMode === mode ? 'bg-purple-600 border-purple-500 text-white' : 'bg-white/5 border-white/10 text-gray-300 hover:border-white/30'}`}
+                                        onClick={() => handleSelectPet(pet)}
+                                        className="h-12 w-12 rounded-xl overflow-hidden border border-white/10 hover:border-[#A7C4B0] transition-colors flex-shrink-0"
                                     >
-                                        {mode === 'auto' && 'Auto-match'}
-                                        {mode === 'suno' && 'Suno link'}
-                                        {mode === 'upload' && 'Upload'}
-                                        {mode === 'none' && 'No music'}
+                                        <SmartImage src={pet.image} className="w-full h-full object-cover" />
                                     </button>
                                 ))}
                             </div>
+                        )}
+                    </div>
 
-                            {audioMode === 'auto' && (
-                                <p className="mt-3 text-xs text-gray-400">
-                                    Auto-match a royalty-free track and sound effects.
-                                </p>
-                            )}
+                    <div className="hidden md:flex items-center justify-center">
+                        <Plus className="text-white/15" size={24} />
+                    </div>
 
-                            {audioMode === 'suno' && (
-                                <div className="mt-3 space-y-2">
-                                    <input
-                                        value={sunoLink}
-                                        onChange={(e) => setSunoLink(e.target.value)}
-                                        placeholder="Paste Suno or audio link"
-                                        className="w-full h-9 rounded-lg bg-black/40 border border-white/10 px-3 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500"
-                                    />
-                                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-400">
-                                        <a
-                                            href={SUNO_AFFILIATE_URL}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="px-2 py-1 rounded-full border border-white/10 hover:border-white/30 text-white/80"
-                                        >
-                                            Create with Suno
-                                        </a>
-                                        {audioStatus === 'fetching' && <span>Auto-fetching audio...</span>}
-                                        {audioStatus === 'ready' && <span>Audio ready to use.</span>}
-                                        {audioStatus === 'idle' && <span>Paste a link to auto-fetch.</span>}
-                                    </div>
-                                    <p className="text-[10px] text-gray-500">
-                                        If fetch fails, open Suno and upload the track.
-                                    </p>
-                                </div>
-                            )}
-
-                            {audioMode === 'upload' && (
-                                <div className="mt-3">
-                                    <label className="inline-flex items-center gap-2 text-xs font-semibold uppercase text-purple-300 hover:text-purple-200 cursor-pointer">
-                                        <Upload className="inline-block" size={12} />
-                                        Upload audio
-                                        <input type="file" className="hidden" accept="audio/*" onChange={handleAudioUpload} />
-                                    </label>
-                                    {audioFile && <div className="mt-2 text-xs text-gray-400">Selected: {audioFile.name}</div>}
-                                </div>
-                            )}
-
-                            {audioMode === 'none' && (
-                                <p className="mt-3 text-xs text-gray-400">Muted ad, no background music.</p>
-                            )}
-                        </div>
-
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="space-y-3">
+                        <div className={`rounded-2xl border bg-[#151815] p-4 ${identityImages.length > 0 ? 'border-[#A7C4B0]/70 ring-1 ring-[#A7C4B0]/30' : 'border-white/10'}`}>
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <div className="text-xs uppercase tracking-widest text-gray-500">Advanced</div>
-                                    <div className="text-sm font-semibold">Prompt (optional)</div>
+                                    <div className="text-xs uppercase tracking-widest text-white/50">Identity (Pet)</div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-sm font-semibold text-white/90">Cloning accuracy</div>
+                                        <span className="text-[10px] uppercase tracking-widest text-[#A7C4B0]">Required</span>
+                                    </div>
+                                </div>
+                                <label className="text-xs font-semibold uppercase text-[#A7C4B0] hover:text-[#B8D3C2] cursor-pointer">
+                                    <Upload className="inline-block mr-1" size={12} />
+                                    Add
+                                    <input type="file" className="hidden" accept="image/*" multiple onChange={handleIdentityUpload} />
+                                </label>
+                            </div>
+        
+                            {identityImages.length > 0 ? (
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    {identityImages.map((image) => (
+                                        <div key={image.id} className="relative h-14 w-14 rounded-xl overflow-hidden border border-white/10 bg-black/30">
+                                            <img src={image.url} alt={image.name} className="w-full h-full object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveIdentity(image.id)}
+                                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-black/70 text-white/70 hover:text-white flex items-center justify-center"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="mt-4 text-sm text-white/60">
+                                    Add at least 1 pet photo (required). More angles = stronger identity lock.
+                                </div>
+                            )}
+        
+                            <p className="mt-3 text-[10px] text-white/50">
+                                {identityImages.length}/{MAX_IDENTITY_IMAGES} identity images
+                            </p>
+                        </div>
+
+                        <div className={`rounded-2xl border bg-[#151815] p-4 ${sceneImages.length > 0 ? 'border-[#A7C4B0]/70 ring-1 ring-[#A7C4B0]/30' : 'border-white/10'}`}>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-xs uppercase tracking-widest text-white/50">Scene (Owner/Location)</div>
+                                    <div className="text-sm font-semibold text-white/90">Background + props</div>
+                                </div>
+                                <label className="text-xs font-semibold uppercase text-[#A7C4B0] hover:text-[#B8D3C2] cursor-pointer">
+                                    <Upload className="inline-block mr-1" size={12} />
+                                    Add
+                                    <input type="file" className="hidden" accept="image/*" multiple onChange={handleSceneUpload} />
+                                </label>
+                            </div>
+        
+                            {sceneImages.length > 0 ? (
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    {sceneImages.map((image) => (
+                                        <div key={image.id} className="relative h-14 w-14 rounded-xl overflow-hidden border border-white/10 bg-black/30">
+                                            <img src={image.url} alt={image.name} className="w-full h-full object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveScene(image.id)}
+                                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-black/70 text-white/70 hover:text-white flex items-center justify-center"
+                                            >
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="mt-4 text-sm text-white/60">
+                                    Add owner or location photos to guide the scene only.
+                                </div>
+                            )}
+        
+                            <p className="mt-3 text-[10px] text-white/50">
+                                {sceneImages.length}/{MAX_SCENE_IMAGES} scene images
+                            </p>
+                        </div>
+                    </div>
+                </div>
+    
+                <div className="grid md:grid-cols-2 gap-4">
+                    <div className="rounded-2xl border border-white/10 bg-[#151815] p-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="text-xs uppercase tracking-widest text-white/50">Style</div>
+                                <div className="text-sm font-semibold text-white/90">Pick a viral look</div>
+                            </div>
+                            <span className="text-[10px] uppercase text-white/50">Tap to select</span>
+                        </div>
+    
+                        <div className="mt-3 grid grid-cols-2 gap-3">
+                            {TEMPLATE_STYLES.map((style) => {
+                                const isSelected = selectedStyle?.id === style.id;
+                                return (
+                                    <button
+                                        key={style.id}
+                                        type="button"
+                                        onClick={() => setSelectedStyle(style)}
+                                        className={`rounded-xl border p-3 text-left transition-all ${isSelected ? 'border-[#A7C4B0]/70 bg-[#1A1F1B] ring-1 ring-[#A7C4B0]/30' : 'border-white/10 hover:border-white/30'}`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-base">{style.icon}</span>
+                                            {isSelected && <span className="text-[10px] uppercase text-[#A7C4B0]">Selected</span>}
+                                        </div>
+                                        <div className="mt-2 text-sm font-semibold text-white/90">{style.name}</div>
+                                        <div className="text-[10px] text-white/50 line-clamp-2">{style.description}</div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+    
+                    <div className="rounded-2xl border border-white/10 bg-[#151815] p-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <div className="text-xs uppercase tracking-widest text-white/50">Prompt</div>
+                                    <div className="text-sm font-semibold text-white/90">Describe the moment</div>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setShowAdvanced((prev) => !prev)}
-                                    className="text-xs text-gray-400 hover:text-white"
+                                    className="text-xs text-white/60 hover:text-white"
                                 >
                                     {showAdvanced ? 'Hide' : 'Show'}
                                 </button>
                             </div>
-
-                            {showAdvanced && (
-                                <div className="mt-3 space-y-3">
-                                    <textarea
-                                        value={promptText}
-                                        onChange={(e) => setPromptText(e.target.value)}
-                                        placeholder="Example: playful puppy tries new chew toy, cozy vibe, 12s"
-                                        maxLength={240}
-                                        className="w-full min-h-[90px] rounded-xl bg-black/40 border border-white/10 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-purple-500"
-                                    />
-                                    <div className="flex flex-wrap gap-2">
-                                        {PROMPT_PRESETS.map((preset) => (
-                                            <button
-                                                key={preset}
-                                                type="button"
-                                                onClick={() => setPromptText(preset)}
-                                                className="px-3 py-1.5 rounded-full text-xs border border-white/10 text-gray-300 hover:border-white/30"
-                                            >
-                                                {preset}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <p className="text-[10px] text-gray-500">Max 240 characters.</p>
+    
+                        {showAdvanced && (
+                            <div className="mt-3 space-y-3">
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-white/60">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIdentityLock((prev) => !prev)}
+                                        className={`px-3 py-1 rounded-full border text-xs font-semibold transition-colors ${identityLock ? 'border-[#A7C4B0] bg-[#1A1F1B] text-[#A7C4B0]' : 'border-white/10 text-white/60 hover:border-white/30'}`}
+                                    >
+                                        Identity Lock: {identityLock ? 'High' : 'Off'}
+                                    </button>
+                                    <span>Use 1-{MAX_IDENTITY_IMAGES} pet photos (required) for cloning-level accuracy.</span>
                                 </div>
-                            )}
-                        </div>
+                                <div>
+                                    <div className="text-[10px] uppercase tracking-widest text-white/50">Subject</div>
+                                    <input
+                                        value={subjectText}
+                                        onChange={(e) => setSubjectText(e.target.value)}
+                                        placeholder="Thai Ridgeback, Bengal cat, macaw..."
+                                        className="mt-1 w-full h-9 rounded-lg bg-[#101210] border border-white/10 px-3 text-sm text-white/90 placeholder:text-white/40 focus:outline-none focus:border-[#A7C4B0]"
+                                    />
+                                </div>
+                                <div>
+                                    <div className="text-[10px] uppercase tracking-widest text-white/50">Preset</div>
+                                    <select
+                                        value={selectedPromptTemplateId}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setSelectedPromptTemplateId(value);
+                                            if (value === 'custom') return;
+                                            if (value === 'default') {
+                                                setPromptText(applyPromptTemplate(DEFAULT_IMAGE_PROMPT));
+                                                return;
+                                            }
+                                            const allPresets = [...THAI_PROMPT_TEMPLATES, ...TREND_PROMPT_TEMPLATES, ...PROMPT_TEMPLATES];
+                                            const selected = allPresets.find((preset) => preset.id === value);
+                                            if (selected) setPromptText(applyPromptTemplate(selected.prompt));
+                                        }}
+                                        className="mt-1 w-full h-10 rounded-lg bg-[#101210] border border-white/10 px-3 text-sm text-white/90 focus:outline-none focus:border-[#A7C4B0]"
+                                    >
+                                        <option value="default">Default (Clean Studio)</option>
+                                        <option value="custom">Custom</option>
+                                        <optgroup label="Thai Presets">
+                                            {THAI_PROMPT_TEMPLATES.map((template) => (
+                                                <option key={template.id} value={template.id}>{template.label}</option>
+                                            ))}
+                                        </optgroup>
+                                        <optgroup label="Trend Presets">
+                                            {TREND_PROMPT_TEMPLATES.map((template) => (
+                                                <option key={template.id} value={template.id}>{template.label}</option>
+                                            ))}
+                                        </optgroup>
+                                        <optgroup label="Classic Presets">
+                                            {PROMPT_TEMPLATES.map((template) => (
+                                                <option key={template.id} value={template.id}>{template.label}</option>
+                                            ))}
+                                        </optgroup>
+                                    </select>
+                                </div>
+                                <textarea
+                                    value={promptText}
+                                    onChange={(e) => {
+                                        setPromptText(e.target.value);
+                                        setSelectedPromptTemplateId('custom');
+                                    }}
+                                    placeholder="Example: cinematic portrait, soft rim light, cozy studio, 4:5 vertical"
+                                    maxLength={240}
+                                    className="w-full min-h-[90px] rounded-xl bg-[#101210] border border-white/10 px-3 py-2 text-sm text-white/90 placeholder:text-white/40 focus:outline-none focus:border-[#A7C4B0]"
+                                />
+                                <div className="flex items-center justify-between text-[10px] text-white/50">
+                                    <span>Max 240 characters.</span>
+                                    {selectedStyle && <span>Style: {selectedStyle.name}</span>}
+                                </div>
+                            </div>
+                        )}
                     </div>
+                </div>
+    
 
+        
                 </div>
-                <div className="sticky bottom-0 z-30 border-t border-white/10 bg-[#0D0D0D]/95 backdrop-blur px-6 py-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="text-xs text-gray-400">
-                            9:16 | 10-12s | Auto-publishes as Sponsored
-                        </div>
-                        <div className="flex flex-col items-start sm:items-end gap-1">
-                            <button
-                                disabled={!selectedPet || !selectedProduct || isGenerating || !canGenerateVideo}
-                                onClick={handleGenerate}
-                                className="w-full sm:w-auto px-10 py-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-full font-bold text-sm sm:text-base shadow-lg hover:shadow-purple-500/25 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
-                            >
-                                {isGenerating ? (
-                                    <>
-                                        <Loader2 className="animate-spin" />
-                                        Creating video...
-                                    </>
-                                ) : (
-                                    <>
-                                        Let's see the magic
-                                    </>
-                                )}
-                            </button>
-                            <span className="text-[10px] text-gray-500">{actionHint}</span>
-                            {generationError && (
-                                <span className="text-[10px] text-red-400">{generationError}</span>
-                            )}
-                            {isGenerating && <span className="text-[10px] text-gray-500 animate-pulse">AI is building your ad...</span>}
-                        </div>
-                    </div>
-                </div>
-                </div>
-            </DialogContent>
-        </Dialog>
-    );
+    
+            {/* Magic Studio Footer */}
+            <div className="sticky bottom-0 z-30 border-t border-white/10 bg-[#101210]/95 px-4 sm:px-6 py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs text-white/50">
+                4:5 Portrait | HD | Share-ready
+            </div>
+            <div className="flex flex-col items-start sm:items-end gap-1">
+                <button
+                    disabled={!canGenerateImage || isGenerating}
+                    onClick={handleGenerate}
+                    className="w-full sm:w-auto px-10 py-3 bg-[#A7C4B0] text-[#0F1110] rounded-full font-semibold text-sm sm:text-base hover:bg-[#B8D3C2] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
+                >
+                    {isGenerating ? (
+                        <>
+                            <Loader2 className="animate-spin" />
+                            Painting...
+                        </>
+                    ) : (
+                        <>
+                            Generate Image
+                        </>
+                    )}
+                </button>
+                <span className="text-[10px] text-white/50">{actionHint}</span>
+                {generationError && (
+                    <span className="text-[10px] text-red-400">{generationError}</span>
+                )}
+            </div>
+        </div>
+    </div>
+        </div>
+    </DialogContent>
+</Dialog>
+);
 };
 
 export default CreateMagicAdModal;
